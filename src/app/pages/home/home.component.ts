@@ -24,12 +24,12 @@ import { ProductService } from '../../services/product.service';
           <p class="hero-tagline">Legado & Co</p>
           <h1 class="hero-title">Timeless Style,<br>Quiet Confidence</h1>
           <p class="hero-subtitle">Discover our curated collection of premium fashion</p>
-          <a routerLink="/collections" class="hero-cta">
+          <button class="hero-cta" (click)="scrollToFeatured()">
             <span class="hero-cta-text">Shop Now</span>
             <span class="hero-cta-arrow">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="5 12 12 19 19 12"></polyline></svg>
             </span>
-          </a>
+          </button>
         </div>
 
         <button class="hero-nav hero-nav-left" (click)="prevHeroSlide()" aria-label="Previous slide">
@@ -45,7 +45,7 @@ import { ProductService } from '../../services/product.service';
       </section>
 
       <!-- Featured Products Carousel -->
-      <section class="featured-section section">
+      <section class="featured-section section" id="featured-products">
         <div class="container">
           <h2 class="section-title">Featured Products</h2>
           <div class="featured-carousel-wrapper">
@@ -399,30 +399,38 @@ import { ProductService } from '../../services/product.service';
       font-weight: 500;
       letter-spacing: 0.12em;
       text-transform: uppercase;
-      padding: 10px 0;
-      border-bottom: 1.5px solid rgba(255, 255, 255, 0.5);
+      padding: 12px 28px;
+      border: 1.5px solid rgba(255, 255, 255, 0.5);
+      background: transparent;
       transition: all 0.35s ease;
       cursor: pointer;
+      font-family: inherit;
     }
 
     .hero-cta:hover {
-      border-bottom-color: var(--text-white);
-      gap: 18px;
+      border-color: var(--text-white);
+      background: rgba(255, 255, 255, 0.12);
     }
 
     .hero-cta-arrow {
       display: flex;
       align-items: center;
-      transition: transform 0.35s ease;
+      animation: bounceDown 1.8s ease-in-out infinite;
+    }
+
+    @keyframes bounceDown {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(5px); }
     }
 
     .hero-cta:hover .hero-cta-arrow {
-      transform: translateX(4px);
+      animation: none;
+      transform: translateY(3px);
     }
 
     .hero-cta-arrow svg {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
     }
 
     /* Hero Navigation Arrows */
@@ -1451,6 +1459,13 @@ export class HomeComponent implements OnInit, OnDestroy {
   private resetHeroAutoSlide() {
     this.stopHeroAutoSlide();
     this.startHeroAutoSlide();
+  }
+
+  scrollToFeatured() {
+    const el = document.getElementById('featured-products');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
 
   loadFeaturedProducts() {
