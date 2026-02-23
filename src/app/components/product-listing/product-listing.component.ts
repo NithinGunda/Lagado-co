@@ -179,35 +179,36 @@ import { Product, FilterOptions } from '../../models/product.model';
   styles: [`
     .product-listing {
       display: flex;
-      gap: var(--spacing-lg);
-      padding: var(--spacing-lg) 0;
+      gap: var(--spacing-md);
+      padding: var(--spacing-sm) 0;
       min-height: calc(100vh - 300px);
     }
 
     .filters-sidebar {
-      width: 280px;
+      width: 220px;
+      min-width: 220px;
       background: var(--text-white);
-      padding: var(--spacing-md);
-      border-radius: 12px;
-      box-shadow: 0 2px 8px var(--shadow-light);
+      padding: 16px;
+      box-shadow: 0 1px 4px var(--shadow-light);
       height: fit-content;
       position: sticky;
-      top: 120px;
+      top: 100px;
+      flex-shrink: 0;
     }
 
     .filters-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: var(--spacing-md);
-      padding-bottom: var(--spacing-sm);
+      margin-bottom: 14px;
+      padding-bottom: 10px;
       border-bottom: 2px solid var(--border-color);
     }
 
     .filters-header h3 {
       margin: 0;
       color: var(--primary-color);
-      font-size: 1.25rem;
+      font-size: 1rem;
     }
 
     .close-filters {
@@ -220,24 +221,24 @@ import { Product, FilterOptions } from '../../models/product.model';
     }
 
     .filter-section {
-      margin-bottom: var(--spacing-md);
+      margin-bottom: 14px;
     }
 
     .filter-section > label {
       display: block;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       font-weight: 600;
       color: var(--primary-color);
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .filter-input {
       width: 100%;
-      padding: 10px 12px;
-      border: 2px solid var(--border-color);
-      border-radius: 8px;
-      font-size: 14px;
+      padding: 8px 10px;
+      border: 1px solid var(--border-color);
+      font-size: 13px;
       transition: var(--transition-normal);
+      box-sizing: border-box;
     }
 
     .filter-input:focus {
@@ -248,25 +249,25 @@ import { Product, FilterOptions } from '../../models/product.model';
     .checkbox-group {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
 
     label.checkbox-label,
     .filter-section > label.checkbox-label {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       cursor: pointer;
       font-weight: 400;
-      font-size: 14px;
+      font-size: 13px;
       margin-bottom: 0;
     }
 
     label.checkbox-label input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      min-width: 18px;
-      min-height: 18px;
+      width: 16px;
+      height: 16px;
+      min-width: 16px;
+      min-height: 16px;
       accent-color: var(--primary-color);
       cursor: pointer;
       margin: 0;
@@ -370,10 +371,11 @@ import { Product, FilterOptions } from '../../models/product.model';
 
     .btn-clear {
       width: 100%;
-      margin-top: var(--spacing-md);
-      padding: 10px;
+      margin-top: 14px;
+      padding: 8px;
+      font-size: 13px;
       background: var(--secondary-color);
-      border: 2px solid var(--border-color);
+      border: 1px solid var(--border-color);
       color: var(--primary-color);
     }
 
@@ -424,9 +426,8 @@ import { Product, FilterOptions } from '../../models/product.model';
 
     .sort-select {
       padding: 8px 12px;
-      border: 2px solid var(--border-color);
-      border-radius: 8px;
-      font-size: 14px;
+      border: 1px solid var(--border-color);
+      font-size: 13px;
       background: var(--text-white);
       color: var(--text-dark);
       cursor: pointer;
@@ -434,28 +435,27 @@ import { Product, FilterOptions } from '../../models/product.model';
 
     .products-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: var(--spacing-md);
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
     }
 
     .product-card {
       background: var(--text-white);
-      border-radius: 12px;
       overflow: hidden;
       transition: var(--transition-normal);
       cursor: pointer;
-      box-shadow: 0 2px 8px var(--shadow-light);
+      box-shadow: 0 1px 4px var(--shadow-light);
     }
 
     .product-card:hover {
-      transform: translateY(-5px);
+      transform: translateY(-4px);
       box-shadow: 0 8px 24px var(--shadow-medium);
     }
 
     .product-image {
       position: relative;
       width: 100%;
-      height: 320px;
+      height: 260px;
       overflow: hidden;
     }
 
@@ -520,14 +520,17 @@ import { Product, FilterOptions } from '../../models/product.model';
     }
 
     .product-info {
-      padding: var(--spacing-md);
+      padding: 12px;
     }
 
     .product-name {
-      font-size: 1rem;
+      font-size: 0.9rem;
       color: var(--primary-color);
       margin-bottom: 4px;
       font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .product-category {
@@ -610,6 +613,12 @@ import { Product, FilterOptions } from '../../models/product.model';
       margin-bottom: var(--spacing-sm);
     }
 
+    @media (max-width: 1200px) {
+      .products-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
     @media (max-width: 968px) {
       .product-listing {
         flex-direction: column;
@@ -622,6 +631,7 @@ import { Product, FilterOptions } from '../../models/product.model';
         right: 0;
         bottom: 0;
         width: 100%;
+        min-width: 100%;
         z-index: 1000;
         overflow-y: auto;
         transform: translateX(-100%);
@@ -635,18 +645,34 @@ import { Product, FilterOptions } from '../../models/product.model';
       .mobile-filter-btn {
         display: flex;
       }
+
+      .products-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
     }
 
     @media (max-width: 768px) {
       .products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: var(--spacing-sm);
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
       }
+
+      .product-image { height: 200px; }
 
       .toolbar {
         flex-direction: column;
         align-items: flex-start;
       }
+    }
+
+    @media (max-width: 480px) {
+      .products-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+      .product-image { height: 180px; }
+      .product-info { padding: 10px; }
+      .product-name { font-size: 0.8rem; }
     }
   `]
 })

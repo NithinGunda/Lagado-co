@@ -6,6 +6,7 @@ import { AdminLayoutComponent } from './components/layout/layout.component';
 import { AdminLoginComponent } from './components/login/login.component';
 import { AdminDashboardComponent } from './components/dashboard/dashboard.component';
 import { AdminProductsComponent } from './components/products/products.component';
+import { AdminProductFormComponent } from './components/product-form/product-form.component';
 import { AdminCategoriesComponent } from './components/categories/categories.component';
 import { AdminOrdersComponent } from './components/orders/orders.component';
 import { AdminCarouselComponent } from './components/carousel/carousel.component';
@@ -23,6 +24,8 @@ const routes = [
       { path: 'carousel', component: AdminCarouselComponent },
       { path: 'categories', component: AdminCategoriesComponent },
       { path: 'products', component: AdminProductsComponent },
+      { path: 'products/new', component: AdminProductFormComponent },
+      { path: 'products/:id/edit', component: AdminProductFormComponent },
       { path: 'featured-products', component: AdminFeaturedProductsComponent },
       { path: 'coupons', component: AdminCouponsComponent },
       { path: 'orders', component: AdminOrdersComponent }
@@ -42,6 +45,7 @@ const routes = [
     AdminDashboardComponent,
     AdminCarouselComponent,
     AdminProductsComponent,
+    AdminProductFormComponent,
     AdminCategoriesComponent,
     AdminFeaturedProductsComponent,
     AdminCouponsComponent,

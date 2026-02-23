@@ -1,22 +1,24 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet } from '@angular/router';
+import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { HeaderComponent } from './components/header/header.component';
 import { FooterComponent } from './components/footer/footer.component';
+import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, HeaderComponent, FooterComponent, CommonModule],
   template: `
-    <app-header></app-header>
-    <main>
+    <app-header *ngIf="!isAdmin"></app-header>
+    <main [class.admin-active]="isAdmin">
       <router-outlet></router-outlet>
     </main>
-    <app-footer></app-footer>
+    <app-footer *ngIf="!isAdmin"></app-footer>
 
     <!-- Cookie Consent Banner -->
-    <div class="cookie-banner" *ngIf="showCookieBanner">
+    <div class="cookie-banner" *ngIf="showCookieBanner && !isAdmin">
       <div class="cookie-content">
         <div class="cookie-text">
           <svg class="cookie-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -37,6 +39,11 @@ import { FooterComponent } from './components/footer/footer.component';
   styles: [`
     main {
       min-height: calc(100vh - 200px);
+    }
+    main.admin-active {
+      min-height: 0;
+      padding: 0;
+      margin: 0;
     }
 
     .cookie-banner {
@@ -140,15 +147,31 @@ import { FooterComponent } from './components/footer/footer.component';
     }
   `]
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   title = 'Legado & Co';
   showCookieBanner = false;
+  isAdmin = false;
+  private routerSub!: Subscription;
+
+  constructor(private router: Router) {}
 
   ngOnInit() {
+    this.routerSub = this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd)
+    ).subscribe((e: any) => {
+      this.isAdmin = e.urlAfterRedirects?.startsWith('/admin') || e.url?.startsWith('/admin');
+    });
+
+    this.isAdmin = this.router.url.startsWith('/admin');
+
     if (typeof localStorage !== 'undefined') {
       const consent = localStorage.getItem('legado_cookie_consent');
       this.showCookieBanner = !consent;
     }
+  }
+
+  ngOnDestroy() {
+    this.routerSub?.unsubscribe();
   }
 
   acceptCookies() {

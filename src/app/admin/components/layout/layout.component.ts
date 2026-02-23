@@ -34,10 +34,16 @@ import { AuthService } from '../../../services/auth.service';
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+      height: 100vh;
+      overflow: hidden;
+    }
     .admin-layout {
       display: flex;
-      min-height: 100vh;
+      height: 100vh;
       background: var(--grey-light, #f5f5f5);
+      overflow: hidden;
     }
     .admin-sidebar {
       width: 260px;
@@ -46,54 +52,69 @@ import { AuthService } from '../../../services/auth.service';
       display: flex;
       flex-direction: column;
       flex-shrink: 0;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 100;
+      overflow-y: auto;
     }
     .sidebar-header {
-      padding: var(--spacing-md);
+      padding: 20px 20px 16px;
       border-bottom: 1px solid rgba(255,255,255,0.1);
     }
     .sidebar-header h2 {
       margin: 0;
-      font-size: 1.25rem;
-      font-family: var(--font-heading);
+      font-size: 1.5rem;
+      font-family: var(--font-logo);
+      font-weight: 400;
     }
     .admin-badge {
       display: inline-block;
       margin-top: 4px;
-      font-size: 11px;
-      padding: 2px 8px;
-      background: var(--btn-primary, #1e3a5f);
-      border-radius: 4px;
+      font-size: 10px;
+      padding: 2px 10px;
+      background: rgba(255,255,255,0.15);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 600;
     }
     .sidebar-nav {
       flex: 1;
-      padding: var(--spacing-sm) 0;
+      padding: 8px 0;
+      overflow-y: auto;
     }
     .sidebar-nav a {
-      display: block;
-      padding: 12px var(--spacing-md);
-      color: rgba(255,255,255,0.85);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 20px;
+      color: rgba(255,255,255,0.7);
       text-decoration: none;
+      font-size: 14px;
       transition: background 0.2s, color 0.2s;
+      border-left: 3px solid transparent;
     }
     .sidebar-nav a:hover {
-      background: rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.06);
       color: #fff;
     }
     .sidebar-nav a.active {
-      background: rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.1);
       color: #fff;
       font-weight: 600;
+      border-left-color: var(--accent-color, #e8c547);
     }
     .sidebar-footer {
-      padding: var(--spacing-sm);
+      padding: 12px 16px;
       border-top: 1px solid rgba(255,255,255,0.1);
     }
     .sidebar-footer a {
       display: block;
-      padding: 8px var(--spacing-md);
-      color: rgba(255,255,255,0.8);
+      padding: 8px 12px;
+      color: rgba(255,255,255,0.7);
       text-decoration: none;
-      font-size: 14px;
+      font-size: 13px;
     }
     .sidebar-footer a:hover { color: #fff; }
     .btn-logout {
@@ -101,19 +122,24 @@ import { AuthService } from '../../../services/auth.service';
       margin-top: 8px;
       padding: 10px;
       background: transparent;
-      border: 1px solid rgba(255,255,255,0.3);
-      color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+      color: rgba(255,255,255,0.8);
       cursor: pointer;
-      border-radius: 8px;
-      font-size: 14px;
+      font-size: 13px;
+      font-family: inherit;
+      transition: all 0.2s;
     }
     .btn-logout:hover {
       background: rgba(255,255,255,0.1);
+      color: #fff;
+      border-color: rgba(255,255,255,0.4);
     }
     .admin-main {
       flex: 1;
-      padding: var(--spacing-md);
-      overflow: auto;
+      margin-left: 260px;
+      padding: 28px 32px;
+      overflow-y: auto;
+      height: 100vh;
     }
   `]
 })
