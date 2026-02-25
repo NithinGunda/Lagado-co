@@ -14,7 +14,7 @@ export class ProductService {
       price: 24000,
       originalPrice: 28000,
       category: 'mens',
-      images: ['blazer-1.jpg'],
+      images: ['assets/homebanner2.png'],
       inStock: true,
       stockQuantity: 15,
       attributes: [
@@ -34,7 +34,7 @@ export class ProductService {
       description: 'A flowing silk dress that embodies elegance and sophistication. Perfect for special occasions.',
       price: 20000,
       category: 'womens',
-      images: ['dress-1.jpg'],
+      images: ['assets/buythelook3.png'],
       inStock: true,
       stockQuantity: 8,
       attributes: [
@@ -53,7 +53,7 @@ export class ProductService {
       description: 'Handcrafted leather jacket with attention to detail. A statement piece for your wardrobe.',
       price: 32000,
       category: 'mens',
-      images: ['jacket-1.jpg'],
+      images: ['assets/buythelook2.png'],
       inStock: true,
       stockQuantity: 12,
       attributes: [
@@ -73,7 +73,7 @@ export class ProductService {
       description: 'Luxurious handbag made from sustainable materials. Spacious and elegant design.',
       price: 16000,
       category: 'womens',
-      images: ['handbag-1.jpg'],
+      images: ['assets/homebanner2.png'],
       inStock: true,
       stockQuantity: 20,
       attributes: [
@@ -91,7 +91,7 @@ export class ProductService {
       description: 'Classic denim jacket with modern fit. Sustainable denim with timeless appeal.',
       price: 18000,
       category: 'collections',
-      images: ['denim-1.jpg'],
+      images: ['assets/ourstory.png'],
       inStock: true,
       stockQuantity: 18,
       attributes: [
@@ -109,7 +109,7 @@ export class ProductService {
       description: 'Soft, breathable cotton t-shirt. Perfect for everyday wear.',
       price: 4000,
       category: 'mens',
-      images: ['tee-1.jpg'],
+      images: ['assets/buythelook3.png'],
       inStock: true,
       stockQuantity: 50,
       attributes: [
@@ -127,7 +127,7 @@ export class ProductService {
       description: 'Classic trench coat that never goes out of style. Water-resistant and elegant.',
       price: 28000,
       category: 'womens',
-      images: ['trench-1.jpg'],
+      images: ['assets/homebanner.png'],
       inStock: true,
       stockQuantity: 10,
       attributes: [
@@ -146,7 +146,7 @@ export class ProductService {
       description: 'Handcrafted leather boots built to last. Comfortable and durable.',
       price: 32000,
       category: 'mens',
-      images: ['boots-1.jpg'],
+      images: ['assets/buythelook2.png'],
       inStock: true,
       stockQuantity: 14,
       attributes: [
@@ -164,7 +164,7 @@ export class ProductService {
       description: 'Luxurious merino wool scarf. Soft, warm, and sustainably sourced.',
       price: 7000,
       category: 'collections',
-      images: ['scarf-1.jpg'],
+      images: ['assets/homebanner2.png'],
       inStock: true,
       stockQuantity: 25,
       attributes: [
@@ -182,7 +182,7 @@ export class ProductService {
       description: 'A refined blazer that exudes quiet confidence. Perfect for the modern professional.',
       price: 22000,
       category: 'womens',
-      images: ['blazer-w-1.jpg'],
+      images: ['assets/buythelook3.png'],
       inStock: true,
       stockQuantity: 16,
       attributes: [
@@ -200,7 +200,7 @@ export class ProductService {
       description: 'Comfortable pants made from natural fibers. Sustainable and stylish.',
       price: 13000,
       category: 'mens',
-      images: ['pants-1.jpg'],
+      images: ['assets/ourstory.png'],
       inStock: true,
       stockQuantity: 22,
       attributes: [
@@ -218,7 +218,7 @@ export class ProductService {
       description: 'Warm and cozy wool sweater. Perfect for cooler seasons.',
       price: 15000,
       category: 'collections',
-      images: ['sweater-1.jpg'],
+      images: ['assets/buythelook2.png'],
       inStock: true,
       stockQuantity: 30,
       attributes: [

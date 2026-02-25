@@ -1,5 +1,4 @@
 /* Global Styles */
-/* Logo font: Snell Roundhand Script (system font). To use on all devices, add font files to src/assets/fonts/ and uncomment the @font-face in this file. */
 
 * {
   margin: 0;
@@ -7,43 +6,42 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 :root {
-  /* Color palette */
   --primary-color: #3C5A99;
   --primary-dark: #2d4473;
-  --secondary-color: #FDF6EA; /* cream */
+  --secondary-color: #FDF6EA;
   --accent-color: #B11C1C;
   --accent-dark: #8b1515;
-  --text-dark: #66708A;
-  --text-light: #66708A;
-  --text-muted: #66708A;
+  --text-dark: #2c3e50;
+  --text-light: #6b7c93;
+  --text-muted: #8896a7;
   --text-white: #ffffff;
   --bg-cream: #FDF6EA;
-  --grey-light: #EEEEEE;
-  --border-color: #EEEEEE;
-  --shadow-light: rgba(60, 90, 153, 0.1);
-  --shadow-medium: rgba(60, 90, 153, 0.15);
-  --shadow-heavy: rgba(60, 90, 153, 0.25);
-  
-  /* Button colors (previous palette – deep blue & mint) */
+  --grey-light: #f5f5f5;
+  --border-color: #e4e8ec;
+  --shadow-light: rgba(60, 90, 153, 0.08);
+  --shadow-medium: rgba(60, 90, 153, 0.14);
+  --shadow-heavy: rgba(60, 90, 153, 0.22);
+
   --btn-primary: #1e3a5f;
   --btn-primary-hover: #152a47;
   --btn-accent: #a8d5ba;
   --btn-accent-hover: #7fb89a;
-  
-  /* Typography - logo only: Snell Roundhand Script; rest: normal */
+
   --font-logo: 'Snell Roundhand', 'Snell Roundhand Script', 'Brush Script MT', 'Great Vibes', cursive;
   --font-heading: 'Playfair Display', serif;
   --font-body: 'Lato', sans-serif;
-  
-  /* Spacing */
+
   --spacing-xs: 0.5rem;
   --spacing-sm: 1rem;
   --spacing-md: 2rem;
   --spacing-lg: 3rem;
   --spacing-xl: 4rem;
-  
-  /* Transitions */
+
   --transition-fast: 0.2s ease;
   --transition-normal: 0.3s ease;
   --transition-slow: 0.5s ease;
@@ -56,6 +54,7 @@ body {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -63,32 +62,42 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   line-height: 1.2;
   margin-bottom: var(--spacing-sm);
+  color: var(--text-dark);
 }
 
-h1 {
-  font-size: 3rem;
-}
-
-h2 {
-  font-size: 2.5rem;
-}
-
-h3 {
-  font-size: 2rem;
-}
+h1 { font-size: clamp(2rem, 4vw, 3rem); }
+h2 { font-size: clamp(1.5rem, 3.5vw, 2.5rem); }
+h3 { font-size: clamp(1.25rem, 2.5vw, 2rem); }
 
 a {
   text-decoration: none;
   color: inherit;
-  transition: opacity 0.3s ease;
+  transition: color 0.25s ease, opacity 0.25s ease;
 }
 
-a:hover {
-  opacity: 0.7;
+a:hover { opacity: 0.85; }
+
+/* Focus states for accessibility */
+:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--primary-color);
+  color: var(--text-white);
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 0 var(--spacing-md);
 }
@@ -97,6 +106,7 @@ a:hover {
   padding: var(--spacing-xl) 0;
 }
 
+/* Buttons */
 .btn {
   display: inline-block;
   padding: 12px 32px;
@@ -105,11 +115,13 @@ a:hover {
   color: var(--btn-primary);
   font-family: var(--font-body);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
   cursor: pointer;
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .btn:hover {
@@ -127,7 +139,11 @@ a:hover {
   background: var(--btn-primary-hover);
   border-color: var(--btn-primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px var(--shadow-medium);
+  box-shadow: 0 4px 16px var(--shadow-medium);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
 }
 
 .btn-accent {
@@ -148,21 +164,55 @@ a:hover {
   border-radius: 0 !important;
 }
 
+/* Global toast notification */
+.toast-notification {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 10000;
+  background: var(--btn-primary);
+  color: var(--text-white);
+  padding: 14px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: toastSlideIn 0.35s ease, toastFadeOut 0.35s ease 2.6s forwards;
+  max-width: 360px;
+}
+
+@keyframes toastSlideIn {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes toastFadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(10px); }
+}
+
 /* Responsive */
+@media (max-width: 1024px) {
+  .container { max-width: 100%; }
+}
+
 @media (max-width: 768px) {
-  h1 {
-    font-size: 2rem;
-  }
-  
-  h2 {
-    font-size: 1.75rem;
-  }
-  
-  .container {
-    padding: 0 var(--spacing-sm);
-  }
-  
-  .section {
-    padding: var(--spacing-lg) 0;
+  .container { padding: 0 var(--spacing-sm); }
+  .section { padding: var(--spacing-lg) 0; }
+}
+
+@media (max-width: 480px) {
+  .container { padding: 0 12px; }
+  .section { padding: var(--spacing-md) 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

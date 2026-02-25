@@ -1,186 +1,252 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { ProductListingComponent } from '../../components/product-listing/product-listing.component';
 import { ProductService } from '../../services/product.service';
+import { ProductApiService } from '../../services/product-api.service';
+import { BuyTheLookService, Look } from '../../services/buy-the-look.service';
+import { CarouselService, CarouselItem } from '../../services/carousel.service';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterModule, ProductListingComponent],
+  imports: [CommonModule, RouterModule],
   template: `
     <div class="home-page">
-      <!-- Hero Carousel -->
-      <section class="hero-section">
+      <!-- =============== HERO SECTION =============== -->
+      <section class="hero-section" (mousemove)="onHeroMouseMove($event)" #heroSection>
         <div class="hero-slides">
           <div class="hero-slide" *ngFor="let slide of heroSlides; let i = index" [class.active]="i === activeSlide" [class.prev]="i === prevSlide">
-               <video class="bg-video" autoplay muted loop playsinline>
-            <source src="assets/login_video_1.mp4" type="video/mp4" />
-          </video>
+            <img class="hero-banner-img" [src]="slide.image" [alt]="slide.alt" />
           </div>
         </div>
         <div class="hero-overlay"></div>
-        <div class="hero-content">
-          <p class="hero-tagline">Legado & Co</p>
-          <h1 class="hero-title">Timeless Style,<br>Quiet Confidence</h1>
-          <p class="hero-subtitle">Discover our curated collection of premium fashion</p>
-          <button class="hero-cta" (click)="scrollToFeatured()">
-            <span class="hero-cta-text">Shop Now</span>
-            <span class="hero-cta-arrow">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="5 12 12 19 19 12"></polyline></svg>
-            </span>
-          </button>
+        <div class="hero-gradient-mesh"></div>
+        <div class="hero-shapes">
+          <div class="shape shape-ring shape-1" [style.transform]="getShapeParallax(0.02)"></div>
+          <div class="shape shape-dot shape-2" [style.transform]="getShapeParallax(-0.03)"></div>
+          <div class="shape shape-diamond shape-3" [style.transform]="getShapeParallax(0.015)"></div>
+          <div class="shape shape-ring shape-4" [style.transform]="getShapeParallax(-0.025)"></div>
+          <div class="shape shape-line shape-5" [style.transform]="getShapeParallax(0.02)"></div>
+          <div class="shape shape-dot shape-6" [style.transform]="getShapeParallax(-0.015)"></div>
+          <div class="shape shape-cross shape-7" [style.transform]="getShapeParallax(0.03)"></div>
+          <div class="shape shape-ring shape-8" [style.transform]="getShapeParallax(-0.02)"></div>
         </div>
-
-        <button class="hero-nav hero-nav-left" (click)="prevHeroSlide()" aria-label="Previous slide">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        <div class="hero-orbs">
+          <div class="orb orb-1"></div>
+          <div class="orb orb-2"></div>
+          <div class="orb orb-3"></div>
+        </div>
+        <div class="hero-scanline"></div>
+        <div class="hero-content">
+          <div class="hero-badge" [class.visible]="heroAnimReady">
+            <span class="badge-line"></span>
+            <span class="badge-text">Legado & Co</span>
+            <span class="badge-line"></span>
+          </div>
+          <h1 class="hero-title" [class.visible]="heroAnimReady">
+            <span class="title-line"><span class="title-word">Timeless</span> <span class="title-word accent">Style,</span></span>
+            <span class="title-line"><span class="title-word">Quiet</span> <span class="title-word">Confidence</span></span>
+          </h1>
+          <p class="hero-subtitle" [class.visible]="heroAnimReady">
+            Where timeless elegance meets bold contemporary fashion. Curated for those who dare to stand out.
+          </p>
+          <div class="hero-cta-group" [class.visible]="heroAnimReady">
+            <button class="hero-cta hero-cta-primary" (click)="scrollToFeatured()">
+              <span class="cta-glow"></span>
+              <span class="cta-bg"></span>
+              <span class="cta-content">
+                <span>Explore Collection</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+              </span>
+            </button>
+            <a routerLink="/collections" class="hero-cta hero-cta-outline">
+              <span class="cta-shimmer"></span>
+              <span class="cta-content"><span>View Lookbook</span></span>
+            </a>
+          </div>
+          <div class="hero-scroll-indicator" [class.visible]="heroAnimReady">
+            <div class="scroll-mouse"><div class="scroll-wheel"></div></div>
+          </div>
+        </div>
+        <button class="hero-nav hero-nav-left" (click)="prevHeroSlide()" aria-label="Previous">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
         </button>
-        <button class="hero-nav hero-nav-right" (click)="nextHeroSlide()" aria-label="Next slide">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"></polyline></svg>
+        <button class="hero-nav hero-nav-right" (click)="nextHeroSlide()" aria-label="Next">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"></polyline></svg>
         </button>
-
-        <div class="hero-dots">
-          <span *ngFor="let slide of heroSlides; let i = index" class="hero-dot" [class.active]="i === activeSlide" (click)="goToSlide(i)"></span>
+        <div class="hero-progress">
+          <div class="hero-progress-track" *ngFor="let slide of heroSlides; let i = index" [class.active]="i === activeSlide" (click)="goToSlide(i)">
+            <div class="hero-progress-fill" [class.animating]="i === activeSlide"></div>
+          </div>
         </div>
       </section>
 
-      <!-- Featured Products Carousel -->
-      <section class="featured-section section" id="featured-products">
+      <!-- =============== FEATURED PRODUCTS =============== -->
+      <section class="featured-section" id="featured-products">
         <div class="container">
-          <h2 class="section-title">Featured Products</h2>
+          <div class="sec-header">
+            <span class="sec-line"></span>
+            <h2 class="sec-title">Featured Products</h2>
+            <span class="sec-line"></span>
+          </div>
+          <p class="sec-sub">Hand-picked pieces that define the season. Premium quality, timeless design.</p>
           <div class="featured-carousel-wrapper">
-            <button class="featured-nav featured-nav-left" (click)="prevFeatured()" [disabled]="featuredOffset === 0" aria-label="Previous">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <button class="nav-btn nav-prev" (click)="prevFeatured()" [disabled]="featuredOffset === 0" aria-label="Previous">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
             <div class="featured-track-container">
               <div class="featured-track" [style.transform]="'translateX(-' + featuredOffset * featuredCardWidth + 'px)'">
-                <div
-                  class="featured-card"
-                  *ngFor="let product of featuredProducts"
-                  [routerLink]="['/product', product.id]"
-                >
-                  <div class="featured-image" [style.background]="getProductColor(product)"></div>
-                  <div class="featured-info">
-                    <h3>{{ product.name }}</h3>
-                    <p class="featured-category">{{ product.category | titlecase }}</p>
-                    <p class="featured-price">{{ formatPrice(product.price) }}</p>
+                <div class="f-card" *ngFor="let product of featuredProducts" [routerLink]="['/product', product.id]">
+                  <div class="f-card-img">
+                    <img [src]="getProductImage(product)" [alt]="product.name" loading="lazy" />
+                    <div class="f-card-img-fallback" [style.background]="getProductColor(product)"></div>
+                    <div class="f-card-overlay">
+                      <span class="f-card-quick">View Details</span>
+                    </div>
+                    <span class="f-card-badge" *ngIf="product.badge">{{ product.badge }}</span>
+                  </div>
+                  <div class="f-card-info">
+                    <span class="f-card-cat">{{ product.category | titlecase }}</span>
+                    <h3 class="f-card-name">{{ product.name }}</h3>
+                    <div class="f-card-price-row">
+                      <span class="f-card-price">{{ formatPrice(product.price) }}</span>
+                      <span class="f-card-original" *ngIf="product.originalPrice">{{ formatPrice(product.originalPrice) }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-            <button class="featured-nav featured-nav-right" (click)="nextFeatured()" [disabled]="featuredOffset >= featuredProducts.length - featuredVisible" aria-label="Next">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"></polyline></svg>
+            <button class="nav-btn nav-next" (click)="nextFeatured()" [disabled]="featuredOffset >= featuredProducts.length - featuredVisible" aria-label="Next">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg>
             </button>
           </div>
+          <div class="featured-dots">
+            <span *ngFor="let _ of getDotArray(); let i = index" class="dot" [class.active]="i === featuredOffset" (click)="featuredOffset = i"></span>
+          </div>
         </div>
       </section>
 
-      <!-- Categories Section -->
-      <section class="categories-section section">
+      <!-- =============== CATEGORY HIGHLIGHTS =============== -->
+      <section class="cat-section">
         <div class="container">
-          <h2 class="section-title">Shop by Category</h2>
-          <div class="categories-grid">
-            <a routerLink="/mens" class="category-card">
-              <div class="category-image" style="background: linear-gradient(135deg, #1e3a5f 0%, #2a4d7a 100%);"></div>
-              <h3>Men's Collection</h3>
+          <div class="sec-header">
+            <span class="sec-line"></span>
+            <h2 class="sec-title">Shop by Category</h2>
+            <span class="sec-line"></span>
+          </div>
+          <div class="cat-grid">
+            <a routerLink="/mens" class="cat-card">
+              <img src="assets/buythelook2.png" alt="Men's Collection" loading="lazy" />
+              <div class="cat-overlay">
+                <div class="cat-label">
+                  <span class="cat-tag">Collection</span>
+                  <h3>Men's</h3>
+                  <span class="cat-cta">Explore <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+                </div>
+              </div>
             </a>
-            <a routerLink="/womens" class="category-card">
-              <div class="category-image" style="background: linear-gradient(135deg, #a8d5ba 0%, #7fb89a 100%);"></div>
-              <h3>Women's Collection</h3>
+            <a routerLink="/womens" class="cat-card">
+              <img src="assets/buythelook3.png" alt="Women's Collection" loading="lazy" />
+              <div class="cat-overlay">
+                <div class="cat-label">
+                  <span class="cat-tag">Collection</span>
+                  <h3>Women's</h3>
+                  <span class="cat-cta">Explore <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+                </div>
+              </div>
             </a>
-            <a routerLink="/collections" class="category-card">
-              <div class="category-image" style="background: linear-gradient(135deg, #f5f1e8 0%, #e8e3d8 100%);"></div>
-              <h3>All Collections</h3>
+            <a routerLink="/collections" class="cat-card cat-card-wide">
+              <img src="assets/homebanner2.png" alt="All Collections" loading="lazy" />
+              <div class="cat-overlay">
+                <div class="cat-label">
+                  <span class="cat-tag">Explore All</span>
+                  <h3>Collections</h3>
+                  <span class="cat-cta">View All <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+                </div>
+              </div>
             </a>
           </div>
         </div>
       </section>
 
-      <!-- What To Expect From Us Section -->
-      <section class="expect-section section">
+      <!-- =============== BRAND STORY STRIP =============== -->
+      <section class="story-section">
+        <div class="story-inner">
+          <div class="story-image-wrap">
+            <img src="assets/ourstory.png" alt="Our Story" loading="lazy" />
+            <div class="story-accent"></div>
+          </div>
+          <div class="story-text">
+            <span class="story-label">Our Story</span>
+            <h2 class="story-heading">Crafted With<br/><em>Purpose & Passion</em></h2>
+            <p>At Legado & Co, we believe fashion is more than fabric — it's a statement of who you are. Every piece is designed with meticulous attention to detail, using premium materials sourced from the finest mills around the world.</p>
+            <p>Our collections bridge the gap between timeless elegance and modern sophistication, creating garments that feel as exceptional as they look.</p>
+            <a routerLink="/our-story" class="story-cta">
+              <span>Read Our Story</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- =============== TRUST / WHAT TO EXPECT =============== -->
+      <section class="trust-section">
         <div class="container">
-          <div class="expect-wrapper">
-            <h2 class="expect-title">What To Expect From Us</h2>
-            <p class="expect-description">
-              We Believe In Building A Legacy You Matter To Us. That's Why We're Committed To Providing You With Exceptional Service And Quality You Can Trust
-            </p>
-            <div class="expect-features">
-              <div class="expect-feature">
-                <div class="expect-icon">
-                  <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Delivery Truck -->
-                    <rect x="4" y="20" width="34" height="24" rx="2" stroke="var(--primary-color)" stroke-width="2.5"/>
-                    <path d="M38 28H48L56 36V44H38V28Z" stroke="var(--primary-color)" stroke-width="2.5" stroke-linejoin="round"/>
-                    <circle cx="16" cy="48" r="5" stroke="var(--primary-color)" stroke-width="2.5"/>
-                    <circle cx="48" cy="48" r="5" stroke="var(--primary-color)" stroke-width="2.5"/>
-                    <path d="M21 44H43" stroke="var(--primary-color)" stroke-width="2"/>
-                    <!-- Globe hint on truck -->
-                    <circle cx="20" cy="14" r="6" stroke="var(--primary-color)" stroke-width="1.5" opacity="0.6"/>
-                    <path d="M14 14H26 M20 8V20 M15 10Q20 14 25 10 M15 18Q20 14 25 18" stroke="var(--primary-color)" stroke-width="1" opacity="0.5"/>
-                  </svg>
-                </div>
-                <h3 class="expect-feature-title">Free Shipping</h3>
+          <div class="trust-grid">
+            <div class="trust-item">
+              <div class="trust-icon">
+                <svg viewBox="0 0 48 48" fill="none" stroke="var(--primary-color)" stroke-width="2"><rect x="3" y="14" width="26" height="18" rx="1"/><path d="M29 20h7l5 6v6H29V20z" stroke-linejoin="round"/><circle cx="12" cy="35" r="4"/><circle cx="36" cy="35" r="4"/></svg>
               </div>
-              <div class="expect-feature">
-                <div class="expect-icon">
-                  <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Exchange / Return Arrows -->
-                    <path d="M12 24C12 17.4 17.4 12 24 12H40C46.6 12 52 17.4 52 24" stroke="var(--primary-color)" stroke-width="2.5" stroke-linecap="round"/>
-                    <path d="M52 40C52 46.6 46.6 52 40 52H24C17.4 52 12 46.6 12 40" stroke="var(--primary-color)" stroke-width="2.5" stroke-linecap="round"/>
-                    <path d="M46 18L52 24L46 30" stroke="var(--primary-color)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M18 34L12 40L18 46" stroke="var(--primary-color)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <!-- Checkmark in center -->
-                    <path d="M26 32L30 36L38 28" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
-                  </svg>
-                </div>
-                <h3 class="expect-feature-title">Easy Exchange And Return</h3>
+              <h4>Free Shipping</h4>
+              <p>Complimentary delivery on all orders above ₹2,000</p>
+            </div>
+            <div class="trust-item">
+              <div class="trust-icon">
+                <svg viewBox="0 0 48 48" fill="none" stroke="var(--primary-color)" stroke-width="2"><path d="M9 18c0-5 4-9 9-9h12c5 0 9 4 9 9"/><path d="M39 30c0 5-4 9-9 9H18c-5 0-9-4-9-9"/><path d="M34 13l5 5-5 5"/><path d="M14 25l-5 5 5 5"/></svg>
               </div>
-              <div class="expect-feature">
-                <div class="expect-icon">
-                  <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Scissors + Thread - Tailor Made -->
-                    <circle cx="18" cy="44" r="7" stroke="var(--primary-color)" stroke-width="2.5"/>
-                    <circle cx="18" cy="20" r="7" stroke="var(--primary-color)" stroke-width="2.5"/>
-                    <path d="M24 38L44 16" stroke="var(--primary-color)" stroke-width="2.5" stroke-linecap="round"/>
-                    <path d="M24 26L44 48" stroke="var(--primary-color)" stroke-width="2.5" stroke-linecap="round"/>
-                    <!-- Thread line -->
-                    <path d="M44 16L48 12M44 48L48 52" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round"/>
-                    <!-- Needle -->
-                    <path d="M48 12L56 20" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
-                    <circle cx="56" cy="20" r="1.5" fill="var(--primary-color)" opacity="0.6"/>
-                    <!-- Thread curves -->
-                    <path d="M56 20Q54 28 50 32Q46 36 48 42" stroke="var(--primary-color)" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="3 3" opacity="0.4"/>
-                  </svg>
-                </div>
-                <h3 class="expect-feature-title">Tailor Made Collections</h3>
+              <h4>Easy Returns</h4>
+              <p>Hassle-free 30-day exchange & return policy</p>
+            </div>
+            <div class="trust-item">
+              <div class="trust-icon">
+                <svg viewBox="0 0 48 48" fill="none" stroke="var(--primary-color)" stroke-width="2"><path d="M24 4l6 12 13 2-9 9 2 13-12-6-12 6 2-13-9-9 13-2z"/></svg>
               </div>
+              <h4>Premium Quality</h4>
+              <p>Handpicked fabrics with meticulous craftsmanship</p>
+            </div>
+            <div class="trust-item">
+              <div class="trust-icon">
+                <svg viewBox="0 0 48 48" fill="none" stroke="var(--primary-color)" stroke-width="2"><rect x="6" y="10" width="36" height="28" rx="1"/><path d="M6 20h36"/><circle cx="14" cy="30" r="3"/></svg>
+              </div>
+              <h4>Secure Payments</h4>
+              <p>SSL encrypted transactions for your safety</p>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Sale Section -->
-      <section class="sale-section section">
+      <!-- =============== ON SALE =============== -->
+      <section class="sale-section" *ngIf="saleProducts.length > 0">
         <div class="container">
-          <h2 class="section-title">On Sale</h2>
-          <div *ngIf="saleProducts.length === 0" class="empty-sale">
-            <p>No products on sale at the moment.</p>
+          <div class="sec-header">
+            <span class="sec-line accent-line"></span>
+            <h2 class="sec-title sale-title">On Sale</h2>
+            <span class="sec-line accent-line"></span>
           </div>
-          <div *ngIf="saleProducts.length > 0" class="sale-grid">
-            <div 
-              class="sale-card" 
-              *ngFor="let product of saleProducts"
-              [routerLink]="['/product', product.id]"
-            >
-              <div class="sale-badge">Sale</div>
-              <div class="sale-image" [style.background]="getProductColor(product)"></div>
-              <div class="sale-info">
-                <h3>{{ product.name }}</h3>
-                <p class="sale-category">{{ product.category | titlecase }}</p>
-                <div class="sale-prices">
-                  <span class="sale-original">{{ formatPrice(product.original_price || product.price) }}</span>
-                  <span class="sale-current">{{ formatPrice(product.price) }}</span>
-                  <span class="sale-discount" *ngIf="product.discount_percentage">-{{ product.discount_percentage }}%</span>
+          <div class="sale-grid">
+            <div class="s-card" *ngFor="let product of saleProducts" [routerLink]="['/product', product.id]">
+              <div class="s-card-img">
+                <img [src]="getProductImage(product)" [alt]="product.name" loading="lazy" />
+                <div class="s-card-img-fallback" [style.background]="getProductColor(product)"></div>
+                <span class="s-badge">Sale</span>
+                <span class="s-discount" *ngIf="product.discount_percentage">-{{ product.discount_percentage }}%</span>
+              </div>
+              <div class="s-card-info">
+                <span class="s-cat">{{ product.category | titlecase }}</span>
+                <h3 class="s-name">{{ product.name }}</h3>
+                <div class="s-prices">
+                  <span class="s-original">{{ formatPrice(product.original_price || product.price) }}</span>
+                  <span class="s-current">{{ formatPrice(product.price) }}</span>
                 </div>
               </div>
             </div>
@@ -188,1128 +254,718 @@ import { ProductService } from '../../services/product.service';
         </div>
       </section>
 
-      <!-- Buy The Look Section -->
-      <section class="buy-look-section section">
+      <!-- =============== BUY THE LOOK =============== -->
+      <section class="look-section">
         <div class="container">
-          <div class="buy-look-wrapper">
-            <h2 class="buy-look-title">Buy The Look</h2>
-            <p class="buy-look-subtitle">
-              Don't Just Buy The Clothes, But Buy The Look, Get Our Curated Collection From One Of Our Favourites To Yours
-            </p>
-            
-            <div class="buy-look-carousel">
-              <button 
-                class="carousel-nav carousel-nav-left" 
-                (click)="prevLook()"
-                [disabled]="currentLookIndex === 0"
-                aria-label="Previous look"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M15 18l-6-6 6-6"/>
-                </svg>
-              </button>
-
-              <div class="buy-look-content" *ngIf="curatedLooks.length > 0">
-                <div class="look-lifestyle">
-                  <div class="lifestyle-image" [style.background-image]="'url(' + curatedLooks[currentLookIndex].lifestyleImage + ')'">
-                    <div class="lifestyle-placeholder" *ngIf="!curatedLooks[currentLookIndex].lifestyleImage">
-                      <span>Lifestyle Image</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="look-products">
-                  <div 
-                    class="product-item" 
-                    *ngFor="let product of curatedLooks[currentLookIndex].products; let i = index"
-                    [routerLink]="['/product', product.id]"
-                  >
-                    <div class="product-image" [style.background-image]="'url(' + product.image + ')'">
-                      <div class="product-placeholder" *ngIf="!product.image">
-                        <span>Product {{ i + 1 }}</span>
-                      </div>
-                    </div>
-                    <div class="product-price-badge">
-                      <span>{{ formatPrice(product.price) }}</span>
-                    </div>
-                  </div>
+          <div class="sec-header">
+            <span class="sec-line"></span>
+            <h2 class="sec-title">Buy The Look</h2>
+            <span class="sec-line"></span>
+          </div>
+          <p class="sec-sub">Get our curated collection — complete outfits styled by our creative team.</p>
+          <div class="look-carousel" *ngIf="curatedLooks.length > 0">
+            <button class="nav-btn" (click)="prevLook()" [disabled]="currentLookIndex === 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+            <div class="look-grid"
+                 [class.two-items]="curatedLooks[currentLookIndex].products.length === 2"
+                 [class.three-items]="curatedLooks[currentLookIndex].products.length >= 3">
+              <div class="look-card"
+                   *ngFor="let product of curatedLooks[currentLookIndex].products; let pi = index"
+                   [class.hero]="pi === 0"
+                   [routerLink]="['/product', product.id]">
+                <img [src]="product.image" [alt]="product.name" loading="lazy" class="look-card-img" />
+                <div class="look-card-overlay">
+                  <h4>{{ product.name }}</h4>
+                  <span>{{ formatPrice(product.price) }}</span>
+                  <span class="look-shop-link">Shop Now</span>
                 </div>
               </div>
-
-              <button 
-                class="carousel-nav carousel-nav-right" 
-                (click)="nextLook()"
-                [disabled]="currentLookIndex === curatedLooks.length - 1"
-                aria-label="Next look"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M9 18l6-6-6-6"/>
-                </svg>
-              </button>
             </div>
+            <button class="nav-btn" (click)="nextLook()" [disabled]="currentLookIndex === curatedLooks.length - 1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></button>
+          </div>
+          <div class="look-dots">
+            <span *ngFor="let look of curatedLooks; let i = index" class="dot" [class.active]="i === currentLookIndex" (click)="currentLookIndex = i"></span>
+          </div>
+        </div>
+      </section>
 
-            <div class="buy-look-cta">
-              <a routerLink="/collections" class="btn-view-more">View More</a>
+      <!-- =============== SOCIAL PROOF =============== -->
+      <section class="social-section">
+        <div class="container">
+          <div class="sec-header">
+            <span class="sec-line"></span>
+            <h2 class="sec-title">Spotted On Social</h2>
+            <span class="sec-line"></span>
+          </div>
+          <p class="sec-sub">Share your style with us — tag <strong>&#64;legadoandco</strong> for a chance to be featured.</p>
+          <div class="social-grid">
+            <div class="social-card" *ngFor="let post of socialPosts">
+              <div class="social-img" [style.background-image]="'url(' + post.image + ')'"></div>
+              <div class="social-hover">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="#fff" stroke="none"/></svg>
+                <span>{{ post.handle }}</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- How We Do It Section -->
-      <section class="how-we-do-section section">
-        <div class="container">
-          <div class="how-we-do-wrapper">
-            <h2 class="how-we-do-title">How We Do It</h2>
-            <p class="how-we-do-description">
-              Spotted By Fashionistas On Social Media – That's How They Did It! Now You Can Also Share Your First Style Inspiration With Us By Tagging Us Online For A Chance To Be Featured And Inspire Many Others
-            </p>
-            <div class="social-posts-grid">
-              <div 
-                class="social-post-card" 
-                *ngFor="let post of socialPosts"
-              >
-                <div class="post-image" [style.background-image]="'url(' + post.image + ')'">
-                  <div class="post-placeholder" *ngIf="!post.image">
-                    <span>Post Image</span>
-                  </div>
-                </div>
-                <div class="post-caption">
-                  <span>Spotted By {{ post.handle }}</span>
-                </div>
-              </div>
-            </div>
+      <!-- =============== NEWSLETTER CTA =============== -->
+      <section class="newsletter-section">
+        <div class="newsletter-inner">
+          <div class="newsletter-text">
+            <h2>Stay In The Loop</h2>
+            <p>Be the first to know about new collections, exclusive offers, and styling tips.</p>
+          </div>
+          <div class="newsletter-form">
+            <input type="email" placeholder="Enter your email address" />
+            <button>Subscribe</button>
           </div>
         </div>
       </section>
     </div>
   `,
   styles: [`
-    .home-page {
-      min-height: calc(100vh - 200px);
-    }
+    :host { display: block; }
+    .home-page { min-height: 100vh; }
 
+    /* ===== HERO (preserved) ===== */
     .hero-section {
-      position: relative;
-      width: 100%;
-      min-height: 520px;
-      display: flex;
-      align-items: flex-end;
-      justify-content: flex-start;
-      color: var(--text-white);
-      overflow: hidden;
+      position: relative; width: 100%; min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-white); overflow: hidden;
+    }
+    .hero-slides { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+    .hero-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 1.2s ease-in-out; transform: scale(1.05); }
+    .hero-slide.active { opacity: 1; z-index: 1; transform: scale(1); transition: opacity 1.2s ease, transform 8s ease-out; }
+    .hero-slide.prev { opacity: 0; z-index: 0; }
+    .hero-banner-img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
+    .hero-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; background: linear-gradient(160deg, rgba(10,20,40,0.75) 0%, rgba(15,30,55,0.55) 40%, rgba(20,40,70,0.7) 100%); }
+    .hero-gradient-mesh { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; background: radial-gradient(ellipse 600px 400px at 15% 80%, rgba(232,197,71,0.08) 0%, transparent 70%), radial-gradient(ellipse 500px 500px at 85% 20%, rgba(100,180,255,0.06) 0%, transparent 70%), radial-gradient(ellipse 400px 300px at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 70%); animation: meshShift 12s ease-in-out infinite alternate; }
+    @keyframes meshShift { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
+    .hero-shapes { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; }
+    .shape { position: absolute; opacity: 0; }
+    .shape-ring { border: 1.5px solid rgba(255,255,255,0.12); border-radius: 50% !important; }
+    .shape-dot { background: rgba(232,197,71,0.25); border-radius: 50% !important; }
+    .shape-diamond { background: rgba(255,255,255,0.08); transform: rotate(45deg); }
+    .shape-line { height: 1.5px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); }
+    .shape-cross::before, .shape-cross::after { content: ''; position: absolute; background: rgba(255,255,255,0.1); }
+    .shape-cross::before { width: 20px; height: 1.5px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+    .shape-cross::after { width: 1.5px; height: 20px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+    .shape-1 { width: 80px; height: 80px; top: 12%; left: 8%; }
+    .shape-2 { width: 8px; height: 8px; top: 25%; right: 15%; }
+    .shape-3 { width: 20px; height: 20px; bottom: 30%; left: 12%; }
+    .shape-4 { width: 50px; height: 50px; top: 18%; right: 8%; }
+    .shape-5 { width: 120px; bottom: 25%; right: 10%; }
+    .shape-6 { width: 6px; height: 6px; top: 60%; left: 20%; }
+    .shape-7 { width: 20px; height: 20px; bottom: 40%; right: 25%; }
+    .shape-8 { width: 35px; height: 35px; top: 55%; left: 5%; }
+    .shape-1 { animation: shapeFadeIn 1.5s ease 0.3s forwards, shapeFloat1 18s ease-in-out infinite 1.8s; }
+    .shape-2 { animation: shapeFadeIn 1.5s ease 0.6s forwards, shapePulse 4s ease-in-out infinite 2.1s; }
+    .shape-3 { animation: shapeFadeIn 1.5s ease 0.9s forwards, shapeFloat2 15s ease-in-out infinite 2.4s; }
+    .shape-4 { animation: shapeFadeIn 1.5s ease 0.4s forwards, shapeFloat1 20s ease-in-out infinite reverse 1.9s; }
+    .shape-5 { animation: shapeFadeIn 1.5s ease 1.1s forwards, shimmerLine 6s ease-in-out infinite 2.6s; }
+    .shape-6 { animation: shapeFadeIn 1.5s ease 0.7s forwards, shapePulse 5s ease-in-out infinite 2.2s; }
+    .shape-7 { animation: shapeFadeIn 1.5s ease 1.3s forwards, shapeFloat2 22s ease-in-out infinite 2.8s; }
+    .shape-8 { animation: shapeFadeIn 1.5s ease 0.5s forwards, shapeFloat1 16s ease-in-out infinite reverse 2s; }
+    @keyframes shapeFadeIn { to { opacity: 1; } }
+    @keyframes shapeFloat1 { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(15px, -20px) rotate(5deg); } 50% { transform: translate(-10px, -35px) rotate(-3deg); } 75% { transform: translate(20px, -15px) rotate(8deg); } }
+    @keyframes shapeFloat2 { 0%, 100% { transform: translate(0, 0); } 33% { transform: translate(-20px, 15px); } 66% { transform: translate(15px, -10px); } }
+    @keyframes shapePulse { 0%, 100% { transform: scale(1); opacity: 0.3; } 50% { transform: scale(1.8); opacity: 0.7; } }
+    @keyframes shimmerLine { 0%, 100% { opacity: 0.15; transform: scaleX(0.6); } 50% { opacity: 0.4; transform: scaleX(1); } }
+    .hero-orbs { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
+    .orb { position: absolute; border-radius: 50% !important; filter: blur(60px); }
+    .orb-1 { width: 300px; height: 300px; top: -5%; right: -5%; background: radial-gradient(circle, rgba(232,197,71,0.12), transparent 70%); animation: orbDrift1 20s ease-in-out infinite; }
+    .orb-2 { width: 250px; height: 250px; bottom: 5%; left: -3%; background: radial-gradient(circle, rgba(100,160,255,0.1), transparent 70%); animation: orbDrift2 25s ease-in-out infinite; }
+    .orb-3 { width: 180px; height: 180px; top: 40%; left: 50%; background: radial-gradient(circle, rgba(255,255,255,0.06), transparent 70%); animation: orbDrift3 18s ease-in-out infinite; }
+    @keyframes orbDrift1 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-60px, 40px); } }
+    @keyframes orbDrift2 { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, -30px); } }
+    @keyframes orbDrift3 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-30px, 20px) scale(1.2); } }
+    .hero-scanline { position: absolute; top: 0; left: 0; width: 100%; height: 2px; z-index: 5; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(232,197,71,0.15), transparent); animation: scanDown 8s linear infinite; }
+    @keyframes scanDown { 0% { top: -2px; } 100% { top: 100%; } }
+    .hero-content { position: relative; z-index: 10; text-align: center; max-width: 800px; padding: 0 var(--spacing-lg); display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .hero-badge { display: flex; align-items: center; gap: 16px; opacity: 0; transform: translateY(20px); transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+    .hero-badge.visible { opacity: 1; transform: translateY(0); }
+    .badge-line { width: 40px; height: 1px; background: rgba(255,255,255,0.4); }
+    .badge-text { font-family: var(--font-logo); font-size: 1.1rem; font-weight: 400; letter-spacing: 0.05em; color: rgba(255,255,255,0.85); }
+    .hero-title { font-family: var(--font-heading); font-size: clamp(2.8rem, 7vw, 5rem); font-weight: 700; line-height: 1.1; margin: 0; letter-spacing: -0.02em; text-shadow: 0 4px 30px rgba(0,0,0,0.3); }
+    .title-line { display: block; overflow: hidden; }
+    .title-word { display: inline-block; opacity: 0; transform: translateY(100%); transition: all 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+    .title-word.accent { color: #e8c547; }
+    .hero-title.visible .title-line:nth-child(1) .title-word:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 0.4s; }
+    .hero-title.visible .title-line:nth-child(1) .title-word:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 0.55s; }
+    .hero-title.visible .title-line:nth-child(2) .title-word:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 0.7s; }
+    .hero-title.visible .title-line:nth-child(2) .title-word:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 0.85s; }
+    .hero-subtitle { font-size: clamp(0.95rem, 1.5vw, 1.15rem); color: rgba(255,255,255,0.75); max-width: 560px; line-height: 1.7; opacity: 0; transform: translateY(20px); transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 1s; }
+    .hero-subtitle.visible { opacity: 1; transform: translateY(0); }
+    .hero-cta-group { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; opacity: 0; transform: translateY(20px); transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 1.2s; }
+    .hero-cta-group.visible { opacity: 1; transform: translateY(0); }
+    .hero-cta { position: relative; display: inline-flex; align-items: center; justify-content: center; padding: 16px 36px; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; overflow: hidden; border: none; text-decoration: none; font-family: var(--font-body); transition: transform 0.3s, box-shadow 0.3s; }
+    .hero-cta:hover { transform: translateY(-3px); }
+    .hero-cta-primary { color: #fff; }
+    .hero-cta-primary .cta-bg { position: absolute; inset: 0; background: linear-gradient(135deg, var(--primary-color), #2a4d7a); z-index: 0; transition: opacity 0.3s; }
+    .hero-cta-primary .cta-glow { position: absolute; inset: -2px; background: linear-gradient(135deg, rgba(232,197,71,0.3), rgba(100,180,255,0.2)); z-index: -1; filter: blur(8px); opacity: 0; transition: opacity 0.4s; }
+    .hero-cta-primary:hover .cta-glow { opacity: 1; }
+    .hero-cta-primary:hover { box-shadow: 0 8px 30px rgba(21,42,71,0.4); }
+    .cta-content { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; }
+    .cta-content svg { transition: transform 0.3s; }
+    .hero-cta-primary:hover .cta-content svg { transform: translateX(4px); }
+    .hero-cta-outline { color: rgba(255,255,255,0.9); border: 1.5px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.05); backdrop-filter: blur(6px); }
+    .hero-cta-outline .cta-shimmer { position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); transition: left 0.6s; }
+    .hero-cta-outline:hover .cta-shimmer { left: 100%; }
+    .hero-cta-outline:hover { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.1); }
+    .hero-scroll-indicator { opacity: 0; transform: translateY(20px); transition: all 0.8s ease 1.5s; margin-top: 16px; }
+    .hero-scroll-indicator.visible { opacity: 0.6; transform: translateY(0); }
+    .scroll-mouse { width: 24px; height: 38px; border: 2px solid rgba(255,255,255,0.5); border-radius: 12px !important; display: flex; justify-content: center; padding-top: 8px; }
+    .scroll-wheel { width: 3px; height: 8px; background: rgba(255,255,255,0.7); border-radius: 2px !important; animation: scrollBounce 2s ease-in-out infinite; }
+    @keyframes scrollBounce { 0%, 100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(8px); opacity: 0.3; } }
+    .hero-nav { position: absolute; top: 50%; z-index: 20; background: rgba(255,255,255,0.08); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; }
+    .hero-nav:hover { background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.3); }
+    .hero-nav-left { left: 20px; transform: translateY(-50%); }
+    .hero-nav-right { right: 20px; transform: translateY(-50%); }
+    .hero-progress { position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; gap: 8px; }
+    .hero-progress-track { width: 48px; height: 3px; background: rgba(255,255,255,0.2); cursor: pointer; overflow: hidden; transition: background 0.3s; }
+    .hero-progress-track.active { background: rgba(255,255,255,0.3); }
+    .hero-progress-fill { width: 0; height: 100%; background: rgba(255,255,255,0.9); }
+    .hero-progress-fill.animating { animation: progressFill 5s linear forwards; }
+    @keyframes progressFill { from { width: 0; } to { width: 100%; } }
+
+    /* ===== SHARED SECTION STYLES ===== */
+    .sec-header {
+      display: flex; align-items: center; justify-content: center; gap: 20px;
+      margin-bottom: 12px;
+    }
+    .sec-line {
+      flex: 1; max-width: 120px; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+    }
+    .sec-line.accent-line { background: linear-gradient(90deg, transparent, #b91c1c, transparent); }
+    .sec-title {
+      font-family: var(--font-heading); font-size: clamp(1.4rem, 2.5vw, 1.8rem);
+      font-weight: 700; color: var(--text-dark);
+      text-transform: uppercase; letter-spacing: 3px;
+      margin: 0; padding: 0; text-align: center;
+    }
+    .sale-title { color: #b91c1c; }
+    .sec-sub {
+      text-align: center; color: var(--text-muted); font-size: 0.95rem;
+      max-width: 520px; margin: 0 auto 28px; line-height: 1.6;
     }
 
-    .hero-slides {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 0;
+    /* ===== FEATURED PRODUCTS ===== */
+    .featured-section {
+      padding: 60px 0 40px;
+      background: #fff;
     }
-
-    .hero-slide {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      opacity: 0;
-      transition: opacity 1s ease-in-out;
-    }
-
-    .hero-slide.active {
-      opacity: 1;
-      z-index: 1;
-    }
-
-    .hero-slide.prev {
-      opacity: 0;
-      z-index: 0;
-    }
-
-    .hero-banner-img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center 15%;
-    }
-
-    .hero-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(
-        to bottom,
-        rgba(21, 42, 71, 0.25) 0%,
-        rgba(21, 42, 71, 0.45) 50%,
-        rgba(21, 42, 71, 0.7) 100%
-      );
-      z-index: 2;
-    }
-
-    .hero-content {
-      position: relative;
-      z-index: 3;
-      max-width: 680px;
-      padding: var(--spacing-xl) var(--spacing-lg);
-      text-align: left;
-    }
-
-    .hero-tagline {
-      font-family: var(--font-logo);
-      font-size: clamp(1rem, 2vw, 1.3rem);
-      font-weight: 400;
-      letter-spacing: 0.15em;
-      color: var(--secondary-color);
-      margin-bottom: var(--spacing-xs);
-      opacity: 0.9;
-    }
-
-    .hero-title {
-      font-family: var(--font-heading);
-      font-size: clamp(2.2rem, 5vw, 3.5rem);
-      font-weight: 600;
-      line-height: 1.15;
-      margin-bottom: var(--spacing-sm);
-      color: var(--text-white);
-      text-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
-      letter-spacing: -0.01em;
-    }
-
-    .hero-subtitle {
-      font-size: clamp(0.9rem, 1.5vw, 1.1rem);
-      margin-bottom: var(--spacing-md);
-      opacity: 0.85;
-      color: rgba(255, 255, 255, 0.9);
-      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
-      max-width: 420px;
-      line-height: 1.6;
-    }
-
-    .hero-cta {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      color: var(--text-white);
-      text-decoration: none;
-      font-size: 0.95rem;
-      font-weight: 500;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      padding: 12px 28px;
-      border: 1.5px solid rgba(255, 255, 255, 0.5);
-      background: transparent;
-      transition: all 0.35s ease;
-      cursor: pointer;
-      font-family: inherit;
-    }
-
-    .hero-cta:hover {
-      border-color: var(--text-white);
-      background: rgba(255, 255, 255, 0.12);
-    }
-
-    .hero-cta-arrow {
-      display: flex;
-      align-items: center;
-      animation: bounceDown 1.8s ease-in-out infinite;
-    }
-
-    @keyframes bounceDown {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(5px); }
-    }
-
-    .hero-cta:hover .hero-cta-arrow {
-      animation: none;
-      transform: translateY(3px);
-    }
-
-    .hero-cta-arrow svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    /* Hero Navigation Arrows */
-    .hero-nav {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 4;
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(4px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      color: var(--text-white);
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      padding: 0;
-    }
-
-    .hero-nav:hover {
-      background: rgba(255, 255, 255, 0.3);
-    }
-
-    .hero-nav-left {
-      left: 20px;
-    }
-
-    .hero-nav-right {
-      right: 20px;
-    }
-
-    /* Hero Dots */
-    .hero-dots {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 4;
-      display: flex;
-      gap: 10px;
-    }
-
-    .hero-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.6);
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .hero-dot.active {
-      background: var(--text-white);
-      transform: scale(1.2);
-    }
-
-    .hero-dot:hover {
-      background: rgba(255, 255, 255, 0.7);
-    }
-
-    .section {
-      padding: var(--spacing-lg) 0;
-    }
-
-    .section-title {
-      text-align: center;
-      color: var(--primary-color);
-      margin-bottom: var(--spacing-md);
-      font-size: clamp(1.75rem, 3vw, 2rem);
-    }
-
     .featured-carousel-wrapper {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      max-width: 1400px;
-      margin: 0 auto;
+      display: flex; align-items: center; gap: 16px;
+      max-width: 1400px; margin: 0 auto;
     }
-
-    .featured-nav {
-      background: transparent;
-      border: 2px solid var(--primary-color);
-      color: var(--primary-color);
-      width: 44px;
-      height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: var(--transition-normal);
-      flex-shrink: 0;
-      padding: 0;
+    .nav-btn {
+      width: 48px; height: 48px; flex-shrink: 0;
+      background: #fff; border: 1.5px solid var(--border-color);
+      color: var(--text-dark); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.3s ease;
     }
-
-    .featured-nav:hover:not(:disabled) {
-      background: var(--primary-color);
-      color: var(--text-white);
+    .nav-btn:hover:not(:disabled) {
+      background: var(--primary-color); color: #fff;
+      border-color: var(--primary-color);
+      box-shadow: 0 4px 16px rgba(21,42,71,0.2);
     }
-
-    .featured-nav:disabled {
-      opacity: 0.25;
-      cursor: not-allowed;
+    .nav-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+    .featured-track-container { flex: 1; overflow: hidden; }
+    .featured-track { display: flex; gap: 16px; transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+    .f-card {
+      min-width: calc(25% - 12px); flex-shrink: 0;
+      background: #fff; border: 1px solid var(--border-color);
+      overflow: hidden; cursor: pointer; position: relative;
+      transition: all 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
-
-    .featured-track-container {
-      flex: 1;
-      overflow: hidden;
+    .f-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+      border-color: transparent;
     }
-
-    .featured-track {
-      display: flex;
-      gap: var(--spacing-sm);
-      transition: transform 0.45s ease;
+    .f-card-img {
+      position: relative; width: 100%; height: 240px; overflow: hidden;
     }
-
-    .featured-card {
-      background: var(--text-white);
-      overflow: hidden;
-      box-shadow: 0 2px 8px var(--shadow-light);
-      transition: var(--transition-normal);
-      cursor: pointer;
-      min-width: calc(25% - 12px);
-      flex-shrink: 0;
+    .f-card-img img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      position: relative; z-index: 1;
     }
-
-    .featured-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 24px var(--shadow-medium);
+    .f-card-img-fallback { position: absolute; inset: 0; z-index: 0; }
+    .f-card:hover .f-card-img img { transform: scale(1.08); }
+    .f-card-overlay {
+      position: absolute; inset: 0; z-index: 2;
+      background: linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 50%);
+      display: flex; align-items: flex-end; justify-content: center;
+      padding-bottom: 20px; opacity: 0;
+      transition: opacity 0.4s ease;
     }
-
-    .featured-image {
-      width: 100%;
-      height: 240px;
-      transition: var(--transition-slow);
+    .f-card:hover .f-card-overlay { opacity: 1; }
+    .f-card-quick {
+      padding: 10px 24px; background: #fff; color: var(--text-dark);
+      font-size: 11px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; transform: translateY(10px);
+      transition: transform 0.3s ease;
     }
-
-    .featured-card:hover .featured-image {
-      transform: scale(1.05);
-    }
-
-    .featured-info {
-      padding: var(--spacing-md);
-    }
-
-    .featured-info h3 {
-      color: var(--primary-color);
-      margin-bottom: 4px;
-      font-size: 1.25rem;
-    }
-
-    .featured-category {
-      color: var(--text-light);
-      font-size: 12px;
+    .f-card:hover .f-card-quick { transform: translateY(0); }
+    .f-card-badge {
+      position: absolute; top: 12px; left: 12px; z-index: 3;
+      padding: 5px 14px; background: var(--primary-color); color: #fff;
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
       text-transform: uppercase;
-      margin-bottom: 8px;
     }
-
-    .featured-price {
-      color: var(--primary-color);
-      font-size: 1.25rem;
-      font-weight: 600;
-      margin: 0;
+    .f-card-info { padding: 14px 16px; }
+    .f-card-cat {
+      display: block; font-size: 10px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 6px;
     }
+    .f-card-name {
+      font-size: 1rem; font-weight: 600; color: var(--text-dark);
+      margin: 0 0 10px; line-height: 1.3;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      transition: color 0.2s;
+    }
+    .f-card:hover .f-card-name { color: var(--primary-color); }
+    .f-card-price-row { display: flex; align-items: baseline; gap: 8px; }
+    .f-card-price { font-size: 1.1rem; font-weight: 800; color: var(--text-dark); }
+    .f-card-original { font-size: 0.8rem; color: var(--text-muted); text-decoration: line-through; }
+    .featured-dots {
+      display: flex; justify-content: center; gap: 8px; margin-top: 28px;
+    }
+    .dot {
+      width: 8px; height: 8px; background: var(--border-color);
+      border-radius: 50% !important; cursor: pointer;
+      transition: all 0.3s;
+    }
+    .dot.active { background: var(--primary-color); width: 24px; border-radius: 4px !important; }
 
-    .categories-section {
+    /* ===== CATEGORY HIGHLIGHTS ===== */
+    .cat-section {
+      padding: 80px 0;
       background: var(--secondary-color);
     }
-
-    .categories-grid {
+    .cat-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: var(--spacing-sm);
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
       max-width: 1200px;
-      margin: 0 auto;
+      margin: 40px auto 0;
     }
+    .cat-card {
+      position: relative; overflow: hidden;
+      height: 400px; cursor: pointer;
+      text-decoration: none; display: block;
+    }
+    .cat-card-wide {
+      grid-column: 1 / -1;
+      height: 320px;
+    }
+    .cat-card img {
+      width: 100%; height: 100%; object-fit: cover;
+      transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    .cat-card:hover img { transform: scale(1.06); }
+    .cat-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(10,20,40,0.7) 0%, rgba(10,20,40,0.15) 60%, transparent 100%);
+      display: flex; align-items: flex-end;
+      padding: 32px; transition: background 0.4s;
+    }
+    .cat-card:hover .cat-overlay {
+      background: linear-gradient(to top, rgba(10,20,40,0.8) 0%, rgba(10,20,40,0.25) 60%, transparent 100%);
+    }
+    .cat-label { color: #fff; }
+    .cat-tag {
+      display: block; font-size: 10px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: rgba(255,255,255,0.6); margin-bottom: 6px;
+    }
+    .cat-label h3 {
+      font-family: var(--font-heading); font-size: 1.8rem;
+      font-weight: 700; margin: 0 0 12px; color: #fff;
+    }
+    .cat-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: #fff;
+      opacity: 0; transform: translateY(8px);
+      transition: all 0.3s ease;
+    }
+    .cat-card:hover .cat-cta {
+      opacity: 1; transform: translateY(0);
+    }
+    .cat-cta svg { transition: transform 0.3s; }
+    .cat-card:hover .cat-cta svg { transform: translateX(4px); }
 
-    .category-card {
-      background: var(--text-white);
-      border-radius: 12px;
+    /* ===== BRAND STORY ===== */
+    .story-section {
+      padding: 100px 0;
+      background: #fff;
       overflow: hidden;
-      box-shadow: 0 2px 8px var(--shadow-light);
-      transition: var(--transition-normal);
-      text-align: center;
-      text-decoration: none;
-      color: var(--primary-color);
     }
-
-    .category-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 24px var(--shadow-medium);
-    }
-
-    .category-image {
-      width: 100%;
-      height: 200px;
-      transition: var(--transition-slow);
-    }
-
-    .category-card:hover .category-image {
-      transform: scale(1.05);
-    }
-
-    .category-card h3 {
-      padding: var(--spacing-md);
-      margin: 0;
-      font-size: 1.5rem;
-    }
-
-    .expect-section {
-      background: var(--secondary-color);
-      padding: var(--spacing-lg) 0;
-    }
-
-    .expect-wrapper {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: var(--spacing-md) var(--spacing-md);
-      background: var(--secondary-color);
-      border: 3px solid var(--primary-color);
-      border-radius: 0;
-      text-align: center;
-    }
-
-    .expect-title {
-      font-family: var(--font-logo);
-      font-size: clamp(2rem, 3vw, 2.75rem);
-      color: var(--primary-color);
-      margin: 0 0 var(--spacing-sm) 0;
-      font-weight: 600;
-      font-style: italic;
-      letter-spacing: 0.02em;
-    }
-
-    .expect-description {
-      max-width: 800px;
-      margin: 0 auto var(--spacing-md) auto;
-      color: var(--text-dark);
-      font-family: var(--font-body);
-      font-size: clamp(0.9rem, 1.2vw, 1rem);
-      line-height: 1.6;
-      padding: 0 var(--spacing-sm);
-    }
-
-    .expect-features {
+    .story-inner {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: var(--spacing-md);
-      margin-top: var(--spacing-md);
-      padding: 0 var(--spacing-sm);
-    }
-
-    .expect-feature {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: var(--spacing-md);
-    }
-
-    .expect-icon {
-      width: 90px;
-      height: 90px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .expect-icon svg {
-      width: 100%;
-      height: 100%;
-      max-width: 90px;
-      max-height: 90px;
-    }
-
-    .expect-feature-title {
-      font-family: var(--font-heading);
-      color: var(--text-dark);
-      font-size: clamp(1rem, 1.2vw, 1.125rem);
-      margin: 0;
-      font-weight: 500;
-      text-transform: capitalize;
-      line-height: 1.4;
-    }
-
-    @media (max-width: 1200px) {
-      .featured-card { min-width: calc(33.333% - 12px); }
-      .sale-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
-    }
-
-    @media (max-width: 968px) {
-      .hero-section {
-        min-height: 400px;
-      }
-
-      .hero-content {
-        padding: var(--spacing-lg) var(--spacing-md);
-      }
-
-      .featured-card { min-width: calc(50% - 8px); }
-      .sale-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .buy-look-content {
-        grid-template-columns: 1fr;
-        gap: var(--spacing-md);
-      }
-
-      .lifestyle-image {
-        height: 300px;
-      }
-
-      .look-products {
-        flex-direction: row;
-        height: auto;
-      }
-
-      .product-image {
-        height: 150px;
-      }
-
-      .buy-look-carousel {
-        min-height: auto;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .featured-card { min-width: calc(80% - 8px); }
-      .categories-grid,
-      .sale-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .expect-features {
-        grid-template-columns: 1fr;
-        gap: var(--spacing-md);
-      }
-
-      .expect-icon {
-        width: 80px;
-        height: 80px;
-      }
-
-      .expect-wrapper {
-        padding: var(--spacing-md);
-      }
-
-      .expect-description {
-        margin-bottom: var(--spacing-md);
-      }
-
-      .social-posts-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 480px) {
-      .hero-section {
-        min-height: 300px;
-      }
-
-      .hero-content {
-        padding: var(--spacing-lg) var(--spacing-sm);
-      }
-
-      .hero-nav {
-        width: 36px;
-        height: 36px;
-      }
-
-      .hero-nav-left {
-        left: 10px;
-      }
-
-      .hero-nav-right {
-        right: 10px;
-      }
-
-      .hero-nav svg {
-        width: 18px;
-        height: 18px;
-      }
-
-      .expect-title,
-      .buy-look-title,
-      .how-we-do-title {
-        font-size: 1.75rem;
-      }
-
-      .expect-icon {
-        width: 70px;
-        height: 70px;
-      }
-
-      .lifestyle-image {
-        height: 240px;
-      }
-
-      .product-image {
-        height: 120px;
-      }
-
-      .post-image {
-        height: 180px;
-      }
-
-      .social-posts-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .buy-look-section {
-      background: var(--secondary-color);
-      padding: var(--spacing-lg) 0;
-    }
-
-    .buy-look-wrapper {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: var(--spacing-md) var(--spacing-md);
-      text-align: center;
-    }
-
-    .buy-look-title {
-      font-family: var(--font-logo);
-      font-size: clamp(2rem, 3vw, 2.75rem);
-      color: var(--primary-color);
-      margin: 0 0 var(--spacing-sm) 0;
-      font-weight: 600;
-      font-style: italic;
-      letter-spacing: 0.02em;
-    }
-
-    .buy-look-subtitle {
-      max-width: 900px;
-      margin: 0 auto var(--spacing-md) auto;
-      color: var(--primary-color);
-      font-family: var(--font-body);
-      font-size: clamp(0.9rem, 1.2vw, 1rem);
-      line-height: 1.6;
-      padding: 0 var(--spacing-sm);
-    }
-
-    .buy-look-carousel {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-md);
-      min-height: 380px;
-    }
-
-    .carousel-nav {
-      background: transparent;
-      border: 2px solid var(--primary-color);
-      color: var(--primary-color);
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: var(--transition-normal);
-      flex-shrink: 0;
-      padding: 0;
-    }
-
-    .carousel-nav:hover:not(:disabled) {
-      background: var(--primary-color);
-      color: var(--text-white);
-    }
-
-    .carousel-nav:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
-    }
-
-    .carousel-nav svg {
-      width: 24px;
-      height: 24px;
-    }
-
-    .buy-look-content {
-      flex: 1;
-      display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: var(--spacing-lg);
-      align-items: start;
-    }
-
-    .look-lifestyle {
-      width: 100%;
-    }
-
-    .lifestyle-image {
-      width: 100%;
-      height: 380px;
-      background-size: cover;
-      background-position: center;
-      background-color: var(--grey-light);
-      border-radius: 8px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .lifestyle-placeholder {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-      color: var(--text-white);
-      font-family: var(--font-heading);
-      font-size: 1.2rem;
-    }
-
-    .look-products {
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacing-md);
-      height: 100%;
-    }
-
-    .product-item {
-      flex: 1;
-      position: relative;
-      cursor: pointer;
-      text-decoration: none;
-      display: block;
-    }
-
-    .product-image {
-      width: 100%;
-      height: 180px;
-      background-size: cover;
-      background-position: center;
-      background-color: var(--text-white);
-      border-radius: 8px;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 2px 8px var(--shadow-light);
-      transition: var(--transition-normal);
-    }
-
-    .product-item:hover .product-image {
-      transform: translateY(-4px);
-      box-shadow: 0 4px 16px var(--shadow-medium);
-    }
-
-    .product-placeholder {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--grey-light);
-      color: var(--text-dark);
-      font-family: var(--font-body);
-      font-size: 0.9rem;
-    }
-
-    .product-price-badge {
-      position: absolute;
-      bottom: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--accent-color);
-      color: var(--text-white);
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-family: var(--font-body);
-      font-size: 0.95rem;
-      font-weight: 600;
-      border: 2px solid var(--accent-color);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .buy-look-cta {
-      margin-top: var(--spacing-lg);
-    }
-
-    .btn-view-more {
-      display: inline-block;
-      padding: 12px 32px;
-      border: 2px solid var(--primary-color);
-      color: var(--primary-color);
-      background: transparent;
-      border-radius: 8px;
-      font-family: var(--font-body);
-      font-size: 1rem;
-      font-weight: 500;
-      text-decoration: none;
-      transition: var(--transition-normal);
-      cursor: pointer;
-    }
-
-    .btn-view-more:hover {
-      background: var(--primary-color);
-      color: var(--text-white);
-    }
-
-    @media (max-width: 768px) {
-      .buy-look-carousel {
-        flex-direction: column;
-        gap: var(--spacing-sm);
-      }
-
-      .carousel-nav {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 10;
-      }
-
-      .carousel-nav-left {
-        left: 8px;
-      }
-
-      .carousel-nav-right {
-        right: 8px;
-      }
-
-      .buy-look-content {
-        width: 100%;
-      }
-
-      .lifestyle-image {
-        height: 280px;
-      }
-
-      .look-products {
-        flex-direction: column;
-      }
-
-      .product-image {
-        height: 150px;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .buy-look-title {
-        font-size: 2rem;
-      }
-
-      .lifestyle-image {
-        height: 300px;
-      }
-
-      .product-image {
-        height: 150px;
-      }
-
-      .carousel-nav {
-        width: 40px;
-        height: 40px;
-      }
-
-      .carousel-nav svg {
-        width: 20px;
-        height: 20px;
-      }
-    }
-
-    .sale-section {
-      padding: var(--spacing-lg) 0;
-      background: var(--text-white);
-    }
-
-    .sale-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: var(--spacing-sm);
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-
-    .sale-card {
-      background: var(--text-white);
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px var(--shadow-light);
-      transition: var(--transition-normal);
-      cursor: pointer;
-      position: relative;
-    }
-
-    .sale-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 24px var(--shadow-medium);
-    }
-
-    .sale-badge {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      background: var(--accent-color);
-      color: var(--text-white);
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      z-index: 10;
-    }
-
-    .sale-image {
-      width: 100%;
-      height: 240px;
-      transition: var(--transition-slow);
-    }
-
-    .sale-card:hover .sale-image {
-      transform: scale(1.05);
-    }
-
-    .sale-info {
-      padding: var(--spacing-md);
-    }
-
-    .sale-info h3 {
-      color: var(--primary-color);
-      margin-bottom: 4px;
-      font-size: 1.25rem;
-    }
-
-    .sale-category {
-      color: var(--text-light);
-      font-size: 12px;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-
-    .sale-prices {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .sale-original {
-      text-decoration: line-through;
-      color: var(--text-light);
-      font-size: 0.9rem;
-    }
-
-    .sale-current {
-      color: var(--accent-color);
-      font-size: 1.25rem;
-      font-weight: 600;
-    }
-
-    .sale-discount {
-      background: var(--accent-color);
-      color: var(--text-white);
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-
-    .empty-sale {
-      text-align: center;
-      padding: var(--spacing-xl);
-      color: var(--text-light);
-    }
-
-    .how-we-do-section {
-      background: var(--secondary-color);
-      padding: var(--spacing-lg) 0;
-    }
-
-    .how-we-do-wrapper {
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
       max-width: 1200px;
       margin: 0 auto;
       padding: 0 var(--spacing-md);
-      text-align: center;
+      align-items: center;
     }
-
-    .how-we-do-title {
-      font-family: var(--font-logo);
-      font-size: clamp(2rem, 3vw, 2.75rem);
-      color: var(--primary-color);
-      margin: 0 0 var(--spacing-sm) 0;
-      font-weight: 600;
-      font-style: italic;
-      letter-spacing: 0.02em;
-    }
-
-    .how-we-do-description {
-      max-width: 900px;
-      margin: 0 auto var(--spacing-md) auto;
-      color: var(--text-dark);
-      font-family: var(--font-body);
-      font-size: clamp(0.9rem, 1.2vw, 1rem);
-      line-height: 1.6;
-      padding: 0 var(--spacing-sm);
-    }
-
-    .social-posts-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: var(--spacing-sm);
-    }
-
-    .social-post-card {
-      background: var(--text-white);
-      border-radius: 0;
-      overflow: hidden;
-      border: 2px solid var(--primary-color);
-      transition: var(--transition-normal);
-      cursor: pointer;
-    }
-
-    .social-post-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 4px 16px var(--shadow-medium);
-    }
-
-    .post-image {
-      width: 100%;
-      height: 220px;
-      background-size: cover;
-      background-position: center;
-      background-color: var(--grey-light);
+    .story-image-wrap {
       position: relative;
     }
+    .story-image-wrap img {
+      width: 100%; height: 500px; object-fit: cover; display: block;
+      position: relative; z-index: 1;
+    }
+    .story-accent {
+      position: absolute; top: 24px; left: 24px; right: -24px; bottom: -24px;
+      border: 2px solid var(--primary-color); z-index: 0;
+      opacity: 0.3;
+    }
+    .story-text {
+      padding: 20px 0;
+    }
+    .story-label {
+      display: inline-block; font-size: 11px; font-weight: 700;
+      letter-spacing: 3px; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 16px;
+      position: relative; padding-left: 40px;
+    }
+    .story-label::before {
+      content: ''; position: absolute; left: 0; top: 50%;
+      width: 28px; height: 1px; background: var(--primary-color);
+    }
+    .story-heading {
+      font-family: var(--font-heading); font-size: clamp(1.8rem, 3vw, 2.5rem);
+      font-weight: 700; color: var(--text-dark);
+      line-height: 1.2; margin: 0 0 24px;
+    }
+    .story-heading em {
+      font-style: italic; color: var(--primary-color);
+    }
+    .story-text p {
+      color: var(--text-light); font-size: 0.95rem;
+      line-height: 1.8; margin: 0 0 16px;
+    }
+    .story-cta {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 14px 32px; margin-top: 12px;
+      border: 2px solid var(--primary-color); color: var(--primary-color);
+      background: transparent; font-size: 12px; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      text-decoration: none; font-family: var(--font-body);
+      transition: all 0.3s ease;
+    }
+    .story-cta:hover {
+      background: var(--primary-color); color: #fff;
+    }
+    .story-cta svg { transition: transform 0.3s; }
+    .story-cta:hover svg { transform: translateX(4px); }
 
-    .post-placeholder {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-      color: var(--text-white);
-      font-family: var(--font-body);
-      font-size: 0.9rem;
+    /* ===== TRUST SECTION ===== */
+    .trust-section {
+      padding: 60px 0;
+      background: var(--secondary-color);
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .trust-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 32px; max-width: 1100px; margin: 0 auto;
+      text-align: center;
+    }
+    .trust-item {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 12px; padding: 24px 16px;
+      transition: transform 0.3s ease;
+    }
+    .trust-item:hover { transform: translateY(-4px); }
+    .trust-icon {
+      width: 56px; height: 56px;
+    }
+    .trust-icon svg { width: 100%; height: 100%; }
+    .trust-item h4 {
+      font-family: var(--font-heading);
+      font-size: 0.95rem; font-weight: 700; color: var(--text-dark);
+      margin: 0; letter-spacing: 0.5px;
+    }
+    .trust-item p {
+      font-size: 0.82rem; color: var(--text-muted);
+      line-height: 1.5; margin: 0; max-width: 200px;
     }
 
-    .post-caption {
+    /* ===== SALE SECTION ===== */
+    .sale-section {
+      padding: 80px 0;
+      background: #fff;
+    }
+    .sale-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 16px; max-width: 1400px; margin: 40px auto 0;
+    }
+    .s-card {
+      overflow: hidden; cursor: pointer; position: relative;
+      border: 1px solid var(--border-color); background: #fff;
+      transition: all 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    .s-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+      border-color: transparent;
+    }
+    .s-card-img {
+      position: relative; width: 100%; aspect-ratio: 3/4; overflow: hidden;
+    }
+    .s-card-img img {
+      width: 100%; height: 100%; object-fit: cover;
+      transition: transform 0.6s ease; position: relative; z-index: 1;
+    }
+    .s-card-img-fallback { position: absolute; inset: 0; z-index: 0; }
+    .s-card:hover .s-card-img img { transform: scale(1.08); }
+    .s-badge {
+      position: absolute; top: 12px; left: 12px; z-index: 3;
+      padding: 5px 14px; background: #b91c1c; color: #fff;
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .s-discount {
+      position: absolute; top: 12px; right: 12px; z-index: 3;
+      padding: 5px 10px; background: #fff; color: #b91c1c;
+      font-size: 11px; font-weight: 800;
+    }
+    .s-card-info { padding: 18px; }
+    .s-cat {
+      display: block; font-size: 10px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 4px;
+    }
+    .s-name {
+      font-size: 0.95rem; font-weight: 600; color: var(--text-dark);
+      margin: 0 0 10px; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .s-prices { display: flex; align-items: baseline; gap: 8px; }
+    .s-original { font-size: 0.82rem; color: var(--text-muted); text-decoration: line-through; }
+    .s-current { font-size: 1.1rem; font-weight: 800; color: #b91c1c; }
+
+    /* ===== BUY THE LOOK ===== */
+    .look-section {
+      padding: 80px 0;
+      background: var(--secondary-color);
+    }
+    .look-carousel {
+      display: flex; align-items: center; gap: 16px;
+      max-width: 1200px; margin: 0 auto;
+    }
+    .look-grid {
+      flex: 1; display: grid; gap: 4px; height: 480px;
+    }
+    .look-grid.two-items {
+      grid-template-columns: 1fr 1fr;
+    }
+    .look-grid.three-items {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+    }
+    .look-grid.three-items .hero {
+      grid-row: 1 / 3;
+    }
+    .look-card {
+      position: relative; overflow: hidden; cursor: pointer;
+      text-decoration: none;
+    }
+    .look-card-img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      transition: transform 0.5s ease;
+    }
+    .look-card:hover .look-card-img {
+      transform: scale(1.04);
+    }
+    .look-card-overlay {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.65));
+      padding: 40px 20px 20px; color: #fff;
+      transition: padding-bottom 0.3s ease;
+    }
+    .look-card:hover .look-card-overlay {
+      padding-bottom: 26px;
+    }
+    .look-card-overlay h4 {
+      margin: 0 0 4px; font-size: 1rem; font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .look-card-overlay span {
+      display: block; font-size: 0.95rem; font-weight: 800;
+    }
+    .look-shop-link {
+      font-size: 0.75rem !important; font-weight: 600 !important;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      opacity: 0; transform: translateY(8px);
+      transition: all 0.3s ease; margin-top: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.5);
+      display: inline-block !important; padding-bottom: 2px;
+    }
+    .look-card:hover .look-shop-link {
+      opacity: 1; transform: translateY(0);
+    }
+    .look-dots {
+      display: flex; justify-content: center; gap: 8px; margin-top: 24px;
+    }
+
+    /* ===== SOCIAL PROOF ===== */
+    .social-section {
+      padding: 80px 0;
+      background: #fff;
+    }
+    .social-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 16px; max-width: 1200px; margin: 0 auto;
+    }
+    .social-card {
+      position: relative; overflow: hidden;
+      aspect-ratio: 1; cursor: pointer;
+    }
+    .social-img {
+      width: 100%; height: 100%;
+      background-size: cover; background-position: center;
+      transition: transform 0.5s ease;
+    }
+    .social-card:hover .social-img { transform: scale(1.08); }
+    .social-hover {
+      position: absolute; inset: 0;
+      background: rgba(10,20,40,0.6);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 10px; color: #fff; opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+    .social-card:hover .social-hover { opacity: 1; }
+    .social-hover span {
+      font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
+    }
+
+    /* ===== NEWSLETTER ===== */
+    .newsletter-section {
+      padding: 80px 0;
       background: var(--primary-color);
-      color: var(--text-white);
-      padding: 12px;
-      text-align: center;
+      color: #fff;
+    }
+    .newsletter-inner {
+      max-width: 700px; margin: 0 auto;
+      text-align: center; padding: 0 var(--spacing-md);
+    }
+    .newsletter-text h2 {
+      font-family: var(--font-heading);
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 700; color: #fff; margin: 0 0 10px;
+    }
+    .newsletter-text p {
+      color: rgba(255,255,255,0.7); font-size: 0.95rem;
+      margin: 0 0 32px; line-height: 1.6;
+    }
+    .newsletter-form {
+      display: flex; gap: 0; max-width: 460px; margin: 0 auto;
+    }
+    .newsletter-form input {
+      flex: 1; padding: 14px 20px;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08);
+      color: #fff; font-size: 14px;
       font-family: var(--font-body);
-      font-size: 0.9rem;
-      font-weight: 500;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    .newsletter-form input::placeholder { color: rgba(255,255,255,0.4); }
+    .newsletter-form input:focus { border-color: rgba(255,255,255,0.5); }
+    .newsletter-form button {
+      padding: 14px 28px; background: #fff;
+      color: var(--primary-color); border: none;
+      font-size: 12px; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      cursor: pointer; font-family: var(--font-body);
+      transition: all 0.3s;
+    }
+    .newsletter-form button:hover {
+      background: var(--secondary-color);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1200px) {
+      .f-card { min-width: calc(33.333% - 12px); }
+      .sale-grid { grid-template-columns: repeat(3, 1fr); }
     }
 
     @media (max-width: 968px) {
-      .social-posts-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
+      .hero-section { min-height: 85vh; }
+      .hero-content { padding: 0 var(--spacing-md); }
+      .hero-title { font-size: clamp(2.2rem, 6vw, 3.5rem); }
+      .hero-nav { width: 40px; height: 40px; }
+      .hero-nav-left { left: 12px; }
+      .hero-nav-right { right: 12px; }
+      .orb-1 { width: 200px; height: 200px; }
+      .orb-2 { width: 150px; height: 150px; }
+      .f-card { min-width: calc(50% - 8px); }
+      .sale-grid { grid-template-columns: repeat(2, 1fr); }
+      .cat-grid { grid-template-columns: 1fr; }
+      .cat-card { height: 300px; }
+      .cat-card-wide { height: 260px; }
+      .story-inner { grid-template-columns: 1fr; gap: 40px; }
+      .story-image-wrap img { height: 360px; }
+      .story-accent { display: none; }
+      .trust-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+      .look-grid { height: 380px; }
+      .look-grid.three-items .hero { grid-row: auto; }
+      .look-grid.three-items { grid-template-columns: 1fr; grid-template-rows: 1.2fr 1fr 1fr; }
+      .social-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
     @media (max-width: 768px) {
-      .sale-grid {
-        grid-template-columns: 1fr;
-      }
+      .f-card { min-width: calc(80% - 8px); }
+      .sale-grid { grid-template-columns: 1fr 1fr; }
+      .cat-card { height: 240px; }
+      .cat-label h3 { font-size: 1.3rem; }
+      .newsletter-form { flex-direction: column; }
+      .newsletter-form input, .newsletter-form button { width: 100%; }
+    }
 
-      .social-posts-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .post-image {
-        height: 250px;
-      }
+    @media (max-width: 480px) {
+      .hero-section { min-height: 100vh; min-height: 100svh; }
+      .hero-content { padding: 0 var(--spacing-sm); }
+      .hero-title { font-size: clamp(2rem, 10vw, 2.8rem); }
+      .hero-cta-group { flex-direction: column; width: 100%; }
+      .hero-cta { width: 100%; }
+      .hero-cta-primary .cta-content, .hero-cta-outline .cta-content { width: 100%; justify-content: center; }
+      .hero-nav { width: 34px; height: 34px; }
+      .hero-nav-left { left: 8px; }
+      .hero-nav-right { right: 8px; }
+      .hero-nav svg { width: 16px; height: 16px; }
+      .hero-progress-track { width: 32px; }
+      .hero-shapes { display: none; }
+      .hero-scroll-indicator { display: none; }
+      .sale-grid { grid-template-columns: 1fr; }
+      .trust-grid { grid-template-columns: 1fr; }
+      .social-grid { grid-template-columns: 1fr 1fr; }
+      .look-carousel { flex-direction: column; }
+      .look-grid { height: auto; }
+      .look-grid.two-items { grid-template-columns: 1fr; grid-template-rows: 260px 260px; }
+      .look-grid.three-items { grid-template-columns: 1fr; grid-template-rows: 260px 200px 200px; }
+      .sec-title { font-size: 1.2rem; letter-spacing: 2px; }
     }
   `]
 })
-export class HomeComponent implements OnInit, OnDestroy {
+export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('heroSection') heroSection!: ElementRef;
+
+  heroAnimReady = false;
+  private heroMouseX = 0.5;
+  private heroMouseY = 0.5;
+
   featuredProducts: any[] = [];
   saleProducts: any[] = [];
 
@@ -1318,11 +974,11 @@ export class HomeComponent implements OnInit, OnDestroy {
   featuredCardWidth = 0;
   private featuredAutoInterval: any;
 
-  /* Hero Carousel */
-  heroSlides = [
-    { image: 'assets/login_video_1.mp4', alt: 'Legado & Co - Timeless Style' },
+  private defaultHeroSlides = [
+    { image: 'assets/homebanner.png', alt: 'Legado & Co - Timeless Style' },
     { image: 'assets/homebanner2.png', alt: 'Legado & Co - Premium Collection' }
   ];
+  heroSlides: { image: string; alt: string }[] = [...this.defaultHeroSlides];
   activeSlide = 0;
   prevSlide = -1;
   private heroInterval: any;
@@ -1330,43 +986,39 @@ export class HomeComponent implements OnInit, OnDestroy {
   curatedLooks: any[] = [
     {
       id: 1,
-      lifestyleImage: 'assets/homebanner2.png',
       products: [
-        { id: 1, name: 'Brown Zippered Jacket', price: 3499, image: 'assets/buythelook2.png' },
-        { id: 2, name: 'Brown Leather Brogue Shoes', price: 5679, image: 'assets/buythelook3.png' }
+        { id: 1, name: 'Brown Zippered Jacket', price: 3499, image: 'assets/homebanner2.png' },
+        { id: 2, name: 'Brown Leather Brogue Shoes', price: 5679, image: 'assets/buythelook3.png' },
+        { id: 3, name: 'Classic White Shirt', price: 2499, image: 'assets/buythelook2.png' }
       ]
     },
     {
       id: 2,
-      lifestyleImage: 'assets/homebanner2.png',
       products: [
-        { id: 3, name: 'Classic White Shirt', price: 2499, image: '' },
-        { id: 4, name: 'Navy Blue Trousers', price: 3299, image: '' }
-      ]
-    },
-    {
-      id: 3,
-      lifestyleImage: 'assets/homebanner2.png',
-      products: [
-        { id: 5, name: 'Olive Green Sweater', price: 2799, image: '' },
-        { id: 6, name: 'Dark Denim Jeans', price: 2999, image: '' }
+        { id: 4, name: 'Navy Blue Trousers', price: 3299, image: 'assets/homebanner.png' },
+        { id: 5, name: 'Olive Green Sweater', price: 2799, image: 'assets/buythelook2.png' }
       ]
     }
   ];
   socialPosts: any[] = [
-    { id: 1, image: '', handle: '@Sannidh123' },
-    { id: 2, image: '', handle: '@FashionLover' },
-    { id: 3, image: '', handle: '@StyleInspire' },
-    { id: 4, image: '', handle: '@TrendSetter' }
+    { id: 1, image: 'assets/buythelook2.png', handle: '@Sannidh123' },
+    { id: 2, image: 'assets/buythelook3.png', handle: '@FashionLover' },
+    { id: 3, image: 'assets/homebanner2.png', handle: '@StyleInspire' },
+    { id: 4, image: 'assets/ourstory.png', handle: '@TrendSetter' }
   ];
 
-  constructor(private productService: ProductService) {}
+  constructor(
+    private productService: ProductService,
+    private productApi: ProductApiService,
+    private lookService: BuyTheLookService,
+    private carouselService: CarouselService
+  ) {}
 
   ngOnInit() {
+    this.loadHeroSlides();
     this.loadFeaturedProducts();
     this.loadSaleProducts();
-    this.loadCuratedLooks();
-    this.loadSocialPosts();
+    this.loadLooksFromApi();
     this.startHeroAutoSlide();
     this.calcFeaturedLayout();
     this.startFeaturedAuto();
@@ -1375,12 +1027,28 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
+  ngAfterViewInit() {
+    setTimeout(() => this.heroAnimReady = true, 200);
+  }
+
   ngOnDestroy() {
     this.stopHeroAutoSlide();
     this.stopFeaturedAuto();
     if (typeof window !== 'undefined') {
       window.removeEventListener('resize', this.onResize);
     }
+  }
+
+  onHeroMouseMove(e: MouseEvent) {
+    if (typeof window === 'undefined') return;
+    this.heroMouseX = e.clientX / window.innerWidth;
+    this.heroMouseY = e.clientY / window.innerHeight;
+  }
+
+  getShapeParallax(factor: number): string {
+    const x = (this.heroMouseX - 0.5) * 100 * factor;
+    const y = (this.heroMouseY - 0.5) * 100 * factor;
+    return `translate(${x}px, ${y}px)`;
   }
 
   private onResize = () => this.calcFeaturedLayout();
@@ -1400,6 +1068,11 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
+  getDotArray(): any[] {
+    const total = Math.max(0, this.featuredProducts.length - this.featuredVisible + 1);
+    return new Array(total);
+  }
+
   prevFeatured() {
     if (this.featuredOffset > 0) this.featuredOffset--;
     this.restartFeaturedAuto();
@@ -1417,71 +1090,91 @@ export class HomeComponent implements OnInit, OnDestroy {
   private startFeaturedAuto() {
     this.featuredAutoInterval = setInterval(() => this.nextFeatured(), 4000);
   }
-
   private stopFeaturedAuto() {
     if (this.featuredAutoInterval) clearInterval(this.featuredAutoInterval);
   }
-
   private restartFeaturedAuto() {
-    this.stopFeaturedAuto();
-    this.startFeaturedAuto();
+    this.stopFeaturedAuto(); this.startFeaturedAuto();
   }
 
   startHeroAutoSlide() {
     this.heroInterval = setInterval(() => this.nextHeroSlide(), 5000);
   }
-
   stopHeroAutoSlide() {
-    if (this.heroInterval) {
-      clearInterval(this.heroInterval);
-    }
+    if (this.heroInterval) clearInterval(this.heroInterval);
   }
-
   nextHeroSlide() {
     this.prevSlide = this.activeSlide;
     this.activeSlide = (this.activeSlide + 1) % this.heroSlides.length;
     this.resetHeroAutoSlide();
   }
-
   prevHeroSlide() {
     this.prevSlide = this.activeSlide;
     this.activeSlide = (this.activeSlide - 1 + this.heroSlides.length) % this.heroSlides.length;
     this.resetHeroAutoSlide();
   }
-
   goToSlide(index: number) {
     if (index === this.activeSlide) return;
     this.prevSlide = this.activeSlide;
     this.activeSlide = index;
     this.resetHeroAutoSlide();
   }
-
   private resetHeroAutoSlide() {
-    this.stopHeroAutoSlide();
-    this.startHeroAutoSlide();
+    this.stopHeroAutoSlide(); this.startHeroAutoSlide();
   }
 
   scrollToFeatured() {
     const el = document.getElementById('featured-products');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  loadHeroSlides() {
+    this.carouselService.list().subscribe({
+      next: (items) => {
+        const active = items.filter(i => i.is_active !== false && i.image_url);
+        if (active.length > 0) {
+          active.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+          this.heroSlides = active.map(i => ({
+            image: i.image_url!,
+            alt: i.title || 'Legado & Co'
+          }));
+          this.activeSlide = 0;
+          this.prevSlide = -1;
+        }
+      },
+      error: () => {}
+    });
   }
 
   loadFeaturedProducts() {
+    this.productApi.list({ featured: true, per_page: 12 }).subscribe({
+      next: (res) => {
+        const apiProducts = res?.data || [];
+        if (apiProducts.length > 0) {
+          this.featuredProducts = apiProducts;
+        } else {
+          this.loadFeaturedFallback();
+        }
+        this.calcFeaturedLayout();
+      },
+      error: () => {
+        this.loadFeaturedFallback();
+        this.calcFeaturedLayout();
+      }
+    });
+  }
+
+  private loadFeaturedFallback() {
     const allProducts = this.productService.getAllProducts();
     this.featuredProducts = allProducts.filter(p => p.featured).slice(0, 8);
     if (this.featuredProducts.length < 4) {
       this.featuredProducts = allProducts.slice(0, 8);
     }
-    this.calcFeaturedLayout();
   }
 
   loadSaleProducts() {
-    // In a real app, fetch from API: /products?is_on_sale=1
     const allProducts = this.productService.getAllProducts();
     this.saleProducts = allProducts.filter(p => p.is_on_sale || (p.originalPrice && p.price < p.originalPrice)).slice(0, 8);
-    // Map to include discount_percentage if not present
     this.saleProducts = this.saleProducts.map(p => {
       if (!p.discount_percentage && p.originalPrice) {
         const discount = ((p.originalPrice - p.price) / p.originalPrice) * 100;
@@ -1494,32 +1187,42 @@ export class HomeComponent implements OnInit, OnDestroy {
     });
   }
 
-  loadCuratedLooks() {
-    // In a real app, this would fetch from an API
-    // For now, using mock data with placeholder images
-    // You can replace with actual product images from your API
-  }
-
-  loadSocialPosts() {
-    // In a real app, fetch from API: /social-posts or /featured-posts
-    // For now, using mock data
-    // You can replace with actual social media posts from your API
+  loadLooksFromApi() {
+    this.lookService.list().subscribe({
+      next: (looks) => {
+        if (looks && looks.length > 0) {
+          this.curatedLooks = looks.map(l => ({
+            id: l.id,
+            products: (l.products || []).map(p => ({
+              id: p.product_id || p.id,
+              name: p.name,
+              price: p.price,
+              image: p.image_url || ''
+            }))
+          }));
+          this.currentLookIndex = 0;
+        }
+      },
+      error: () => {}
+    });
   }
 
   prevLook() {
-    if (this.currentLookIndex > 0) {
-      this.currentLookIndex--;
-    }
+    if (this.currentLookIndex > 0) this.currentLookIndex--;
   }
-
   nextLook() {
-    if (this.currentLookIndex < this.curatedLooks.length - 1) {
-      this.currentLookIndex++;
-    }
+    if (this.currentLookIndex < this.curatedLooks.length - 1) this.currentLookIndex++;
   }
 
   formatPrice(price: number): string {
     return `₹${price.toLocaleString()}/-`;
+  }
+
+  getProductImage(product: any): string {
+    if (product.images?.length && product.images[0].startsWith('assets/')) return product.images[0];
+    if (product.image_url) return product.image_url;
+    if (product.image_urls?.length) return product.image_urls[0];
+    return '';
   }
 
   getProductColor(product: any): string {

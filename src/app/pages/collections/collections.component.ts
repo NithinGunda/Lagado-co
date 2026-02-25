@@ -8,15 +8,13 @@ import { ProductListingComponent } from '../../components/product-listing/produc
   imports: [CommonModule, ProductListingComponent],
   template: `
     <div class="collections-page">
-      <div class="container">
-        <app-product-listing></app-product-listing>
-      </div>
+      <app-product-listing></app-product-listing>
     </div>
   `,
   styles: [`
     .collections-page {
       min-height: calc(100vh - 200px);
-      padding: var(--spacing-md) 0;
+      padding: var(--spacing-sm) 0;
     }
   `]
 })

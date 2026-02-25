@@ -479,25 +479,11 @@ export class AdminLoginComponent implements AfterViewInit, OnDestroy {
 
     this.loading = true;
 
-    if (this.email.trim().toLowerCase() === ADMIN_EMAIL && this.password === ADMIN_PASS) {
-      setTimeout(() => {
-        this.loading = false;
-        this.loginSuccess = true;
-        if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('admin_auth', 'true');
-        }
-        setTimeout(() => {
-          const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/admin';
-          this.router.navigateByUrl(returnUrl);
-        }, 2200);
-      }, 800);
-      return;
-    }
-
     this.auth.login({ email: this.email.trim(), password: this.password }).subscribe({
       next: () => {
         this.loading = false;
         this.loginSuccess = true;
+        localStorage.setItem('admin_auth', 'true');
         setTimeout(() => {
           const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/admin';
           this.router.navigateByUrl(returnUrl);
@@ -505,7 +491,8 @@ export class AdminLoginComponent implements AfterViewInit, OnDestroy {
       },
       error: (err) => {
         this.loading = false;
-        this.error = err?.error?.message || 'Invalid credentials. Please try again.';
+        const msg = err?.error?.error || err?.error?.message || '';
+        this.error = msg || 'Invalid credentials. Please try again.';
       }
     });
   }

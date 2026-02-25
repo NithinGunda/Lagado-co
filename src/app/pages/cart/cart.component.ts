@@ -13,11 +13,14 @@ import { Subscription } from 'rxjs';
   template: `
     <div class="cart-page">
       <div class="container">
-        <h1 class="page-title">Shopping Cart</h1>
+        <div class="cart-header">
+          <h1 class="page-title">Shopping Cart</h1>
+          <span class="item-count" *ngIf="cartItems.length > 0">{{ cartItems.length }} item{{ cartItems.length > 1 ? 's' : '' }}</span>
+        </div>
 
         <div class="cart-content" *ngIf="cartItems.length > 0">
           <div class="cart-items">
-            <div class="cart-item" *ngFor="let item of cartItems; trackBy: trackByItemId">
+            <div class="cart-item" *ngFor="let item of cartItems; trackBy: trackByItemId; let i = index" [style.animation-delay]="i * 0.06 + 's'">
               <div class="item-image">
                 <div class="image-placeholder" [style.background]="getProductColor(item.product)"></div>
               </div>
@@ -35,28 +38,25 @@ import { Subscription } from 'rxjs';
               </div>
 
               <div class="item-quantity">
-                <label>Quantity</label>
                 <div class="quantity-controls">
-                  <button class="qty-btn" (click)="updateQuantity(item, item.quantity - 1)">-</button>
-                  <input 
-                    type="number" 
-                    [(ngModel)]="item.quantity"
-                    (ngModelChange)="updateQuantity(item, item.quantity)"
-                    min="1"
-                    [max]="item.product.stockQuantity"
-                    class="qty-input"
-                  >
-                  <button class="qty-btn" (click)="updateQuantity(item, item.quantity + 1)">+</button>
+                  <button class="qty-btn" (click)="updateQuantity(item, item.quantity - 1)" [disabled]="item.quantity <= 1">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  </button>
+                  <span class="qty-display">{{ item.quantity }}</span>
+                  <button class="qty-btn" (click)="updateQuantity(item, item.quantity + 1)" [disabled]="item.quantity >= item.product.stockQuantity">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  </button>
                 </div>
               </div>
 
               <div class="item-total">
                 <p class="total-price">{{ formatPrice(getItemTotal(item)) }}</p>
                 <button class="remove-btn" (click)="removeItem(item)" aria-label="Remove item">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                   </svg>
+                  <span>Remove</span>
                 </button>
               </div>
             </div>
@@ -66,19 +66,26 @@ import { Subscription } from 'rxjs';
             <h2>Order Summary</h2>
             
             <div class="summary-row">
-              <span>Subtotal</span>
-              <span>{{ formatPrice(getSubtotal()) }}</span>
+              <span>Subtotal ({{ cartItems.length }} items)</span>
+              <span class="summary-value">{{ formatPrice(getSubtotal()) }}</span>
             </div>
             
             <div class="summary-row">
               <span>Estimated Tax</span>
-              <span>{{ formatPrice(getTax()) }}</span>
+              <span class="summary-value">{{ formatPrice(getTax()) }}</span>
             </div>
             
             <div class="summary-row">
               <span>Shipping</span>
               <span class="free-shipping" *ngIf="getSubtotal() >= 5000">FREE</span>
-              <span *ngIf="getSubtotal() < 5000">{{ formatPrice(500) }}</span>
+              <span class="summary-value" *ngIf="getSubtotal() < 5000">{{ formatPrice(500) }}</span>
+            </div>
+
+            <div class="shipping-progress" *ngIf="getSubtotal() < 5000">
+              <div class="progress-bar">
+                <div class="progress-fill" [style.width.%]="(getSubtotal() / 5000) * 100"></div>
+              </div>
+              <p class="progress-text">Add {{ formatPrice(getRemainingForFreeShipping()) }} more for <strong>free shipping!</strong></p>
             </div>
 
             <div class="summary-divider"></div>
@@ -88,27 +95,29 @@ import { Subscription } from 'rxjs';
               <span>{{ formatPrice(getTotal()) }}</span>
             </div>
 
-            <div class="shipping-note" *ngIf="getSubtotal() < 100">
-              <p>Add {{ formatPrice(getRemainingForFreeShipping()) }} more for free shipping!</p>
-            </div>
-
-            <button class="btn btn-primary btn-checkout" routerLink="/checkout">
+            <button class="btn-checkout" routerLink="/checkout">
               Proceed to Checkout
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
             </button>
 
-            <a routerLink="/collections" class="continue-shopping">Continue Shopping</a>
+            <a routerLink="/collections" class="continue-shopping">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+              Continue Shopping
+            </a>
           </div>
         </div>
 
         <div class="cart-empty" *ngIf="cartItems.length === 0">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 2L7 6m8-4l-2 4M3 6h18l-2 13H5L3 6z"></path>
-            <circle cx="9" cy="20" r="1"></circle>
-            <circle cx="20" cy="20" r="1"></circle>
-          </svg>
+          <div class="empty-icon">
+            <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 2L7 6m8-4l-2 4M3 6h18l-2 13H5L3 6z"></path>
+              <circle cx="9" cy="20" r="1"></circle>
+              <circle cx="20" cy="20" r="1"></circle>
+            </svg>
+          </div>
           <h2>Your cart is empty</h2>
-          <p>Start shopping to add items to your cart</p>
-          <a routerLink="/collections" class="btn btn-primary">Continue Shopping</a>
+          <p>Looks like you haven't added anything to your cart yet.</p>
+          <a routerLink="/collections" class="btn btn-primary">Start Shopping</a>
         </div>
       </div>
     </div>
@@ -117,47 +126,81 @@ import { Subscription } from 'rxjs';
     .cart-page {
       min-height: calc(100vh - 200px);
       padding: var(--spacing-xl) 0;
+      animation: fadeIn 0.35s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .cart-header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: var(--spacing-lg);
     }
 
     .page-title {
-      font-size: clamp(2rem, 4vw, 3rem);
-      color: var(--primary-color);
-      margin-bottom: var(--spacing-lg);
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      color: var(--text-dark);
+      margin: 0;
+    }
+
+    .item-count {
+      font-size: 14px;
+      color: var(--text-muted);
+      font-weight: 500;
     }
 
     .cart-content {
       display: grid;
-      grid-template-columns: 1fr 400px;
+      grid-template-columns: 1fr 380px;
       gap: var(--spacing-xl);
+      align-items: start;
     }
 
     .cart-items {
       display: flex;
       flex-direction: column;
-      gap: var(--spacing-md);
+      gap: 12px;
     }
 
     .cart-item {
       display: grid;
-      grid-template-columns: 120px 1fr 150px 120px;
-      gap: var(--spacing-md);
-      padding: var(--spacing-md);
+      grid-template-columns: 110px 1fr auto 140px;
+      gap: 20px;
+      padding: 20px;
       background: var(--text-white);
-      border-radius: 12px;
-      box-shadow: 0 2px 8px var(--shadow-light);
+      box-shadow: 0 1px 4px var(--shadow-light);
       align-items: center;
+      transition: box-shadow 0.2s ease;
+      animation: slideIn 0.35s ease both;
+    }
+
+    .cart-item:hover {
+      box-shadow: 0 4px 16px var(--shadow-medium);
     }
 
     .item-image {
-      width: 120px;
-      height: 120px;
-      border-radius: 8px;
+      width: 110px;
+      height: 110px;
       overflow: hidden;
     }
 
     .image-placeholder {
       width: 100%;
       height: 100%;
+      transition: transform 0.3s ease;
+    }
+
+    .cart-item:hover .image-placeholder {
+      transform: scale(1.05);
     }
 
     .item-details {
@@ -168,23 +211,25 @@ import { Subscription } from 'rxjs';
 
     .item-name {
       margin: 0;
-      font-size: 1.125rem;
-      color: var(--primary-color);
+      font-size: 1rem;
+      font-weight: 600;
     }
 
     .item-name a {
-      color: inherit;
-      transition: var(--transition-normal);
+      color: var(--text-dark);
+      transition: color 0.2s ease;
     }
 
     .item-name a:hover {
-      color: var(--primary-dark);
+      color: var(--primary-color);
+      opacity: 1;
     }
 
     .item-category {
-      font-size: 12px;
-      color: var(--text-light);
+      font-size: 11px;
+      color: var(--text-muted);
       text-transform: uppercase;
+      letter-spacing: 1px;
       margin: 0;
     }
 
@@ -196,56 +241,55 @@ import { Subscription } from 'rxjs';
     }
 
     .item-price {
-      font-size: 1rem;
-      color: var(--primary-color);
+      font-size: 15px;
+      color: var(--text-dark);
       font-weight: 600;
       margin: 4px 0 0 0;
     }
 
     .item-quantity {
       display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .item-quantity label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--primary-color);
+      align-items: center;
     }
 
     .quantity-controls {
       display: flex;
       align-items: center;
-      gap: 8px;
+      border: 1px solid var(--border-color);
     }
 
     .qty-btn {
-      width: 32px;
-      height: 32px;
-      border: 2px solid var(--border-color);
-      background: var(--text-white);
-      color: var(--primary-color);
-      border-radius: 6px;
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: transparent;
+      color: var(--text-dark);
       cursor: pointer;
-      font-weight: 600;
-      transition: var(--transition-normal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
     }
 
-    .qty-btn:hover {
+    .qty-btn:hover:not(:disabled) {
       background: var(--primary-color);
       color: var(--text-white);
-      border-color: var(--primary-color);
     }
 
-    .qty-input {
-      width: 50px;
-      height: 32px;
+    .qty-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .qty-display {
+      width: 40px;
       text-align: center;
-      border: 2px solid var(--border-color);
-      border-radius: 6px;
       font-size: 14px;
       font-weight: 600;
+      color: var(--text-dark);
+      border-left: 1px solid var(--border-color);
+      border-right: 1px solid var(--border-color);
+      padding: 8px 0;
     }
 
     .item-total {
@@ -256,121 +300,171 @@ import { Subscription } from 'rxjs';
     }
 
     .total-price {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: var(--primary-color);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-dark);
       margin: 0;
     }
 
     .remove-btn {
       background: none;
       border: none;
-      color: #e74c3c;
+      color: var(--text-muted);
       cursor: pointer;
-      padding: 4px;
-      transition: var(--transition-normal);
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-family: var(--font-body);
+      transition: all 0.2s ease;
     }
 
     .remove-btn:hover {
-      transform: scale(1.1);
+      color: #e74c3c;
+      background: #fef2f2;
     }
 
     .cart-summary {
       background: var(--text-white);
-      padding: var(--spacing-md);
-      border-radius: 12px;
-      box-shadow: 0 2px 8px var(--shadow-light);
+      padding: 28px;
+      box-shadow: 0 1px 4px var(--shadow-light);
       height: fit-content;
       position: sticky;
-      top: 120px;
+      top: 100px;
     }
 
     .cart-summary h2 {
-      color: var(--primary-color);
-      margin-bottom: var(--spacing-md);
-      font-size: 1.5rem;
+      color: var(--text-dark);
+      margin-bottom: 20px;
+      font-size: 1.25rem;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
     }
 
     .summary-row {
       display: flex;
       justify-content: space-between;
-      margin-bottom: var(--spacing-sm);
+      margin-bottom: 14px;
       font-size: 14px;
+      color: var(--text-light);
+    }
+
+    .summary-value {
       color: var(--text-dark);
+      font-weight: 500;
     }
 
     .summary-row.total {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: var(--primary-color);
-      margin-top: var(--spacing-sm);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-top: 12px;
+      margin-bottom: 0;
     }
 
     .free-shipping {
       color: #27ae60;
-      font-weight: 600;
+      font-weight: 700;
+      font-size: 13px;
     }
 
     .summary-divider {
       height: 1px;
       background: var(--border-color);
-      margin: var(--spacing-sm) 0;
+      margin: 14px 0;
     }
 
-    .shipping-note {
-      background: var(--secondary-color);
-      padding: var(--spacing-sm);
-      border-radius: 8px;
-      margin: var(--spacing-sm) 0;
+    .shipping-progress {
+      margin: 4px 0 12px;
     }
 
-    .shipping-note p {
+    .progress-bar {
+      height: 4px;
+      background: var(--grey-light);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary-color), var(--btn-accent));
+      transition: width 0.4s ease;
+      max-width: 100%;
+    }
+
+    .progress-text {
       margin: 0;
       font-size: 12px;
-      color: var(--text-light);
-      text-align: center;
+      color: var(--text-muted);
     }
 
     .btn-checkout {
       width: 100%;
-      padding: 14px;
-      margin-top: var(--spacing-md);
-      font-size: 1.125rem;
+      padding: 16px;
+      margin-top: 20px;
+      font-size: 15px;
       font-weight: 600;
+      background: var(--btn-primary);
+      color: var(--text-white);
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: var(--font-body);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
 
+    .btn-checkout:hover {
+      background: var(--btn-primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(30, 58, 95, 0.3);
+    }
+
+    .btn-checkout:active { transform: translateY(0); }
+
     .continue-shopping {
-      display: block;
-      text-align: center;
-      margin-top: var(--spacing-sm);
-      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 14px;
+      color: var(--text-light);
       font-weight: 500;
-      transition: var(--transition-normal);
+      font-size: 14px;
+      transition: color 0.2s ease;
     }
 
     .continue-shopping:hover {
-      color: var(--primary-dark);
+      color: var(--primary-color);
+      opacity: 1;
     }
 
     .cart-empty {
       text-align: center;
-      padding: var(--spacing-xl) 0;
-      color: var(--text-light);
+      padding: var(--spacing-xl) var(--spacing-md);
     }
 
-    .cart-empty svg {
-      color: var(--primary-color);
-      margin-bottom: var(--spacing-md);
-      opacity: 0.5;
+    .empty-icon {
+      color: var(--text-muted);
+      opacity: 0.35;
+      margin-bottom: 20px;
     }
 
     .cart-empty h2 {
-      color: var(--primary-color);
-      margin-bottom: var(--spacing-sm);
+      color: var(--text-dark);
+      margin-bottom: 8px;
+      font-size: 1.5rem;
     }
 
     .cart-empty p {
       margin-bottom: var(--spacing-md);
+      color: var(--text-muted);
+      font-size: 15px;
     }
 
     @media (max-width: 968px) {
@@ -379,8 +473,8 @@ import { Subscription } from 'rxjs';
       }
 
       .cart-item {
-        grid-template-columns: 100px 1fr;
-        gap: var(--spacing-sm);
+        grid-template-columns: 90px 1fr;
+        gap: 12px;
       }
 
       .item-quantity,
@@ -389,14 +483,19 @@ import { Subscription } from 'rxjs';
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
-        margin-top: var(--spacing-sm);
-        padding-top: var(--spacing-sm);
+        padding-top: 12px;
         border-top: 1px solid var(--border-color);
       }
 
       .cart-summary {
         position: static;
       }
+    }
+
+    @media (max-width: 480px) {
+      .cart-item { padding: 14px; }
+      .item-image { width: 80px; height: 80px; }
+      .item-name { font-size: 14px; }
     }
   `]
 })

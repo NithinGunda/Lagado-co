@@ -11,674 +11,639 @@ import { Product, FilterOptions } from '../../models/product.model';
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
   template: `
-    <div class="product-listing">
-      <!-- Filters Sidebar -->
-      <aside class="filters-sidebar" [class.mobile-open]="mobileFiltersOpen">
-        <div class="filters-header">
-          <h3>Filters</h3>
-          <button class="close-filters" (click)="closeMobileFilters()" *ngIf="mobileFiltersOpen">×</button>
-        </div>
+    <div class="listing-page" (mousemove)="onMouseMove($event)">
+      <!-- Custom cursor glow -->
+      <div class="cursor-glow" [style.left.px]="cursorX" [style.top.px]="cursorY" [class.active]="cursorActive"></div>
 
-        <!-- Search -->
-        <div class="filter-section">
-          <label>Search</label>
-          <input 
-            type="text" 
-            [(ngModel)]="searchQuery"
-            (ngModelChange)="applyFilters()"
-            placeholder="Search products..."
-            class="filter-input"
-          >
-        </div>
-
-        <!-- Category Filter -->
-        <div class="filter-section">
-          <label>Category</label>
-          <div class="checkbox-group">
-            <label class="checkbox-label" *ngFor="let cat of categories">
-              <input 
-                type="checkbox" 
-                [value]="cat"
-                [checked]="selectedCategories.includes(cat)"
-                (change)="toggleCategory(cat)"
-              >
-              <span>{{ cat | titlecase }}</span>
-            </label>
+      <!-- Floating filter bar -->
+      <div class="filter-bar">
+        <div class="filter-bar-inner">
+          <div class="filter-chips">
+            <button
+              class="chip"
+              [class.active]="selectedCategories.length === 0"
+              (click)="selectCategory('all')"
+            >All</button>
+            <button
+              *ngFor="let cat of categories"
+              class="chip"
+              [class.active]="selectedCategories.includes(cat)"
+              (click)="selectCategory(cat)"
+            >{{ cat | titlecase }}</button>
           </div>
-        </div>
 
-        <!-- Price Range -->
-        <div class="filter-section">
-          <label>Price Range</label>
-          <div class="price-range-display">
-            <span>₹{{ priceRangeMin.toLocaleString() }}</span>
-            <span>₹{{ priceRangeMax.toLocaleString() }}</span>
-          </div>
-          <div class="range-slider-container">
-            <input 
-              type="range" 
-              class="range-slider range-min"
-              [min]="0"
-              [max]="50000"
-              [step]="500"
-              [(ngModel)]="priceRangeMin"
-              (ngModelChange)="onPriceRangeChange()"
-            >
-            <input 
-              type="range" 
-              class="range-slider range-max"
-              [min]="0"
-              [max]="50000"
-              [step]="500"
-              [(ngModel)]="priceRangeMax"
-              (ngModelChange)="onPriceRangeChange()"
-            >
-            <div class="range-track">
-              <div class="range-track-fill" [style.left.%]="(priceRangeMin / 50000) * 100" [style.right.%]="100 - (priceRangeMax / 50000) * 100"></div>
+          <div class="filter-controls">
+            <div class="search-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input
+                type="text"
+                [(ngModel)]="searchQuery"
+                (ngModelChange)="applyFilters()"
+                placeholder="Search products..."
+              />
             </div>
-          </div>
-        </div>
 
-        <!-- In Stock Filter -->
-        <div class="filter-section">
-          <label class="checkbox-label">
-            <input 
-              type="checkbox" 
-              [(ngModel)]="inStockOnly"
-              (ngModelChange)="applyFilters()"
-            >
-            <span>In Stock Only</span>
-          </label>
-        </div>
-
-        <!-- Clear Filters -->
-        <button class="btn btn-clear" (click)="clearFilters()">Clear All Filters</button>
-      </aside>
-
-      <!-- Main Content -->
-      <div class="products-main">
-        <!-- Toolbar -->
-        <div class="toolbar">
-          <div class="results-info">
-            <p>{{ filteredProducts.length }} product{{ filteredProducts.length !== 1 ? 's' : '' }} found</p>
-            <button class="mobile-filter-btn" (click)="toggleMobileFilters()">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+            <button class="filter-toggle" (click)="showAdvanced = !showAdvanced" [class.active]="showAdvanced || hasActiveFilters">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+                <circle cx="8" cy="6" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/><circle cx="10" cy="18" r="2" fill="currentColor"/>
               </svg>
-              Filters
+              <span>Filters</span>
+              <span class="filter-count" *ngIf="activeFilterCount > 0">{{ activeFilterCount }}</span>
             </button>
-          </div>
-          <div class="sort-options">
-            <label>Sort by:</label>
+
             <select [(ngModel)]="sortBy" (ngModelChange)="applySorting()" class="sort-select">
-              <option value="default">Default</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="name-asc">Name: A to Z</option>
-              <option value="name-desc">Name: Z to A</option>
-              <option value="rating">Highest Rated</option>
+              <option value="default">Sort: Default</option>
+              <option value="price-low">Price: Low → High</option>
+              <option value="price-high">Price: High → Low</option>
+              <option value="name-asc">Name: A → Z</option>
+              <option value="name-desc">Name: Z → A</option>
+              <option value="rating">Top Rated</option>
             </select>
           </div>
         </div>
 
-        <!-- Products Grid -->
-        <div class="products-grid">
-          <div 
-            class="product-card" 
-            *ngFor="let product of filteredProducts"
-            [routerLink]="['/product', product.id]"
-          >
-            <div class="product-image">
-              <div class="product-placeholder" [style.background]="getProductColor(product)"></div>
-              <div class="product-badge" *ngIf="product.badge">{{ product.badge }}</div>
-              <div class="product-actions">
-                <button 
-                  class="product-action-btn" 
-                  (click)="addToCart(product, $event)"
-                  aria-label="Add to cart"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 2L7 6m8-4l-2 4M3 6h18l-2 13H5L3 6z"></path>
-                    <circle cx="9" cy="20" r="1"></circle>
-                    <circle cx="20" cy="20" r="1"></circle>
-                  </svg>
-                </button>
+        <!-- Advanced filters drawer -->
+        <div class="advanced-filters" [class.open]="showAdvanced">
+          <div class="af-inner">
+            <div class="af-group">
+              <label>Price Range</label>
+              <div class="price-display">
+                <span>₹{{ priceRangeMin.toLocaleString() }}</span>
+                <span class="price-dash">—</span>
+                <span>₹{{ priceRangeMax.toLocaleString() }}</span>
+              </div>
+              <div class="range-slider-container">
+                <input type="range" class="range-slider" [min]="0" [max]="50000" [step]="500"
+                  [(ngModel)]="priceRangeMin" (ngModelChange)="onPriceRangeChange()" />
+                <input type="range" class="range-slider" [min]="0" [max]="50000" [step]="500"
+                  [(ngModel)]="priceRangeMax" (ngModelChange)="onPriceRangeChange()" />
+                <div class="range-track">
+                  <div class="range-fill" [style.left.%]="(priceRangeMin / 50000) * 100" [style.right.%]="100 - (priceRangeMax / 50000) * 100"></div>
+                </div>
               </div>
             </div>
-            <div class="product-info">
-              <h3 class="product-name">{{ product.name }}</h3>
-              <p class="product-category">{{ product.category | titlecase }}</p>
-              <div class="product-price-row">
-                <p class="product-price">{{ formatPrice(product.price) }}</p>
-                <p class="product-original-price" *ngIf="product.originalPrice">{{ formatPrice(product.originalPrice) }}</p>
+
+            <label class="toggle-label">
+              <span>In Stock Only</span>
+              <div class="toggle" [class.on]="inStockOnly" (click)="inStockOnly = !inStockOnly; applyFilters()">
+                <div class="toggle-knob"></div>
               </div>
-              <div class="product-sizes" *ngIf="getProductSizes(product).length > 0">
-                <span class="size-tag" *ngFor="let size of getProductSizes(product)">{{ size }}</span>
+            </label>
+
+            <button class="af-clear" (click)="clearFilters()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Clear All
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results count -->
+      <div class="results-bar">
+        <p class="result-count">
+          <strong>{{ filteredProducts.length }}</strong> product{{ filteredProducts.length !== 1 ? 's' : '' }}
+        </p>
+        <div class="active-tags" *ngIf="hasActiveFilters">
+          <span class="tag" *ngIf="searchQuery" (click)="searchQuery=''; applyFilters()">
+            "{{ searchQuery }}" <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </span>
+          <span class="tag" *ngIf="inStockOnly" (click)="inStockOnly=false; applyFilters()">
+            In Stock <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </span>
+          <span class="tag" *ngIf="priceRangeMin > 0 || priceRangeMax < 50000" (click)="priceRangeMin=0; priceRangeMax=50000; applyFilters()">
+            ₹{{ priceRangeMin.toLocaleString() }}–₹{{ priceRangeMax.toLocaleString() }} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </span>
+        </div>
+      </div>
+
+      <!-- Products Grid -->
+      <div class="products-grid">
+        <div
+          class="product-card"
+          *ngFor="let product of filteredProducts; let i = index"
+          [routerLink]="['/product', product.id]"
+          [style.animation-delay]="i * 0.05 + 's'"
+          (mouseenter)="cursorActive = true"
+          (mouseleave)="cursorActive = false"
+        >
+          <!-- Image -->
+          <div class="card-image">
+            <img class="card-img-inner" [src]="getProductImage(product)" [alt]="product.name" loading="lazy" />
+            <div class="card-img-fallback" [style.background]="getProductColor(product)"></div>
+            <div class="card-overlay"></div>
+
+            <!-- Badges -->
+            <div class="badge sale" *ngIf="product.originalPrice">-{{ getDiscountPercent(product) }}%</div>
+            <div class="badge new" *ngIf="product.badge && !product.originalPrice">{{ product.badge }}</div>
+
+            <!-- Quick actions -->
+            <div class="card-actions">
+              <button
+                class="action-btn cart-btn"
+                (click)="addToCart(product, $event)"
+                [class.added]="addedProductId === product.id"
+                aria-label="Add to cart"
+              >
+                <svg *ngIf="addedProductId !== product.id" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
+                </svg>
+                <svg *ngIf="addedProductId === product.id" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Quick view strip -->
+            <div class="quick-view-strip">
+              <span>Quick View</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
+          </div>
+
+          <!-- Info -->
+          <div class="card-info">
+            <span class="card-category">{{ product.category | titlecase }}</span>
+            <h3 class="card-name">{{ product.name }}</h3>
+            <div class="card-price-row">
+              <span class="card-price">{{ formatPrice(product.price) }}</span>
+              <span class="card-original" *ngIf="product.originalPrice">{{ formatPrice(product.originalPrice) }}</span>
+            </div>
+            <div class="card-sizes" *ngIf="getProductSizes(product).length > 0">
+              <span *ngFor="let size of getProductSizes(product)">{{ size }}</span>
+            </div>
+            <div class="card-rating" *ngIf="product.rating">
+              <div class="star-bar">
+                <div class="star-fill" [style.width.%]="(product.rating / 5) * 100"></div>
+                <span>★★★★★</span>
               </div>
-              <div class="product-rating" *ngIf="product.rating">
-                <span class="stars">{{ getStars(product.rating) }}</span>
-                <span class="rating-text">({{ product.reviewCount }})</span>
-              </div>
+              <span class="rating-num">{{ product.rating }}</span>
+              <span class="review-count">({{ product.reviewCount }})</span>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Empty State -->
-        <div class="empty-state" *ngIf="filteredProducts.length === 0">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="M21 21l-4.35-4.35"></path>
-          </svg>
-          <h3>No products found</h3>
-          <p>Try adjusting your filters</p>
-          <button class="btn btn-primary" (click)="clearFilters()">Clear Filters</button>
+      <!-- Toast -->
+      <div class="toast" [class.show]="showToast">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        {{ toastMessage }}
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-state" *ngIf="filteredProducts.length === 0">
+        <div class="empty-icon">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         </div>
+        <h3>No products found</h3>
+        <p>Try adjusting your filters or search terms</p>
+        <button class="btn-reset" (click)="clearFilters()">Reset Filters</button>
       </div>
     </div>
   `,
   styles: [`
-    .product-listing {
-      display: flex;
-      gap: var(--spacing-md);
-      padding: var(--spacing-sm) 0;
-      min-height: calc(100vh - 300px);
+    :host { display: block; }
+
+    .listing-page {
+      position: relative;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0 clamp(16px, 3vw, 40px) 60px;
     }
 
-    .filters-sidebar {
-      width: 220px;
-      min-width: 220px;
-      background: var(--text-white);
-      padding: 16px;
-      box-shadow: 0 1px 4px var(--shadow-light);
-      height: fit-content;
-      position: sticky;
-      top: 100px;
-      flex-shrink: 0;
+    /* ===== CUSTOM CURSOR GLOW ===== */
+    .cursor-glow {
+      position: fixed; width: 320px; height: 320px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(232,197,71,0.06) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+      transform: translate(-50%, -50%);
+      transition: width 0.4s ease, height 0.4s ease, opacity 0.4s ease;
+      opacity: 0;
+    }
+    .cursor-glow.active {
+      opacity: 1; width: 400px; height: 400px;
     }
 
-    .filters-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid var(--border-color);
+    /* ===== FILTER BAR ===== */
+    .filter-bar {
+      position: sticky; top: 70px; z-index: 50;
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      margin: 0 -clamp(16px, 3vw, 40px);
+      padding: 0 clamp(16px, 3vw, 40px);
+    }
+    .filter-bar-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 14px 0; flex-wrap: wrap;
     }
 
-    .filters-header h3 {
-      margin: 0;
-      color: var(--primary-color);
-      font-size: 1rem;
+    .filter-chips {
+      display: flex; gap: 6px; flex-wrap: wrap;
     }
-
-    .close-filters {
-      background: none;
-      border: none;
-      font-size: 2rem;
-      color: var(--text-light);
-      cursor: pointer;
-      line-height: 1;
+    .chip {
+      padding: 8px 20px; border: 1.5px solid var(--border-color);
+      background: transparent; color: var(--text-dark);
+      font-size: 12px; font-weight: 600; letter-spacing: 0.8px;
+      text-transform: uppercase; cursor: pointer;
+      font-family: var(--font-body);
+      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      position: relative; overflow: hidden;
     }
-
-    .filter-section {
-      margin-bottom: 14px;
+    .chip::after {
+      content: ''; position: absolute; bottom: 0; left: 50%; width: 0; height: 2px;
+      background: var(--primary-color); transition: all 0.3s ease;
+      transform: translateX(-50%);
     }
-
-    .filter-section > label {
-      display: block;
-      margin-bottom: 6px;
-      font-weight: 600;
-      color: var(--primary-color);
-      font-size: 13px;
-    }
-
-    .filter-input {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid var(--border-color);
-      font-size: 13px;
-      transition: var(--transition-normal);
-      box-sizing: border-box;
-    }
-
-    .filter-input:focus {
-      outline: none;
+    .chip:hover { border-color: var(--primary-color); color: var(--primary-color); }
+    .chip:hover::after { width: 60%; }
+    .chip.active {
+      background: var(--primary-color); color: #fff;
       border-color: var(--primary-color);
     }
+    .chip.active::after { display: none; }
 
-    .checkbox-group {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+    .filter-controls {
+      display: flex; align-items: center; gap: 10px;
     }
 
-    label.checkbox-label,
-    .filter-section > label.checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      font-weight: 400;
-      font-size: 13px;
-      margin-bottom: 0;
+    .search-box {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; border: 1.5px solid var(--border-color);
+      background: #fff; transition: border-color 0.3s, box-shadow 0.3s;
+      min-width: 200px;
     }
-
-    label.checkbox-label input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      min-width: 16px;
-      min-height: 16px;
-      accent-color: var(--primary-color);
-      cursor: pointer;
-      margin: 0;
-      padding: 0;
-      flex-shrink: 0;
+    .search-box:focus-within {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(21,42,71,0.06);
     }
-
-    label.checkbox-label span {
-      user-select: none;
-      padding-left: 0;
+    .search-box svg { color: var(--text-muted); flex-shrink: 0; }
+    .search-box input {
+      border: none; outline: none; background: transparent;
+      font-size: 13px; font-family: var(--font-body); width: 100%;
+      color: var(--text-dark);
     }
+    .search-box input::placeholder { color: var(--text-muted); }
 
-    /* Price Range Slider */
-    .price-range-display {
-      display: flex;
-      justify-content: space-between;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--primary-color);
-      margin-bottom: 12px;
+    .filter-toggle {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border: 1.5px solid var(--border-color);
+      background: #fff; cursor: pointer; font-size: 12px;
+      font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+      font-family: var(--font-body); color: var(--text-dark);
+      transition: all 0.3s ease;
     }
-
-    .range-slider-container {
-      position: relative;
-      width: 100%;
-      height: 24px;
-      margin: 8px 0 4px;
+    .filter-toggle:hover, .filter-toggle.active {
+      border-color: var(--primary-color); color: var(--primary-color);
     }
-
-    .range-track {
-      position: absolute;
-      top: 50%;
-      left: 0;
-      right: 0;
-      height: 4px;
-      transform: translateY(-50%);
-      background: var(--border-color);
-      border-radius: 2px;
-      z-index: 1;
-    }
-
-    .range-track-fill {
-      position: absolute;
-      top: 0;
-      height: 100%;
-      background: var(--primary-color);
-      border-radius: 2px;
-    }
-
-    .range-slider {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      -webkit-appearance: none;
-      appearance: none;
-      background: transparent;
-      pointer-events: none;
-      margin: 0;
-      padding: 0;
-      z-index: 2;
-    }
-
-    .range-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: var(--primary-color);
-      border: 3px solid var(--text-white);
-      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
-      cursor: pointer;
-      pointer-events: auto;
-      margin-top: -9px;
-    }
-
-    .range-slider::-webkit-slider-runnable-track {
-      height: 4px;
-      background: transparent;
-      cursor: pointer;
-    }
-
-    .range-slider::-moz-range-thumb {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: var(--primary-color);
-      border: 3px solid var(--text-white);
-      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
-      cursor: pointer;
-      pointer-events: auto;
-    }
-
-    .range-slider::-moz-range-track {
-      height: 4px;
-      background: transparent;
-      cursor: pointer;
-    }
-
-    .btn-clear {
-      width: 100%;
-      margin-top: 14px;
-      padding: 8px;
-      font-size: 13px;
-      background: var(--secondary-color);
-      border: 1px solid var(--border-color);
-      color: var(--primary-color);
-    }
-
-    .products-main {
-      flex: 1;
-    }
-
-    .toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: var(--spacing-md);
-      flex-wrap: wrap;
-      gap: var(--spacing-sm);
-    }
-
-    .results-info {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-md);
-    }
-
-    .results-info p {
-      margin: 0;
-      color: var(--text-light);
-      font-size: 14px;
-    }
-
-    .mobile-filter-btn {
-      display: none;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      background: var(--primary-color);
-      color: var(--text-white);
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-    }
-
-    .sort-options {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .filter-count {
+      background: var(--primary-color); color: #fff;
+      font-size: 10px; padding: 1px 6px; border-radius: 10px;
+      font-weight: 700; line-height: 1.4;
     }
 
     .sort-select {
-      padding: 8px 12px;
-      border: 1px solid var(--border-color);
-      font-size: 13px;
-      background: var(--text-white);
-      color: var(--text-dark);
-      cursor: pointer;
+      padding: 9px 14px; border: 1.5px solid var(--border-color);
+      font-size: 12px; font-weight: 600; letter-spacing: 0.5px;
+      text-transform: uppercase; background: #fff; cursor: pointer;
+      font-family: var(--font-body); color: var(--text-dark);
+      transition: border-color 0.3s;
+    }
+    .sort-select:focus { border-color: var(--primary-color); outline: none; }
+
+    /* Advanced filters */
+    .advanced-filters {
+      max-height: 0; overflow: hidden;
+      transition: max-height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), padding 0.4s ease;
+      padding: 0;
+    }
+    .advanced-filters.open { max-height: 200px; padding: 16px 0; }
+    .af-inner {
+      display: flex; align-items: center; gap: 32px; flex-wrap: wrap;
+    }
+    .af-group label {
+      display: block; font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;
+    }
+    .price-display {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 700; color: var(--primary-color); margin-bottom: 8px;
+    }
+    .price-dash { color: var(--text-muted); font-weight: 400; }
+
+    .range-slider-container {
+      position: relative; width: 200px; height: 20px;
+    }
+    .range-track {
+      position: absolute; top: 50%; left: 0; right: 0;
+      height: 3px; transform: translateY(-50%);
+      background: var(--border-color); z-index: 1;
+    }
+    .range-fill {
+      position: absolute; top: 0; height: 100%;
+      background: var(--primary-color);
+    }
+    .range-slider {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      -webkit-appearance: none; appearance: none;
+      background: transparent; pointer-events: none; margin: 0; z-index: 2;
+    }
+    .range-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 16px; height: 16px;
+      border-radius: 50%; background: var(--primary-color);
+      border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+      cursor: pointer; pointer-events: auto;
+    }
+    .range-slider::-moz-range-thumb {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--primary-color); border: 3px solid #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+      cursor: pointer; pointer-events: auto;
     }
 
+    .toggle-label {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 12px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text-dark); cursor: pointer;
+    }
+    .toggle {
+      width: 38px; height: 20px; background: var(--border-color);
+      border-radius: 10px; position: relative; cursor: pointer;
+      transition: background 0.3s;
+    }
+    .toggle.on { background: var(--primary-color); }
+    .toggle-knob {
+      position: absolute; top: 2px; left: 2px;
+      width: 16px; height: 16px; background: #fff;
+      border-radius: 50%; transition: transform 0.3s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle.on .toggle-knob { transform: translateX(18px); }
+
+    .af-clear {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border: 1px solid rgba(185,28,28,0.3);
+      background: transparent; color: #b91c1c; font-size: 11px;
+      font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+      cursor: pointer; font-family: var(--font-body);
+      transition: all 0.3s;
+    }
+    .af-clear:hover { background: #fef2f2; border-color: #b91c1c; }
+
+    /* Results bar */
+    .results-bar {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      padding: 16px 0 8px; min-height: 40px;
+    }
+    .result-count {
+      margin: 0; font-size: 13px; color: var(--text-muted);
+    }
+    .result-count strong { color: var(--text-dark); }
+    .active-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; background: var(--secondary-color);
+      font-size: 11px; font-weight: 600; color: var(--primary-color);
+      cursor: pointer; transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+    .tag:hover { border-color: var(--primary-color); }
+    .tag svg { opacity: 0.5; }
+
+    /* ===== PRODUCTS GRID ===== */
     .products-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
+      gap: 20px;
+      padding-top: 8px;
+    }
+
+    @keyframes cardReveal {
+      from { opacity: 0; transform: translateY(24px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     .product-card {
-      background: var(--text-white);
-      overflow: hidden;
-      transition: var(--transition-normal);
-      cursor: pointer;
-      box-shadow: 0 1px 4px var(--shadow-light);
-    }
-
-    .product-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 24px var(--shadow-medium);
-    }
-
-    .product-image {
       position: relative;
-      width: 100%;
-      height: 260px;
+      background: #fff;
+      border: 1px solid rgba(0,0,0,0.06);
+      overflow: hidden; cursor: pointer;
+      animation: cardReveal 0.5s ease both;
+      transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                  box-shadow 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                  border-color 0.3s;
+    }
+    .product-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 24px 48px rgba(0,0,0,0.1), 0 8px 16px rgba(0,0,0,0.06);
+      border-color: transparent;
+    }
+
+    /* Card image */
+    .card-image {
+      position: relative; width: 100%;
+      aspect-ratio: 3 / 4;
       overflow: hidden;
     }
-
-    .product-placeholder {
-      width: 100%;
-      height: 100%;
-      transition: var(--transition-slow);
+    .card-img-inner {
+      width: 100%; height: 100%; object-fit: cover;
+      display: block; position: relative; z-index: 1;
+      transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    .card-img-fallback {
+      position: absolute; inset: 0; z-index: 0;
+    }
+    .product-card:hover .card-img-inner {
+      transform: scale(1.08);
     }
 
-    .product-card:hover .product-placeholder {
-      transform: scale(1.05);
+    .card-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.2) 0%, transparent 50%);
+      opacity: 0; transition: opacity 0.4s ease;
     }
+    .product-card:hover .card-overlay { opacity: 1; }
 
-    .product-badge {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      background: var(--accent-color);
-      color: var(--primary-color);
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      z-index: 2;
+    /* Badges */
+    .badge {
+      position: absolute; top: 12px; left: 12px; z-index: 3;
+      padding: 5px 12px; font-size: 10px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
     }
+    .badge.sale { background: #b91c1c; color: #fff; }
+    .badge.new { background: var(--primary-color); color: #fff; }
 
-    .product-actions {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      opacity: 0;
-      transform: translateX(10px);
-      transition: var(--transition-normal);
-      z-index: 2;
+    /* Card actions */
+    .card-actions {
+      position: absolute; top: 12px; right: 12px; z-index: 4;
+      opacity: 0; transform: translateY(-10px) scale(0.9);
+      transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
-
-    .product-card:hover .product-actions {
-      opacity: 1;
-      transform: translateX(0);
+    .product-card:hover .card-actions {
+      opacity: 1; transform: translateY(0) scale(1);
     }
-
-    .product-action-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: var(--text-white);
-      border: none;
-      color: var(--primary-color);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 8px var(--shadow-light);
-      transition: var(--transition-normal);
+    .action-btn {
+      width: 42px; height: 42px; background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(8px); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-dark);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      transition: all 0.25s ease;
     }
-
-    .product-action-btn:hover {
-      background: var(--primary-color);
-      color: var(--text-white);
+    .action-btn:hover {
+      background: var(--primary-color); color: #fff;
       transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(21,42,71,0.3);
+    }
+    .action-btn.added { background: #059669; color: #fff; }
+
+    /* Quick view strip */
+    .quick-view-strip {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 3;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px; font-size: 11px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: #fff; background: rgba(21,42,71,0.88); backdrop-filter: blur(4px);
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    .product-card:hover .quick-view-strip {
+      transform: translateY(0);
     }
 
-    .product-info {
-      padding: 12px;
+    /* Card info */
+    .card-info {
+      padding: 16px 16px 18px;
     }
-
-    .product-name {
-      font-size: 0.9rem;
-      color: var(--primary-color);
-      margin-bottom: 4px;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .card-category {
+      display: block; font-size: 10px; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 4px;
     }
-
-    .product-category {
-      font-size: 12px;
-      color: var(--text-light);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
+    .card-name {
+      font-size: 0.95rem; font-weight: 600; color: var(--text-dark);
+      margin: 0 0 8px 0; line-height: 1.35;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      transition: color 0.2s;
     }
+    .product-card:hover .card-name { color: var(--primary-color); }
 
-    .product-price-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
+    .card-price-row {
+      display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;
     }
-
-    .product-price {
-      font-size: 1.125rem;
-      color: var(--primary-color);
-      font-weight: 600;
-      margin: 0;
+    .card-price {
+      font-size: 1.05rem; font-weight: 800; color: var(--text-dark);
+      letter-spacing: -0.02em;
     }
-
-    .product-original-price {
-      font-size: 0.875rem;
-      color: var(--text-light);
+    .card-original {
+      font-size: 0.8rem; color: var(--text-muted);
       text-decoration: line-through;
-      margin: 0;
     }
 
-    .product-sizes {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      margin-bottom: 6px;
+    .card-sizes {
+      display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px;
+    }
+    .card-sizes span {
+      padding: 2px 8px; font-size: 10px; font-weight: 700;
+      border: 1px solid var(--border-color); color: var(--text-muted);
+      letter-spacing: 0.5px; transition: all 0.2s;
+    }
+    .product-card:hover .card-sizes span {
+      border-color: rgba(21,42,71,0.2); color: var(--text-dark);
     }
 
-    .size-tag {
-      display: inline-block;
-      padding: 2px 8px;
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--text-light);
-      background: var(--secondary-color);
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
-      line-height: 1.4;
+    .card-rating {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .star-bar {
+      position: relative; display: inline-block;
+      color: rgba(0,0,0,0.1); font-size: 12px; letter-spacing: 1px;
+      line-height: 1;
+    }
+    .star-fill {
+      position: absolute; top: 0; left: 0; height: 100%;
+      overflow: hidden; color: #f59e0b; white-space: nowrap;
+    }
+    .star-fill::after { content: '★★★★★'; }
+    .rating-num {
+      font-size: 12px; font-weight: 700; color: var(--text-dark);
+    }
+    .review-count {
+      font-size: 11px; color: var(--text-muted);
     }
 
-    .product-rating {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 12px;
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: var(--primary-color); color: #fff;
+      padding: 14px 28px; display: flex; align-items: center; gap: 10px;
+      font-size: 13px; font-weight: 600; z-index: 1000;
+      box-shadow: 0 8px 30px rgba(21,42,71,0.3);
+      opacity: 0; transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      pointer-events: none;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0); opacity: 1;
     }
 
-    .stars {
-      color: #fbbf24;
-    }
-
-    .rating-text {
-      color: var(--text-light);
-    }
-
+    /* Empty state */
     .empty-state {
-      text-align: center;
-      padding: var(--spacing-xl) 0;
-      color: var(--text-light);
+      text-align: center; padding: 80px 20px;
     }
-
-    .empty-state svg {
-      color: var(--primary-color);
-      opacity: 0.5;
-      margin-bottom: var(--spacing-md);
+    .empty-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 100px; height: 100px; border-radius: 50%;
+      background: var(--secondary-color); margin-bottom: 24px;
+      color: var(--primary-color); opacity: 0.6;
     }
-
     .empty-state h3 {
-      color: var(--primary-color);
-      margin-bottom: var(--spacing-sm);
+      font-size: 1.2rem; color: var(--text-dark); margin: 0 0 8px;
     }
+    .empty-state p {
+      color: var(--text-muted); margin: 0 0 24px;
+    }
+    .btn-reset {
+      padding: 12px 32px; border: 2px solid var(--primary-color);
+      background: transparent; color: var(--primary-color);
+      font-size: 12px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; cursor: pointer;
+      font-family: var(--font-body); transition: all 0.3s;
+    }
+    .btn-reset:hover { background: var(--primary-color); color: #fff; }
 
+    /* ===== RESPONSIVE ===== */
     @media (max-width: 1200px) {
-      .products-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
+      .products-grid { grid-template-columns: repeat(3, 1fr); }
     }
 
     @media (max-width: 968px) {
-      .product-listing {
-        flex-direction: column;
-      }
-
-      .filters-sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        width: 100%;
-        min-width: 100%;
-        z-index: 1000;
-        overflow-y: auto;
-        transform: translateX(-100%);
-        transition: var(--transition-normal);
-      }
-
-      .filters-sidebar.mobile-open {
-        transform: translateX(0);
-      }
-
-      .mobile-filter-btn {
-        display: flex;
-      }
-
-      .products-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
+      .products-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; }
+      .filter-bar-inner { gap: 12px; }
+      .search-box { min-width: 160px; }
+      .cursor-glow { display: none; }
     }
 
     @media (max-width: 768px) {
-      .products-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-      }
-
-      .product-image { height: 200px; }
-
-      .toolbar {
-        flex-direction: column;
-        align-items: flex-start;
-      }
+      .products-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .filter-bar-inner { flex-direction: column; align-items: stretch; }
+      .filter-controls { flex-wrap: wrap; }
+      .search-box { flex: 1; min-width: 0; }
+      .range-slider-container { width: 100%; }
+      .af-inner { gap: 20px; }
     }
 
     @media (max-width: 480px) {
-      .products-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-      }
-      .product-image { height: 180px; }
-      .product-info { padding: 10px; }
-      .product-name { font-size: 0.8rem; }
+      .products-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .card-info { padding: 12px; }
+      .card-name { font-size: 0.82rem; }
+      .card-price { font-size: 0.95rem; }
+      .chip { padding: 6px 14px; font-size: 11px; }
+      .filter-chips { gap: 4px; }
     }
   `]
 })
 export class ProductListingComponent implements OnInit {
   @Input() category?: string;
-  
+
   products: Product[] = [];
   filteredProducts: Product[] = [];
   categories: string[] = ['mens', 'womens', 'collections'];
@@ -688,7 +653,14 @@ export class ProductListingComponent implements OnInit {
   priceRangeMax = 50000;
   inStockOnly = false;
   sortBy = 'default';
-  mobileFiltersOpen = false;
+  showAdvanced = false;
+  showToast = false;
+  toastMessage = '';
+  addedProductId: string | null = null;
+
+  cursorX = 0;
+  cursorY = 0;
+  cursorActive = false;
 
   constructor(
     private productService: ProductService,
@@ -705,18 +677,36 @@ export class ProductListingComponent implements OnInit {
     this.filteredProducts = [...this.products];
   }
 
-  toggleCategory(category: string) {
-    const index = this.selectedCategories.indexOf(category);
-    if (index > -1) {
-      this.selectedCategories.splice(index, 1);
+  onMouseMove(e: MouseEvent) {
+    this.cursorX = e.clientX;
+    this.cursorY = e.clientY;
+  }
+
+  get hasActiveFilters(): boolean {
+    return this.searchQuery.length > 0 || this.inStockOnly ||
+      this.priceRangeMin > 0 || this.priceRangeMax < 50000;
+  }
+
+  get activeFilterCount(): number {
+    let c = 0;
+    if (this.searchQuery) c++;
+    if (this.inStockOnly) c++;
+    if (this.priceRangeMin > 0 || this.priceRangeMax < 50000) c++;
+    return c;
+  }
+
+  selectCategory(cat: string) {
+    if (cat === 'all') {
+      this.selectedCategories = [];
     } else {
-      this.selectedCategories.push(category);
+      const idx = this.selectedCategories.indexOf(cat);
+      if (idx > -1) this.selectedCategories.splice(idx, 1);
+      else this.selectedCategories = [cat];
     }
     this.applyFilters();
   }
 
   onPriceRangeChange() {
-    // Ensure min doesn't exceed max
     if (this.priceRangeMin > this.priceRangeMax) {
       const temp = this.priceRangeMin;
       this.priceRangeMin = this.priceRangeMax;
@@ -727,51 +717,25 @@ export class ProductListingComponent implements OnInit {
 
   applyFilters() {
     const filters: FilterOptions = {};
-
-    if (this.selectedCategories.length > 0) {
-      filters.category = this.selectedCategories;
-    }
-
+    if (this.selectedCategories.length > 0) filters.category = this.selectedCategories;
     if (this.priceRangeMin > 0 || this.priceRangeMax < 50000) {
-      filters.priceRange = {
-        min: this.priceRangeMin,
-        max: this.priceRangeMax
-      };
+      filters.priceRange = { min: this.priceRangeMin, max: this.priceRangeMax };
     }
-
-    if (this.inStockOnly) {
-      filters.inStock = true;
-    }
-
-    if (this.searchQuery) {
-      filters.search = this.searchQuery;
-    }
-
+    if (this.inStockOnly) filters.inStock = true;
+    if (this.searchQuery) filters.search = this.searchQuery;
     this.filteredProducts = this.productService.filterProducts(filters);
     this.applySorting();
   }
 
   applySorting() {
     const sorted = [...this.filteredProducts];
-    
     switch (this.sortBy) {
-      case 'price-low':
-        sorted.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-high':
-        sorted.sort((a, b) => b.price - a.price);
-        break;
-      case 'name-asc':
-        sorted.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      case 'name-desc':
-        sorted.sort((a, b) => b.name.localeCompare(a.name));
-        break;
-      case 'rating':
-        sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        break;
+      case 'price-low': sorted.sort((a, b) => a.price - b.price); break;
+      case 'price-high': sorted.sort((a, b) => b.price - a.price); break;
+      case 'name-asc': sorted.sort((a, b) => a.name.localeCompare(b.name)); break;
+      case 'name-desc': sorted.sort((a, b) => b.name.localeCompare(a.name)); break;
+      case 'rating': sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0)); break;
     }
-
     this.filteredProducts = sorted;
   }
 
@@ -782,28 +746,39 @@ export class ProductListingComponent implements OnInit {
     this.priceRangeMax = 50000;
     this.inStockOnly = false;
     this.sortBy = 'default';
+    this.showAdvanced = false;
     this.applyFilters();
-  }
-
-  toggleMobileFilters() {
-    this.mobileFiltersOpen = !this.mobileFiltersOpen;
-  }
-
-  closeMobileFilters() {
-    this.mobileFiltersOpen = false;
   }
 
   addToCart(product: Product, event: Event) {
     event.stopPropagation();
     event.preventDefault();
     this.cartService.addToCart(product, 1);
-    // Show notification or toast here
+    this.addedProductId = product.id;
+    this.toastMessage = `${product.name} added to cart!`;
+    this.showToast = true;
+    setTimeout(() => this.addedProductId = null, 1500);
+    setTimeout(() => this.showToast = false, 3000);
+  }
+
+  getDiscountPercent(product: Product): number {
+    if (!product.originalPrice) return 0;
+    return Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
   }
 
   getProductSizes(product: Product): string[] {
     const sizeAttr = product.attributes?.find(a => a.name.toLowerCase() === 'size');
     if (!sizeAttr) return [];
     return sizeAttr.value.split(',').map(s => s.trim()).filter(s => s);
+  }
+
+  getProductImage(product: Product): string {
+    if (product.images && product.images.length > 0 && product.images[0].startsWith('assets/')) {
+      return product.images[0];
+    }
+    if (product.image_url) return product.image_url;
+    if ((product as any).image_urls?.length) return (product as any).image_urls[0];
+    return '';
   }
 
   getProductColor(product: Product): string {
@@ -816,15 +791,15 @@ export class ProductListingComponent implements OnInit {
   }
 
   formatPrice(price: number): string {
-    return `₹${price}`;
+    return `₹${price.toLocaleString()}`;
   }
 
   getStars(rating: number): string {
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 >= 0.5;
-    let stars = '★'.repeat(fullStars);
-    if (hasHalfStar) stars += '½';
-    stars += '☆'.repeat(5 - Math.ceil(rating));
-    return stars;
+    const full = Math.floor(rating);
+    const half = rating % 1 >= 0.5;
+    let s = '★'.repeat(full);
+    if (half) s += '½';
+    s += '☆'.repeat(5 - Math.ceil(rating));
+    return s;
   }
 }

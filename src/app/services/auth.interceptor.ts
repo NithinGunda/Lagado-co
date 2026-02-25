@@ -19,6 +19,9 @@ export class AuthInterceptor implements HttpInterceptor {
     return next.handle(cloned).pipe(
       catchError((err: any) => {
         if (err instanceof HttpErrorResponse && err.status === 401) {
+          if (this.auth.isAdminAuth()) {
+            return throwError(err);
+          }
           this.auth.clearAuth();
           try {
             const url = this.router.url || '';

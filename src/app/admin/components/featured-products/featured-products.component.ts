@@ -1,140 +1,181 @@
 import { Component, OnInit } from '@angular/core';
-import { of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
-import { FeaturedProductsService, FeaturedProduct } from '../../../services/featured-products.service';
-
-const MOCK_FEATURED: FeaturedProduct[] = [
-  { id: 1, name: 'Featured Product 1', price: 25000, description: 'Premium featured product' },
-  { id: 2, name: 'Featured Product 2', price: 18000, description: 'Elegant featured product' }
-];
+import { Router } from '@angular/router';
+import { ProductApiService } from '../../../services/product-api.service';
 
 @Component({
   selector: 'app-admin-featured-products',
   template: `
-    <div class="admin-featured-products">
+    <div class="fp-page">
       <div class="page-header">
-        <h1>Featured Products</h1>
-        <button type="button" class="btn btn-primary" (click)="openAdd()">Add Featured Product</button>
+        <div>
+          <h1>Featured Products</h1>
+          <p class="subtitle">Products marked as featured are displayed on the homepage. Manage this from the product edit page.</p>
+        </div>
       </div>
 
-      <div *ngIf="error" class="alert error">{{ error }}</div>
-      <div *ngIf="loading" class="loading">Loading…</div>
-
-      <div *ngIf="!loading && featuredProducts.length === 0 && !editing" class="empty">
-        No featured products yet. Add one above.
+      <!-- Search -->
+      <div class="filter-bar">
+        <div class="search-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" [(ngModel)]="searchQuery" (input)="filterProducts()" placeholder="Search featured products..." />
+        </div>
+        <span class="count-label">{{ filtered.length }} featured product{{ filtered.length !== 1 ? 's' : '' }}</span>
       </div>
 
-      <table *ngIf="!loading && featuredProducts.length > 0" class="data-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Image</th>
-            <th>Name</th>
-            <th>Price</th>
-            <th>Description</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let p of featuredProducts">
-            <td>{{ p.id }}</td>
-            <td>
-              <img *ngIf="p.image_url" [src]="p.image_url" alt="{{ p.name }}" class="table-image" />
-              <span *ngIf="!p.image_url">—</span>
-            </td>
-            <td>{{ p.name }}</td>
-            <td>{{ formatPrice(p.price) }}</td>
-            <td class="desc-cell">{{ p.description || '—' }}</td>
-            <td>
-              <button type="button" class="btn btn-sm" (click)="edit(p)">Edit</button>
-              <button type="button" class="btn btn-sm btn-danger" (click)="confirmDelete(p)">Delete</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div *ngIf="loading" class="loading-msg">Loading featured products...</div>
 
-      <div *ngIf="editing" class="form-overlay">
-        <div class="form-card wide">
-          <h3>{{ editing.id ? 'Edit' : 'Add' }} Featured Product</h3>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Product Name</label>
-              <input [(ngModel)]="editing.name" placeholder="Product name" class="form-input" />
+      <!-- Products Grid -->
+      <div class="products-grid" *ngIf="!loading && filtered.length > 0">
+        <div class="product-card" *ngFor="let p of filtered">
+          <div class="card-img">
+            <img *ngIf="p.image_url" [src]="p.image_url" [alt]="p.name" />
+            <div *ngIf="!p.image_url" class="card-img-placeholder">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             </div>
-            <div class="form-group">
-              <label>Price</label>
-              <input type="number" [(ngModel)]="editing.price" placeholder="0" class="form-input" min="0" step="0.01" />
+            <span class="featured-badge">Featured</span>
+          </div>
+          <div class="card-body">
+            <h3>{{ p.name }}</h3>
+            <div class="card-meta">
+              <span class="card-price">₹{{ p.price }}</span>
+              <span class="card-category" *ngIf="p.category">{{ p.category.name }}</span>
             </div>
+            <p class="card-desc" *ngIf="p.description">{{ p.description }}</p>
           </div>
-          <div class="form-group">
-            <label>Description</label>
-            <textarea [(ngModel)]="editing.description" placeholder="Product description" class="form-input" rows="3"></textarea>
-          </div>
-          <div class="form-group">
-            <label>Image</label>
-            <input type="file" (change)="onFileChange($event)" accept="image/*" class="form-input" />
-            <div *ngIf="imageError" class="image-error">{{ imageError }}</div>
-            <img *ngIf="imagePreview" [src]="imagePreview" alt="Preview" class="image-preview" />
-            <img *ngIf="!imagePreview && editing.image_url" [src]="editing.image_url" alt="Current" class="image-preview" />
-          </div>
-          <div class="form-actions">
-            <button type="button" class="btn btn-primary" (click)="save()" [disabled]="saving || !editing.name">Save</button>
-            <button type="button" class="btn" (click)="cancel()">Cancel</button>
+          <div class="card-actions">
+            <button class="btn-edit" [routerLink]="['/admin/products', p.id, 'edit']">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Edit Product
+            </button>
+            <button class="btn-unfeature" (click)="removeFeatured(p)" [disabled]="p._saving">
+              {{ p._saving ? 'Removing...' : 'Remove from Featured' }}
+            </button>
           </div>
         </div>
       </div>
 
-      <div *ngIf="toDelete" class="form-overlay">
-        <div class="form-card">
-          <h3>Delete featured product?</h3>
-          <p>Delete "{{ toDelete.name }}"?</p>
-          <div class="form-actions">
-            <button type="button" class="btn btn-danger" (click)="deleteConfirm()" [disabled]="saving">Delete</button>
-            <button type="button" class="btn" (click)="toDelete = null">Cancel</button>
-          </div>
-        </div>
+      <div *ngIf="!loading && filtered.length === 0" class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <p *ngIf="searchQuery">No featured products match your search.</p>
+        <p *ngIf="!searchQuery">No products are marked as featured yet.</p>
+        <p class="empty-hint">To feature a product, go to <strong>Products</strong> → Edit a product → check the <strong>"Featured Product"</strong> checkbox.</p>
       </div>
     </div>
   `,
   styles: [`
-    .admin-featured-products { max-width: 1100px; }
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); }
-    .page-header h1 { margin: 0; }
-    .alert { padding: 12px; border-radius: 8px; margin-bottom: var(--spacing-sm); }
-    .alert.error { background: #fee; color: #c00; }
-    .loading, .empty { padding: var(--spacing-md); color: var(--text-light); }
-    .data-table { width: 100%; border-collapse: collapse; background: var(--text-white); border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px var(--shadow-light); }
-    .data-table th, .data-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
-    .data-table th { background: var(--secondary-color); font-weight: 600; }
-    .table-image { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; }
-    .desc-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .btn-sm { padding: 6px 12px; font-size: 13px; }
-    .btn-danger { background: var(--accent-color); color: #fff; border-color: var(--accent-color); }
-    .form-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; overflow: auto; padding: 20px; }
-    .form-card { background: var(--text-white); padding: var(--spacing-md); border-radius: 12px; min-width: 320px; max-width: 90%; }
-    .form-card.wide { min-width: 500px; }
-    .form-card h3 { margin-top: 0; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-sm); }
-    .form-group { margin-bottom: var(--spacing-sm); }
-    .form-group label { display: block; margin-bottom: 4px; font-weight: 500; }
-    .form-input, textarea.form-input { width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; }
-    .image-error { color: var(--accent-color); font-size: 13px; margin-top: 4px; }
-    .image-preview { max-width: 200px; margin-top: 8px; display: block; border-radius: 8px; max-height: 150px; object-fit: cover; }
-    .form-actions { display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-md); }
+    .fp-page { max-width: 1100px; }
+
+    .page-header {
+      margin-bottom: 24px;
+    }
+    .page-header h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; color: var(--text-dark); }
+    .subtitle { font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5; }
+
+    .filter-bar {
+      display: flex; align-items: center; gap: 16px;
+      margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .search-wrap {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 14px; border: 1px solid var(--border-color);
+      background: #fff; flex: 1; min-width: 220px;
+    }
+    .search-wrap svg { color: var(--text-muted); flex-shrink: 0; }
+    .search-wrap input {
+      border: none; outline: none; width: 100%;
+      padding: 10px 0; font-size: 14px; background: transparent;
+    }
+    .count-label {
+      font-size: 13px; color: var(--text-muted); white-space: nowrap;
+      padding: 8px 16px; background: var(--secondary-color);
+      border: 1px solid var(--border-color);
+    }
+
+    .loading-msg { padding: 40px; text-align: center; color: var(--text-muted); }
+
+    /* Grid */
+    .products-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .product-card {
+      background: #fff; border: 1px solid var(--border-color);
+      overflow: hidden; transition: box-shadow 0.2s;
+    }
+    .product-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+
+    .card-img {
+      position: relative; height: 180px; background: var(--grey-light);
+      overflow: hidden;
+    }
+    .card-img img { width: 100%; height: 100%; object-fit: cover; }
+    .card-img-placeholder {
+      width: 100%; height: 100%; display: flex; align-items: center;
+      justify-content: center; color: var(--text-muted);
+    }
+    .featured-badge {
+      position: absolute; top: 10px; left: 10px;
+      background: #f59e0b; color: #fff;
+      padding: 3px 10px; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    .card-body { padding: 14px 16px; }
+    .card-body h3 {
+      margin: 0 0 8px; font-size: 0.95rem; font-weight: 700;
+      color: var(--text-dark);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .card-price { font-size: 0.95rem; font-weight: 800; color: var(--primary-color); }
+    .card-category {
+      font-size: 11px; padding: 2px 8px;
+      background: var(--secondary-color); color: var(--text-muted);
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .card-desc {
+      font-size: 12px; color: var(--text-muted); margin: 0; line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-actions {
+      padding: 12px 16px; border-top: 1px solid var(--border-color);
+      display: flex; gap: 8px;
+    }
+    .btn-edit {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border: 1px solid var(--border-color);
+      background: #fff; font-size: 12px; font-weight: 600;
+      color: var(--text-dark); cursor: pointer; transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-edit:hover { border-color: var(--primary-color); color: var(--primary-color); }
+    .btn-unfeature {
+      padding: 7px 14px; border: 1px solid rgba(185,28,28,0.2);
+      background: #fff; font-size: 12px; font-weight: 600;
+      color: #b91c1c; cursor: pointer; transition: all 0.2s;
+      margin-left: auto;
+    }
+    .btn-unfeature:hover { background: #fef2f2; border-color: #b91c1c; }
+    .btn-unfeature:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .empty-state {
+      padding: 60px 20px; text-align: center; color: var(--text-muted);
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .empty-state p { margin: 0; font-size: 14px; }
+    .empty-hint { font-size: 13px; max-width: 400px; line-height: 1.5; }
+    .empty-hint strong { color: var(--text-dark); }
   `]
 })
 export class AdminFeaturedProductsComponent implements OnInit {
-  featuredProducts: FeaturedProduct[] = [];
+  allFeatured: any[] = [];
+  filtered: any[] = [];
   loading = false;
-  error = '';
-  saving = false;
-  editing: FeaturedProduct | null = null;
-  toDelete: FeaturedProduct | null = null;
-  imageFile: File | null = null;
-  imagePreview: string | null = null;
-  imageError: string | null = null;
+  searchQuery = '';
 
-  constructor(private api: FeaturedProductsService) {}
+  constructor(private productApi: ProductApiService, private router: Router) {}
 
   ngOnInit() {
     this.load();
@@ -142,120 +183,37 @@ export class AdminFeaturedProductsComponent implements OnInit {
 
   load() {
     this.loading = true;
-    this.error = '';
-    this.api.list().pipe(
-      catchError(() => of(MOCK_FEATURED))
-    ).subscribe({
-      next: (items) => {
-        this.featuredProducts = items;
+    this.productApi.list({ featured: true, per_page: 200 }).subscribe({
+      next: (res) => {
+        this.allFeatured = (res?.data || []).map((p: any) => ({ ...p, _saving: false }));
+        this.filterProducts();
         this.loading = false;
       },
-      error: (err) => {
-        this.error = err?.error?.message || 'Failed to load featured products';
-        this.loading = false;
-      }
+      error: () => { this.allFeatured = []; this.filtered = []; this.loading = false; }
     });
   }
 
-  formatPrice(price: number | undefined | null): string {
-    return price != null ? `₹${Number(price).toLocaleString()}` : '—';
-  }
-
-  openAdd() {
-    this.editing = { name: '', price: undefined, description: '' };
-    this.imageFile = null;
-    this.imagePreview = null;
-    this.imageError = null;
-  }
-
-  edit(p: FeaturedProduct) {
-    this.editing = { ...p };
-    this.imageFile = null;
-    this.imagePreview = p.image_url ? p.image_url : null;
-    this.imageError = null;
-  }
-
-  cancel() {
-    this.editing = null;
-    this.imageFile = null;
-    this.imagePreview = null;
-    this.imageError = null;
-  }
-
-  onFileChange(ev: Event) {
-    this.imageError = null;
-    const input = ev.target as HTMLInputElement;
-    if (!input.files?.length) return;
-    const file = input.files[0];
-    const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    const maxSize = 3 * 1024 * 1024;
-    if (!allowed.includes(file.type)) {
-      this.imageError = 'Only PNG, JPG, JPEG or WEBP allowed.';
-      return;
-    }
-    if (file.size > maxSize) {
-      this.imageError = 'Image must be under 3MB.';
-      return;
-    }
-    this.imageFile = file;
-    this.imagePreview = URL.createObjectURL(file);
-  }
-
-  save() {
-    if (!this.editing || !this.editing.name || this.saving) return;
-    this.saving = true;
-    this.error = '';
-    const id = this.editing.id;
-    const hasImage = this.imageFile != null;
-
-    if (hasImage) {
-      const fd = new FormData();
-      fd.append('name', this.editing.name);
-      fd.append('price', String(this.editing.price ?? 0));
-      if (this.editing.description) fd.append('description', this.editing.description);
-      fd.append('image', this.imageFile!);
-      const op = id ? this.api.update(id, fd) : this.api.create(fd);
-      op.subscribe({ next: () => this.saveDone(), error: (e) => this.saveError(e) });
+  filterProducts() {
+    const q = this.searchQuery.toLowerCase().trim();
+    if (!q) {
+      this.filtered = [...this.allFeatured];
     } else {
-      const payload = {
-        name: this.editing.name,
-        price: this.editing.price ?? 0,
-        description: this.editing.description || undefined
-      };
-      const op = id ? this.api.update(id, payload) : this.api.create(payload);
-      op.subscribe({ next: () => this.saveDone(), error: (e) => this.saveError(e) });
+      this.filtered = this.allFeatured.filter(p =>
+        p.name?.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q)
+      );
     }
   }
 
-  private saveDone() {
-    this.saving = false;
-    this.cancel();
-    this.load();
-  }
-
-  private saveError(err: any) {
-    this.saving = false;
-    this.error = err?.error?.message || 'Save failed';
-  }
-
-  confirmDelete(p: FeaturedProduct) {
-    this.toDelete = p;
-  }
-
-  deleteConfirm() {
-    if (!this.toDelete || this.saving) return;
-    const idToRemove = this.toDelete.id;
-    this.saving = true;
-    this.api.delete(this.toDelete.id!).subscribe({
+  removeFeatured(product: any) {
+    if (!confirm(`Remove "${product.name}" from featured products?`)) return;
+    product._saving = true;
+    this.productApi.update(product.id, { featured: false }).subscribe({
       next: () => {
-        this.saving = false;
-        this.toDelete = null;
-        this.featuredProducts = this.featuredProducts.filter(p => p.id !== idToRemove);
+        this.allFeatured = this.allFeatured.filter(p => p.id !== product.id);
+        this.filterProducts();
       },
-      error: (err) => {
-        this.error = err?.error?.message || 'Delete failed';
-        this.saving = false;
-      }
+      error: () => { product._saving = false; }
     });
   }
 }

@@ -12,6 +12,7 @@ import { AdminOrdersComponent } from './components/orders/orders.component';
 import { AdminCarouselComponent } from './components/carousel/carousel.component';
 import { AdminFeaturedProductsComponent } from './components/featured-products/featured-products.component';
 import { AdminCouponsComponent } from './components/coupons/coupons.component';
+import { AdminBuyTheLookComponent } from './components/buy-the-look/buy-the-look.component';
 
 const routes = [
   { path: 'login', component: AdminLoginComponent },
@@ -28,6 +29,7 @@ const routes = [
       { path: 'products/:id/edit', component: AdminProductFormComponent },
       { path: 'featured-products', component: AdminFeaturedProductsComponent },
       { path: 'coupons', component: AdminCouponsComponent },
+      { path: 'buy-the-look', component: AdminBuyTheLookComponent },
       { path: 'orders', component: AdminOrdersComponent }
     ]
   }
@@ -49,6 +51,7 @@ const routes = [
     AdminCategoriesComponent,
     AdminFeaturedProductsComponent,
     AdminCouponsComponent,
+    AdminBuyTheLookComponent,
     AdminOrdersComponent
   ]
 })

@@ -15,7 +15,6 @@ import { CartItem } from '../../models/product.model';
         <h1 class="page-title">Checkout</h1>
 
         <div class="checkout-content" *ngIf="cartItems.length > 0">
-          <!-- Guest Checkout Option -->
           <div class="guest-option" *ngIf="!isLoggedIn">
             <p>Already have an account? <a routerLink="/login">Sign in</a> or continue as guest</p>
           </div>
@@ -27,7 +26,7 @@ import { CartItem } from '../../models/product.model';
                 <!-- Shipping Information -->
                 <section class="form-section">
                   <h2>Shipping Information</h2>
-                  
+
                   <div class="form-row">
                     <div class="form-group">
                       <label>First Name *</label>
@@ -66,75 +65,44 @@ import { CartItem } from '../../models/product.model';
                       <span class="error" *ngIf="isFieldInvalid('city')">Required</span>
                     </div>
                     <div class="form-group">
-                      <label>State/Province *</label>
-                      <input type="text" formControlName="state" class="form-input">
+                      <label>State *</label>
+                      <select formControlName="state" class="form-input">
+                        <option value="">Select State</option>
+                        <option *ngFor="let s of indianStates" [value]="s">{{ s }}</option>
+                      </select>
                       <span class="error" *ngIf="isFieldInvalid('state')">Required</span>
                     </div>
                     <div class="form-group">
-                      <label>ZIP/Postal Code *</label>
-                      <input type="text" formControlName="zipCode" class="form-input">
+                      <label>PIN Code *</label>
+                      <input type="text" formControlName="zipCode" class="form-input" maxlength="6" placeholder="e.g. 500001">
                       <span class="error" *ngIf="isFieldInvalid('zipCode')">Required</span>
                     </div>
                   </div>
-
-                  <div class="form-group">
-                    <label>Country *</label>
-                    <select formControlName="country" class="form-input">
-                      <option value="">Select Country</option>
-                      <option value="US">United States</option>
-                      <option value="CA">Canada</option>
-                      <option value="UK">United Kingdom</option>
-                      <option value="AU">Australia</option>
-                    </select>
-                    <span class="error" *ngIf="isFieldInvalid('country')">Required</span>
-                  </div>
                 </section>
 
-                <!-- Payment Information -->
+                <!-- Payment -->
                 <section class="form-section">
-                  <h2>Payment Information</h2>
-                  
-                  <div class="payment-methods">
-                    <label class="payment-method">
-                      <input type="radio" formControlName="paymentMethod" value="card" checked>
-                      <span>Credit/Debit Card</span>
-                    </label>
-                    <label class="payment-method">
-                      <input type="radio" formControlName="paymentMethod" value="paypal">
-                      <span>PayPal</span>
-                    </label>
+                  <h2>Payment Method</h2>
+                  <div class="cod-info">
+                    <div class="cod-icon">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                        <line x1="1" y1="10" x2="23" y2="10"/>
+                      </svg>
+                    </div>
+                    <div class="cod-text">
+                      <h3>Cash on Delivery</h3>
+                      <p>Pay with cash when your order is delivered to your doorstep. No advance payment required.</p>
+                    </div>
                   </div>
-
-                  <div *ngIf="checkoutForm.get('paymentMethod')?.value === 'card'">
-                    <div class="form-group">
-                      <label>Card Number *</label>
-                      <input type="text" formControlName="cardNumber" class="form-input" placeholder="1234 5678 9012 3456" maxlength="19">
-                      <span class="error" *ngIf="isFieldInvalid('cardNumber')">Valid card number required</span>
-                    </div>
-
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label>Expiry Date *</label>
-                        <input type="text" formControlName="expiryDate" class="form-input" placeholder="MM/YY" maxlength="5">
-                        <span class="error" *ngIf="isFieldInvalid('expiryDate')">Required</span>
-                      </div>
-                      <div class="form-group">
-                        <label>CVV *</label>
-                        <input type="text" formControlName="cvv" class="form-input" placeholder="123" maxlength="4">
-                        <span class="error" *ngIf="isFieldInvalid('cvv')">Required</span>
-                      </div>
-                    </div>
-
-                    <div class="form-group">
-                      <label>Cardholder Name *</label>
-                      <input type="text" formControlName="cardholderName" class="form-input">
-                      <span class="error" *ngIf="isFieldInvalid('cardholderName')">Required</span>
-                    </div>
+                  <div class="cod-note">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>Please keep the exact amount ready at the time of delivery.</span>
                   </div>
                 </section>
 
-                <button type="submit" class="btn btn-primary btn-submit" [disabled]="checkoutForm.invalid || isProcessing">
-                  <span *ngIf="!isProcessing">Complete Order</span>
+                <button type="submit" class="btn-submit" [disabled]="checkoutForm.invalid || isProcessing">
+                  <span *ngIf="!isProcessing">Place Order — {{ formatPrice(getTotal()) }}</span>
                   <span *ngIf="isProcessing">Processing...</span>
                 </button>
               </form>
@@ -143,7 +111,7 @@ import { CartItem } from '../../models/product.model';
             <!-- Order Summary -->
             <div class="order-summary">
               <h2>Order Summary</h2>
-              
+
               <div class="order-items">
                 <div class="order-item" *ngFor="let item of cartItems">
                   <div class="item-info">
@@ -160,13 +128,13 @@ import { CartItem } from '../../models/product.model';
                   <span>{{ formatPrice(getSubtotal()) }}</span>
                 </div>
                 <div class="summary-row">
-                  <span>Tax</span>
-                  <span>{{ formatPrice(getTax()) }}</span>
+                  <span>Shipping</span>
+                  <span *ngIf="getSubtotal() >= 5000" class="free">FREE</span>
+                  <span *ngIf="getSubtotal() < 5000">{{ formatPrice(500) }}</span>
                 </div>
                 <div class="summary-row">
-                  <span>Shipping</span>
-                  <span *ngIf="getSubtotal() >= 100" class="free">FREE</span>
-                  <span *ngIf="getSubtotal() < 100">{{ formatPrice(10) }}</span>
+                  <span>Payment</span>
+                  <span class="cod-tag">Cash on Delivery</span>
                 </div>
                 <div class="summary-divider"></div>
                 <div class="summary-row total">
@@ -179,7 +147,7 @@ import { CartItem } from '../../models/product.model';
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                 </svg>
-                <span>Secure checkout. Your payment information is encrypted.</span>
+                <span>Your order is secure. Pay conveniently at delivery.</span>
               </div>
             </div>
           </div>
@@ -198,240 +166,160 @@ import { CartItem } from '../../models/product.model';
       padding: var(--spacing-xl) 0;
       min-height: calc(100vh - 200px);
     }
-
     .page-title {
-      font-size: clamp(2rem, 4vw, 3rem);
+      font-size: clamp(1.5rem, 3vw, 2rem);
       color: var(--primary-color);
       margin-bottom: var(--spacing-lg);
+      font-weight: 700;
     }
-
     .guest-option {
       background: var(--secondary-color);
       padding: var(--spacing-sm) var(--spacing-md);
-      border-radius: 8px;
       margin-bottom: var(--spacing-md);
       text-align: center;
     }
-
-    .guest-option a {
-      color: var(--primary-color);
-      font-weight: 600;
-    }
+    .guest-option a { color: var(--primary-color); font-weight: 600; }
 
     .checkout-grid {
       display: grid;
-      grid-template-columns: 1fr 400px;
+      grid-template-columns: 1fr 380px;
       gap: var(--spacing-xl);
     }
 
     .form-section {
-      background: var(--text-white);
-      padding: var(--spacing-md);
-      border-radius: 12px;
+      background: #fff;
+      padding: 24px;
       margin-bottom: var(--spacing-md);
-      box-shadow: 0 2px 8px var(--shadow-light);
+      border: 1px solid var(--border-color);
     }
-
     .form-section h2 {
       color: var(--primary-color);
       margin-bottom: var(--spacing-md);
-      font-size: 1.5rem;
+      font-size: 1.1rem;
+      font-weight: 700;
     }
-
     .form-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: var(--spacing-sm);
     }
-
-    .form-group {
-      margin-bottom: var(--spacing-md);
-    }
-
+    .form-group { margin-bottom: var(--spacing-md); }
     .form-group label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 600;
-      color: var(--primary-color);
-      font-size: 14px;
+      display: block; margin-bottom: 6px;
+      font-weight: 600; color: var(--text-dark); font-size: 13px;
     }
-
     .form-input {
-      width: 100%;
-      padding: 12px;
-      border: 2px solid var(--border-color);
-      border-radius: 8px;
-      font-size: 14px;
-      transition: var(--transition-normal);
+      width: 100%; padding: 11px 14px;
+      border: 1px solid var(--border-color);
+      font-size: 14px; font-family: inherit;
+      transition: border-color 0.2s; box-sizing: border-box;
     }
-
     .form-input:focus {
-      outline: none;
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
+      outline: none; border-color: var(--primary-color);
     }
+    select.form-input { appearance: auto; }
+    .error { display: block; color: #b91c1c; font-size: 11px; margin-top: 4px; }
 
-    .error {
-      display: block;
-      color: #e74c3c;
-      font-size: 12px;
-      margin-top: 4px;
+    /* COD Section */
+    .cod-info {
+      display: flex; gap: 16px; align-items: flex-start;
+      padding: 20px; background: var(--secondary-color);
+      border: 1px solid var(--border-color);
     }
-
-    .payment-methods {
-      display: flex;
-      gap: var(--spacing-md);
-      margin-bottom: var(--spacing-md);
+    .cod-icon {
+      width: 52px; height: 52px; display: flex;
+      align-items: center; justify-content: center;
+      background: var(--primary-color); color: #fff;
+      flex-shrink: 0;
     }
-
-    .payment-method {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      padding: 12px;
-      border: 2px solid var(--border-color);
-      border-radius: 8px;
-      flex: 1;
-      transition: var(--transition-normal);
+    .cod-text h3 { margin: 0 0 6px; font-size: 1rem; font-weight: 700; color: var(--text-dark); }
+    .cod-text p { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+    .cod-note {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 12px; padding: 10px 14px;
+      background: #fffbeb; border: 1px solid #fde68a;
+      font-size: 12px; color: #92400e;
     }
-
-    .payment-method:hover {
-      border-color: var(--primary-color);
-    }
-
-    .payment-method input[type="radio"] {
-      accent-color: var(--primary-color);
-    }
+    .cod-note svg { flex-shrink: 0; color: #d97706; }
 
     .btn-submit {
-      width: 100%;
-      padding: 16px;
-      font-size: 1.125rem;
-      font-weight: 600;
-      margin-top: var(--spacing-md);
+      width: 100%; padding: 16px;
+      background: var(--primary-color); color: #fff;
+      border: none; font-size: 1rem; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      transition: opacity 0.2s; margin-top: var(--spacing-sm);
     }
+    .btn-submit:hover:not(:disabled) { opacity: 0.9; }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .btn-submit:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
+    /* Order Summary */
     .order-summary {
-      background: var(--text-white);
-      padding: var(--spacing-md);
-      border-radius: 12px;
-      box-shadow: 0 2px 8px var(--shadow-light);
-      height: fit-content;
-      position: sticky;
-      top: 120px;
+      background: #fff; padding: 24px;
+      border: 1px solid var(--border-color);
+      height: fit-content; position: sticky; top: 100px;
     }
-
     .order-summary h2 {
       color: var(--primary-color);
       margin-bottom: var(--spacing-md);
-      font-size: 1.5rem;
+      font-size: 1.1rem; font-weight: 700;
     }
-
-    .order-items {
-      margin-bottom: var(--spacing-md);
-    }
-
+    .order-items { margin-bottom: var(--spacing-md); }
     .order-item {
-      display: flex;
-      justify-content: space-between;
+      display: flex; justify-content: space-between;
       padding: var(--spacing-sm) 0;
       border-bottom: 1px solid var(--border-color);
     }
+    .item-info h4 { margin: 0 0 4px; font-size: 13px; font-weight: 600; color: var(--text-dark); }
+    .item-info p { margin: 0; font-size: 12px; color: var(--text-muted); }
+    .item-total { font-weight: 700; color: var(--text-dark); font-size: 13px; }
 
-    .item-info h4 {
-      margin: 0 0 4px 0;
-      font-size: 14px;
-      color: var(--primary-color);
-    }
-
-    .item-info p {
-      margin: 0;
-      font-size: 12px;
-      color: var(--text-light);
-    }
-
-    .item-total {
-      font-weight: 600;
-      color: var(--primary-color);
-    }
-
-    .summary-totals {
-      margin-bottom: var(--spacing-md);
-    }
-
+    .summary-totals { margin-bottom: var(--spacing-md); }
     .summary-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: var(--spacing-sm);
-      font-size: 14px;
+      display: flex; justify-content: space-between;
+      margin-bottom: 10px; font-size: 14px;
     }
-
     .summary-row.total {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: var(--primary-color);
-      margin-top: var(--spacing-sm);
+      font-size: 1.15rem; font-weight: 800;
+      color: var(--primary-color); margin-top: var(--spacing-sm);
     }
-
-    .free {
-      color: #27ae60;
-      font-weight: 600;
+    .free { color: #059669; font-weight: 700; }
+    .cod-tag {
+      font-size: 12px; font-weight: 700; color: var(--primary-color);
+      background: var(--secondary-color); padding: 2px 10px;
     }
-
-    .summary-divider {
-      height: 1px;
-      background: var(--border-color);
-      margin: var(--spacing-sm) 0;
-    }
+    .summary-divider { height: 1px; background: var(--border-color); margin: var(--spacing-sm) 0; }
 
     .security-note {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: var(--spacing-sm);
-      background: var(--secondary-color);
-      border-radius: 8px;
-      font-size: 12px;
-      color: var(--text-light);
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px; background: var(--secondary-color);
+      font-size: 12px; color: var(--text-muted);
     }
+    .security-note svg { color: var(--primary-color); flex-shrink: 0; }
 
-    .security-note svg {
-      color: var(--primary-color);
-      flex-shrink: 0;
-    }
-
-    .empty-cart {
-      text-align: center;
-      padding: var(--spacing-xl) 0;
-    }
-
-    .empty-cart h2 {
-      color: var(--primary-color);
-      margin-bottom: var(--spacing-sm);
-    }
+    .empty-cart { text-align: center; padding: var(--spacing-xl) 0; }
+    .empty-cart h2 { color: var(--primary-color); margin-bottom: var(--spacing-sm); }
 
     @media (max-width: 968px) {
-      .checkout-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .order-summary {
-        position: static;
-      }
+      .checkout-grid { grid-template-columns: 1fr; }
+      .order-summary { position: static; }
     }
   `]
 })
 export class CheckoutComponent implements OnInit {
   checkoutForm: FormGroup;
   cartItems: CartItem[] = [];
-  isLoggedIn = false; // This would come from auth service
+  isLoggedIn = false;
   isProcessing = false;
+
+  indianStates = [
+    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+    'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+    'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+    'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+    'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+    'Delhi', 'Jammu & Kashmir', 'Ladakh'
+  ];
 
   constructor(
     private fb: FormBuilder,
@@ -442,25 +330,16 @@ export class CheckoutComponent implements OnInit {
       firstName: ['', Validators.required],
       lastName: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
-      phone: ['', Validators.required],
+      phone: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
       address: ['', Validators.required],
       city: ['', Validators.required],
       state: ['', Validators.required],
-      zipCode: ['', Validators.required],
-      country: ['', Validators.required],
-      paymentMethod: ['card'],
-      cardNumber: ['', [Validators.required, Validators.pattern(/^\d{4}\s?\d{4}\s?\d{4}\s?\d{4}$/)]],
-      expiryDate: ['', [Validators.required, Validators.pattern(/^\d{2}\/\d{2}$/)]],
-      cvv: ['', [Validators.required, Validators.pattern(/^\d{3,4}$/)]],
-      cardholderName: ['']
+      zipCode: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
     });
   }
 
   ngOnInit() {
     this.cartItems = this.cartService.getCartItems();
-    if (this.cartItems.length === 0) {
-      // Redirect if cart is empty
-    }
   }
 
   isFieldInvalid(fieldName: string): boolean {
@@ -471,12 +350,10 @@ export class CheckoutComponent implements OnInit {
   onSubmit() {
     if (this.checkoutForm.valid) {
       this.isProcessing = true;
-      // Simulate payment processing
       setTimeout(() => {
         this.isProcessing = false;
-        // Clear cart and redirect to success page
         this.cartService.clearCart();
-        alert('Order placed successfully!');
+        alert('Order placed successfully! You will pay on delivery.');
         this.router.navigate(['/']);
       }, 2000);
     } else {
@@ -494,15 +371,10 @@ export class CheckoutComponent implements OnInit {
     return this.cartService.getCartSubtotal();
   }
 
-  getTax(): number {
-    return this.cartService.getEstimatedTax();
-  }
-
   getTotal(): number {
     const subtotal = this.getSubtotal();
-    const tax = this.getTax();
     const shipping = subtotal >= 5000 ? 0 : 500;
-    return subtotal + tax + shipping;
+    return subtotal + shipping;
   }
 
   formatPrice(price: number): string {

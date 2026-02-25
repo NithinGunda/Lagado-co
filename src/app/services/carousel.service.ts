@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Observable, of, map } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
@@ -11,6 +11,7 @@ export interface CarouselItem {
   description?: string;
   link?: string;
   order?: number;
+  is_active?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -21,26 +22,32 @@ export class CarouselService {
   constructor(private http: HttpClient) {}
 
   list(): Observable<CarouselItem[]> {
-    return this.http.get<CarouselItem[]>(this.base).pipe(
+    return this.http.get<any>(this.base).pipe(
+      map(res => {
+        if (Array.isArray(res)) return res;
+        if (res?.data && Array.isArray(res.data)) return res.data;
+        return [];
+      }),
       catchError(() => of([]))
     );
   }
 
-  create(payload: FormData | Partial<CarouselItem>): Observable<CarouselItem> {
-    return this.http.post<CarouselItem>(this.base, payload).pipe(
-      catchError(() => of({} as CarouselItem))
-    );
+  create(payload: FormData): Observable<CarouselItem> {
+    return this.http.post<CarouselItem>(this.base, payload);
   }
 
   update(id: number | string, payload: FormData | Partial<CarouselItem>): Observable<CarouselItem> {
-    return this.http.put<CarouselItem>(`${this.base}/${id}`, payload).pipe(
-      catchError(() => of({} as CarouselItem))
-    );
+    if (payload instanceof FormData) {
+      return this.http.post<CarouselItem>(`${this.base}/${id}`, payload);
+    }
+    return this.http.put<CarouselItem>(`${this.base}/${id}`, payload);
   }
 
   delete(id: number | string): Observable<any> {
-    return this.http.delete(`${this.base}/${id}`).pipe(
-      catchError(() => of(null))
-    );
+    return this.http.delete(`${this.base}/${id}`);
+  }
+
+  toggleActive(id: number | string, isActive: boolean): Observable<CarouselItem> {
+    return this.http.put<CarouselItem>(`${this.base}/${id}`, { is_active: isActive });
   }
 }

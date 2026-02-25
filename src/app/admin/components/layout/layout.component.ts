@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { RouterModule, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../services/auth.service';
@@ -20,6 +20,7 @@ import { AuthService } from '../../../services/auth.service';
           <a routerLink="/admin/categories" routerLinkActive="active">Categories</a>
           <a routerLink="/admin/products" routerLinkActive="active">Products</a>
           <a routerLink="/admin/featured-products" routerLinkActive="active">Featured Products</a>
+          <a routerLink="/admin/buy-the-look" routerLinkActive="active">Buy The Look</a>
           <a routerLink="/admin/coupons" routerLinkActive="active">Coupons</a>
           <a routerLink="/admin/orders" routerLinkActive="active">Orders</a>
         </nav>
@@ -68,6 +69,7 @@ import { AuthService } from '../../../services/auth.service';
       font-size: 1.5rem;
       font-family: var(--font-logo);
       font-weight: 400;
+      color: #fff;
     }
     .admin-badge {
       display: inline-block;
@@ -143,10 +145,17 @@ import { AuthService } from '../../../services/auth.service';
     }
   `]
 })
-export class AdminLayoutComponent {
+export class AdminLayoutComponent implements OnInit {
   constructor(private auth: AuthService, private router: Router) {}
 
+  ngOnInit() {
+    if (!this.auth.isLoggedIn()) {
+      this.router.navigate(['/admin/login']);
+    }
+  }
+
   logout() {
+    this.auth.clearAdminAuth();
     this.auth.logout().subscribe({
       next: () => this.router.navigate(['/admin/login']),
       error: () => { this.auth.clearAuth(); this.router.navigate(['/admin/login']); }

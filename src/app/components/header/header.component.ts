@@ -99,15 +99,16 @@ import { Subscription } from 'rxjs';
       top: 0;
       z-index: 1000;
       background: var(--secondary-color);
-      box-shadow: 0 2px 8px var(--shadow-light);
+      box-shadow: 0 1px 0 var(--border-color);
     }
 
     .announcement-bar {
-      background: var(--primary-dark);
+      background: var(--btn-primary);
       color: var(--text-white);
       padding: 8px 0;
       text-align: center;
       font-size: 12px;
+      letter-spacing: 0.3px;
     }
 
     .announcement-bar p {
@@ -115,14 +116,14 @@ import { Subscription } from 'rxjs';
     }
 
     .announcement-bar a {
-      color: var(--secondary-color);
+      color: var(--btn-accent);
       text-decoration: underline;
-      font-weight: 500;
+      font-weight: 600;
     }
 
     .main-header {
       background: var(--secondary-color);
-      padding: var(--spacing-sm) 0;
+      padding: 12px 0;
     }
 
     .header-content {
@@ -139,48 +140,56 @@ import { Subscription } from 'rxjs';
       margin: 0;
       font-weight: 400;
       display: inline-block;
+      transition: opacity 0.2s ease;
     }
 
-    .logo a {
-      text-decoration: none;
-    }
+    .logo a { text-decoration: none; }
+    .logo a:hover { opacity: 0.85; }
 
     .main-nav {
       display: flex;
-      gap: var(--spacing-md);
+      gap: 32px;
       align-items: center;
     }
 
     .main-nav a {
       color: var(--text-dark);
       font-weight: 500;
-      font-size: 14px;
+      font-size: 13px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      transition: var(--transition-normal);
+      letter-spacing: 1px;
+      transition: color 0.25s ease;
       padding: 8px 0;
       position: relative;
+    }
+
+    .main-nav a::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      right: 50%;
+      height: 2px;
+      background: var(--primary-color);
+      transition: left 0.25s ease, right 0.25s ease;
+    }
+
+    .main-nav a:hover::after,
+    .main-nav a.active::after {
+      left: 0;
+      right: 0;
     }
 
     .main-nav a:hover,
     .main-nav a.active {
       color: var(--primary-color);
-    }
-
-    .main-nav a.active::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: var(--primary-color);
+      opacity: 1;
     }
 
     .header-actions {
       display: flex;
       align-items: center;
-      gap: var(--spacing-md);
+      gap: 8px;
     }
 
     .user-account .account-link,
@@ -189,19 +198,19 @@ import { Subscription } from 'rxjs';
       align-items: center;
       gap: 6px;
       color: var(--text-dark);
-      transition: var(--transition-normal);
-      padding: 8px;
-      border-radius: 8px;
+      transition: all 0.2s ease;
+      padding: 10px;
+      position: relative;
     }
 
     .user-account .account-link:hover,
     .cart-link:hover {
       color: var(--primary-color);
-      background: var(--secondary-color);
+      opacity: 1;
     }
 
     .account-text {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
     }
 
@@ -211,17 +220,23 @@ import { Subscription } from 'rxjs';
 
     .cart-count {
       position: absolute;
-      top: 0;
-      right: 0;
-      background: var(--accent-color);
-      color: var(--primary-color);
+      top: 4px;
+      right: 2px;
+      background: var(--btn-primary);
+      color: var(--text-white);
       font-size: 10px;
       font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 10px;
-      min-width: 18px;
+      padding: 1px 5px;
+      min-width: 17px;
       text-align: center;
-      transform: translate(50%, -50%);
+      line-height: 1.4;
+      animation: badgePop 0.3s ease;
+    }
+
+    @keyframes badgePop {
+      0% { transform: scale(0.5); }
+      60% { transform: scale(1.2); }
+      100% { transform: scale(1); }
     }
 
     .mobile-menu-toggle {
@@ -230,7 +245,11 @@ import { Subscription } from 'rxjs';
       border: none;
       color: var(--text-dark);
       cursor: pointer;
-      padding: 8px;
+      padding: 10px;
+      min-width: 44px;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
     }
 
     .mobile-nav-backdrop {
@@ -248,6 +267,7 @@ import { Subscription } from 'rxjs';
         inset: 0;
         background: rgba(0, 0, 0, 0.45);
         z-index: 998;
+        backdrop-filter: blur(2px);
       }
 
       .main-nav {
@@ -260,13 +280,14 @@ import { Subscription } from 'rxjs';
         background: var(--text-white);
         flex-direction: column;
         padding: 60px 0 0 0;
-        box-shadow: -4px 0 20px var(--shadow-medium);
+        box-shadow: -4px 0 24px rgba(0,0,0,0.15);
         transform: translateX(100%);
         opacity: 0;
         visibility: hidden;
         transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease;
         z-index: 999;
         overflow-y: auto;
+        gap: 0;
       }
 
       .main-nav.mobile-open {
@@ -284,12 +305,12 @@ import { Subscription } from 'rxjs';
         background: none;
         border: 2px solid var(--primary-color);
         color: var(--primary-color);
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: var(--transition-normal);
+        transition: all 0.2s ease;
         padding: 0;
       }
 
@@ -300,17 +321,20 @@ import { Subscription } from 'rxjs';
 
       .main-nav a {
         width: 100%;
-        padding: 16px 20px;
+        padding: 16px 24px;
         border-bottom: 1px solid var(--border-color);
-        font-size: 15px;
+        font-size: 14px;
       }
 
+      .main-nav a::after { display: none; }
+
       .main-nav a:hover {
-        background: var(--secondary-color);
+        background: var(--grey-light);
+        padding-left: 28px;
       }
 
       .mobile-menu-toggle {
-        display: block;
+        display: flex;
       }
 
       .account-text {

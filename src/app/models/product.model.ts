@@ -1,3 +1,13 @@
+export interface SizeGuideRow {
+  size: string;
+  values: string[];
+}
+
+export interface SizeGuide {
+  columns: string[];
+  rows: SizeGuideRow[];
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -10,6 +20,8 @@ export interface Product {
   is_active?: boolean;
   category: 'mens' | 'womens' | 'collections';
   images: string[];
+  image_url?: string;
+  image_urls?: string[];
   inStock: boolean;
   stockQuantity: number;
   attributes: ProductAttribute[];
@@ -18,6 +30,7 @@ export interface Product {
   badge?: string;
   rating?: number;
   reviewCount?: number;
+  size_guide?: SizeGuide;
 }
 
 export interface ProductAttribute {

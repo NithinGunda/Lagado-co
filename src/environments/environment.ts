@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiBaseUrl: 'https://legadoandco.com/api_backend'
+  apiBaseUrl: 'http://localhost/api_backend/api'
 };

@@ -86,6 +86,14 @@ export class AuthService {
   }
 
   isLoggedIn(): boolean {
-    return !!this.getToken();
+    return !!this.getToken() || localStorage.getItem('admin_auth') === 'true';
+  }
+
+  isAdminAuth(): boolean {
+    return localStorage.getItem('admin_auth') === 'true';
+  }
+
+  clearAdminAuth() {
+    localStorage.removeItem('admin_auth');
   }
 }

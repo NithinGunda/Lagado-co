@@ -89,6 +89,73 @@ import { Category } from '../../../models/category.model';
             </div>
           </div>
 
+          <!-- Size Guide -->
+          <div class="form-section">
+            <div class="section-header">
+              <h2>Size Guide</h2>
+              <button *ngIf="sizeGuide.rows.length > 0" type="button" class="btn-text-danger" (click)="clearSizeGuide()">Clear All</button>
+            </div>
+            <p class="help-text" style="margin-bottom: 12px;">Add measurement columns (e.g. Chest, Waist, Length) and fill values for each size. This table will be shown on the product page.</p>
+
+            <div class="sg-columns">
+              <label>Measurement Columns</label>
+              <div class="sg-col-row">
+                <input class="input sg-col-input" [(ngModel)]="newColumnName" placeholder="e.g. Chest (in)" (keyup.enter)="addSizeGuideColumn()" />
+                <button type="button" class="sg-add-col-btn" (click)="addSizeGuideColumn()" [disabled]="!newColumnName.trim()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  Add
+                </button>
+              </div>
+              <div *ngIf="sizeGuide.columns.length > 0" class="sg-col-chips">
+                <span class="sg-chip" *ngFor="let col of sizeGuide.columns; let ci = index">
+                  {{ col }}
+                  <button type="button" (click)="removeSizeGuideColumn(ci)" title="Remove column">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                </span>
+              </div>
+            </div>
+
+            <div *ngIf="sizeGuide.columns.length > 0" class="sg-table-wrap">
+              <div class="sg-add-row-bar">
+                <input class="input sg-size-input" [(ngModel)]="newRowSize" placeholder="Size label (e.g. M)" (keyup.enter)="addSizeGuideRow()" />
+                <button type="button" class="sg-add-col-btn" (click)="addSizeGuideRow()" [disabled]="!newRowSize.trim()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  Add Size Row
+                </button>
+              </div>
+
+              <div *ngIf="sizeGuide.rows.length > 0" class="sg-table-container">
+                <table class="sg-table">
+                  <thead>
+                    <tr>
+                      <th>Size</th>
+                      <th *ngFor="let col of sizeGuide.columns">{{ col }}</th>
+                      <th class="sg-th-action"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let row of sizeGuide.rows; let ri = index">
+                      <td class="sg-size-cell"><strong>{{ row.size }}</strong></td>
+                      <td *ngFor="let col of sizeGuide.columns; let ci = index">
+                        <input class="sg-cell-input" [(ngModel)]="row.values[ci]" placeholder="—" />
+                      </td>
+                      <td class="sg-td-action">
+                        <button type="button" class="sg-remove-row" (click)="removeSizeGuideRow(ri)" title="Remove row">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div *ngIf="sizeGuide.rows.length === 0" class="sg-empty">Add size rows above to build the guide table.</div>
+            </div>
+
+            <div *ngIf="sizeGuide.columns.length === 0" class="sg-empty">Add measurement columns to get started.</div>
+          </div>
+
           <!-- Images -->
           <div class="form-section">
             <div class="section-header">
@@ -129,6 +196,10 @@ import { Category } from '../../../models/category.model';
               <input type="checkbox" [(ngModel)]="product.is_active" />
               <span>Active (visible on storefront)</span>
             </label>
+            <label class="toggle-row" style="margin-top: 12px;">
+              <input type="checkbox" [(ngModel)]="product.featured" />
+              <span>Featured Product</span>
+            </label>
           </div>
 
           <div class="sidebar-card">
@@ -148,6 +219,10 @@ import { Category } from '../../../models/category.model';
             <div class="summary-row">
               <span>Sizes</span>
               <strong>{{ product.sizes || '—' }}</strong>
+            </div>
+            <div class="summary-row">
+              <span>Featured</span>
+              <strong>{{ product.featured ? 'Yes' : 'No' }}</strong>
             </div>
           </div>
 
@@ -236,6 +311,34 @@ import { Category } from '../../../models/category.model';
     .btn-cancel { width: 100%; padding: 12px; background: transparent; border: 1px solid var(--border-color); color: var(--text-dark); font-size: 14px; cursor: pointer; font-family: inherit; transition: all 0.2s; }
     .btn-cancel:hover { border-color: var(--accent-color); color: var(--accent-color); }
 
+    /* Size Guide */
+    .sg-columns { margin-bottom: 16px; }
+    .sg-columns label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; color: var(--text-dark); }
+    .sg-col-row { display: flex; gap: 8px; }
+    .sg-col-input { flex: 1; }
+    .sg-size-input { width: 160px; }
+    .sg-add-col-btn { display: flex; align-items: center; gap: 4px; padding: 8px 14px; background: var(--primary-color); color: var(--text-white); border: none; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; transition: background 0.2s; }
+    .sg-add-col-btn:hover:not(:disabled) { background: var(--primary-dark); }
+    .sg-add-col-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .sg-col-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .sg-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; background: var(--secondary-color); border: 1px solid var(--border-color); font-size: 13px; font-weight: 500; color: var(--primary-color); }
+    .sg-chip button { background: none; border: none; cursor: pointer; color: var(--accent-color); padding: 0; display: flex; transition: transform 0.2s; }
+    .sg-chip button:hover { transform: scale(1.2); }
+    .sg-table-wrap { margin-top: 8px; }
+    .sg-add-row-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+    .sg-table-container { overflow-x: auto; }
+    .sg-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .sg-table th { padding: 10px 12px; background: var(--primary-color); color: var(--text-white); font-weight: 600; text-align: left; white-space: nowrap; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .sg-table td { padding: 6px 8px; border-bottom: 1px solid var(--border-color); }
+    .sg-size-cell { font-size: 14px; padding-left: 12px; background: var(--grey-light); }
+    .sg-cell-input { width: 100%; padding: 7px 10px; border: 1px solid var(--border-color); font-size: 13px; font-family: inherit; box-sizing: border-box; transition: border-color 0.2s; text-align: center; }
+    .sg-cell-input:focus { outline: none; border-color: var(--primary-color); }
+    .sg-th-action { width: 40px; }
+    .sg-td-action { text-align: center; }
+    .sg-remove-row { background: none; border: none; cursor: pointer; color: var(--text-light); padding: 4px; transition: color 0.2s; }
+    .sg-remove-row:hover { color: var(--accent-color); }
+    .sg-empty { padding: 20px; text-align: center; color: var(--text-light); font-size: 13px; background: var(--grey-light); border: 1px dashed var(--border-color); }
+
     @media (max-width: 900px) {
       .form-layout { grid-template-columns: 1fr; }
       .form-sidebar { position: static; }
@@ -252,12 +355,16 @@ export class AdminProductFormComponent implements OnInit {
   product: any = {
     name: '', price: null, category_id: null, description: '',
     is_on_sale: false, original_price: null, discount_percentage: null,
-    is_active: true, sizes: ''
+    is_active: true, featured: false, sizes: ''
   };
 
   imageFiles: File[] = [];
   imagePreviews: { url: string; file?: File; existing?: boolean }[] = [];
   imageError: string | null = null;
+
+  sizeGuide: { columns: string[]; rows: { size: string; values: string[] }[] } = { columns: [], rows: [] };
+  newColumnName = '';
+  newRowSize = '';
 
   constructor(
     private api: ProductApiService,
@@ -289,8 +396,13 @@ export class AdminProductFormComponent implements OnInit {
       this.loadingProduct = false;
       if (!p) { this.error = 'Product not found.'; return; }
       this.product = { ...p };
-      const existingImages: string[] = p.images || (p.image_url ? [p.image_url] : []);
-      existingImages.forEach((url: string) => this.imagePreviews.push({ url, existing: true }));
+      const urls: string[] = p.image_urls && p.image_urls.length
+        ? p.image_urls
+        : (p.image_url ? [p.image_url] : []);
+      urls.forEach((url: string) => this.imagePreviews.push({ url, existing: true }));
+      if (p.size_guide && p.size_guide.columns) {
+        this.sizeGuide = { columns: [...p.size_guide.columns], rows: p.size_guide.rows.map((r: any) => ({ size: r.size, values: [...r.values] })) };
+      }
     });
   }
 
@@ -353,6 +465,37 @@ export class AdminProductFormComponent implements OnInit {
     this.imageError = null;
   }
 
+  // --- Size Guide ---
+  addSizeGuideColumn() {
+    const name = this.newColumnName.trim();
+    if (!name || this.sizeGuide.columns.includes(name)) return;
+    this.sizeGuide.columns.push(name);
+    this.sizeGuide.rows.forEach(r => r.values.push(''));
+    this.newColumnName = '';
+  }
+
+  removeSizeGuideColumn(ci: number) {
+    this.sizeGuide.columns.splice(ci, 1);
+    this.sizeGuide.rows.forEach(r => r.values.splice(ci, 1));
+  }
+
+  addSizeGuideRow() {
+    const size = this.newRowSize.trim();
+    if (!size) return;
+    this.sizeGuide.rows.push({ size, values: this.sizeGuide.columns.map(() => '') });
+    this.newRowSize = '';
+  }
+
+  removeSizeGuideRow(ri: number) {
+    this.sizeGuide.rows.splice(ri, 1);
+  }
+
+  clearSizeGuide() {
+    this.sizeGuide = { columns: [], rows: [] };
+    this.newColumnName = '';
+    this.newRowSize = '';
+  }
+
   // --- Save ---
   save() {
     if (!this.product.name || this.saving) return;
@@ -376,7 +519,9 @@ export class AdminProductFormComponent implements OnInit {
       if (this.product.category_id != null) fd.append('category_id', String(this.product.category_id));
       if (this.product.description) fd.append('description', this.product.description);
       fd.append('is_active', this.product.is_active === false ? '0' : '1');
+      fd.append('featured', this.product.featured ? '1' : '0');
       if (this.product.sizes) fd.append('sizes', this.product.sizes);
+      if (this.sizeGuide.rows.length > 0) fd.append('size_guide', JSON.stringify(this.sizeGuide));
       if (this.product.is_on_sale) {
         fd.append('is_on_sale', '1');
         if (this.product.original_price) fd.append('original_price', String(this.product.original_price));
@@ -393,7 +538,9 @@ export class AdminProductFormComponent implements OnInit {
         category_id: this.product.category_id ?? undefined,
         description: this.product.description || undefined,
         is_active: this.product.is_active !== false,
-        sizes: this.product.sizes || undefined
+        featured: !!this.product.featured,
+        sizes: this.product.sizes || undefined,
+        size_guide: this.sizeGuide.rows.length > 0 ? this.sizeGuide : undefined
       };
       if (existingUrls.length) payload.existing_images = existingUrls;
       if (this.product.is_on_sale) {
