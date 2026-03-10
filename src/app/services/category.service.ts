@@ -15,6 +15,16 @@ export class CategoryService {
     return this.http.get<PagedResult<Category>>(this.base, { params: httpParams });
   }
 
+  /** Get full category tree (nested) for admin subcategories screen */
+  getTree(): Observable<{ data: Category[] }> {
+    return this.http.get<{ data: Category[] }>(this.base, { params: { tree: '1' } });
+  }
+
+  /** Reorder categories: updates[] with id, sort_order, parent_id */
+  reorder(updates: { id: number | string; sort_order: number; parent_id?: number | string | null }[]): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.base}/reorder`, { updates });
+  }
+
   create(payload: Partial<Category> | FormData): Observable<Category> {
     return this.http.post<Category>(this.base, payload);
   }

@@ -447,8 +447,21 @@ export class AdminProductsComponent implements OnInit, OnDestroy {
   }
 
   getThumb(p: any): string | null {
-    if (p.images?.length) return p.images[0];
+    // Prefer API-computed URL (includes full base URL)
     if (p.image_url) return p.image_url;
+    if (Array.isArray(p.image_urls) && p.image_urls.length) {
+      return p.image_urls[0];
+    }
+    // Fallback for seed / mock data where images is an array of string paths
+    if (Array.isArray(p.images) && p.images.length) {
+      const first = p.images[0];
+      if (typeof first === 'string') {
+        return first;
+      }
+      if (first && typeof first.path === 'string') {
+        return first.path;
+      }
+    }
     return null;
   }
 

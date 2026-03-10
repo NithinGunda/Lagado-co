@@ -7,6 +7,8 @@ import { environment } from '../../environments/environment';
 export interface CarouselItem {
   id?: number | string;
   image_url?: string;
+  mobile_image_url?: string;
+  media_type?: 'image' | 'video';
   title?: string;
   description?: string;
   link?: string;

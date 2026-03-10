@@ -2,9 +2,11 @@ import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { ProductService } from '../../services/product.service';
+import { ProductApiService } from '../../services/product-api.service';
+import { CategoryService } from '../../services/category.service';
 import { CartService } from '../../services/cart.service';
 import { Product, FilterOptions } from '../../models/product.model';
+import { Category } from '../../models/category.model';
 
 @Component({
   selector: 'app-product-listing',
@@ -21,15 +23,15 @@ import { Product, FilterOptions } from '../../models/product.model';
           <div class="filter-chips">
             <button
               class="chip"
-              [class.active]="selectedCategories.length === 0"
-              (click)="selectCategory('all')"
+              [class.active]="!selectedCategoryId"
+              (click)="selectCategoryById(null)"
             >All</button>
             <button
-              *ngFor="let cat of categories"
+              *ngFor="let cat of filterCategories"
               class="chip"
-              [class.active]="selectedCategories.includes(cat)"
-              (click)="selectCategory(cat)"
-            >{{ cat | titlecase }}</button>
+              [class.active]="selectedCategoryId === cat.id"
+              (click)="selectCategoryById(cat.id ?? null)"
+            >{{ cat.name }}</button>
           </div>
 
           <div class="filter-controls">
@@ -118,7 +120,10 @@ import { Product, FilterOptions } from '../../models/product.model';
       </div>
 
       <!-- Products Grid -->
-      <div class="products-grid">
+      <div class="products-loading" *ngIf="loading">
+        <p>Loading products...</p>
+      </div>
+      <div class="products-grid" *ngIf="!loading">
         <div
           class="product-card"
           *ngFor="let product of filteredProducts; let i = index"
@@ -134,21 +139,21 @@ import { Product, FilterOptions } from '../../models/product.model';
             <div class="card-overlay"></div>
 
             <!-- Badges -->
-            <div class="badge sale" *ngIf="product.originalPrice">-{{ getDiscountPercent(product) }}%</div>
-            <div class="badge new" *ngIf="product.badge && !product.originalPrice">{{ product.badge }}</div>
+            <div class="badge sale" *ngIf="product.original_price || product.originalPrice">-{{ getDiscountPercent(product) }}%</div>
+            <div class="badge new" *ngIf="product.badge && !product.original_price && !product.originalPrice">{{ product.badge }}</div>
 
             <!-- Quick actions -->
             <div class="card-actions">
               <button
                 class="action-btn cart-btn"
                 (click)="addToCart(product, $event)"
-                [class.added]="addedProductId === product.id"
+                [class.added]="addedProductId === strId(product.id)"
                 aria-label="Add to cart"
               >
-                <svg *ngIf="addedProductId !== product.id" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg *ngIf="addedProductId !== strId(product.id)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
                 </svg>
-                <svg *ngIf="addedProductId === product.id" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <svg *ngIf="addedProductId === strId(product.id)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
               </button>
@@ -163,11 +168,11 @@ import { Product, FilterOptions } from '../../models/product.model';
 
           <!-- Info -->
           <div class="card-info">
-            <span class="card-category">{{ product.category | titlecase }}</span>
+            <span class="card-category">{{ getProductCategoryName(product) }}</span>
             <h3 class="card-name">{{ product.name }}</h3>
             <div class="card-price-row">
               <span class="card-price">{{ formatPrice(product.price) }}</span>
-              <span class="card-original" *ngIf="product.originalPrice">{{ formatPrice(product.originalPrice) }}</span>
+              <span class="card-original" *ngIf="product.original_price || product.originalPrice">{{ formatPrice(product.original_price || product.originalPrice) }}</span>
             </div>
             <div class="card-sizes" *ngIf="getProductSizes(product).length > 0">
               <span *ngFor="let size of getProductSizes(product)">{{ size }}</span>
@@ -191,7 +196,7 @@ import { Product, FilterOptions } from '../../models/product.model';
       </div>
 
       <!-- Empty state -->
-      <div class="empty-state" *ngIf="filteredProducts.length === 0">
+      <div class="empty-state" *ngIf="!loading && filteredProducts.length === 0">
         <div class="empty-icon">
           <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         </div>
@@ -410,6 +415,9 @@ import { Product, FilterOptions } from '../../models/product.model';
     .tag svg { opacity: 0.5; }
 
     /* ===== PRODUCTS GRID ===== */
+    .products-loading {
+      padding: 40px 20px; text-align: center; color: var(--text-muted); font-size: 14px;
+    }
     .products-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -644,10 +652,11 @@ import { Product, FilterOptions } from '../../models/product.model';
 export class ProductListingComponent implements OnInit {
   @Input() category?: string;
 
-  products: Product[] = [];
-  filteredProducts: Product[] = [];
-  categories: string[] = ['mens', 'womens', 'collections'];
-  selectedCategories: string[] = [];
+  products: any[] = [];
+  filteredProducts: any[] = [];
+  filterCategories: Category[] = [];
+  selectedCategoryId: number | string | null = null;
+  initialCategoryId: number | string | null = null;
   searchQuery = '';
   priceRangeMin = 0;
   priceRangeMax = 50000;
@@ -657,24 +666,85 @@ export class ProductListingComponent implements OnInit {
   showToast = false;
   toastMessage = '';
   addedProductId: string | null = null;
+  loading = false;
+  loadingCategories = true;
 
   cursorX = 0;
   cursorY = 0;
   cursorActive = false;
 
   constructor(
-    private productService: ProductService,
+    private productApi: ProductApiService,
+    private categoryService: CategoryService,
     private cartService: CartService
   ) {}
 
   ngOnInit() {
-    if (this.category) {
-      this.selectedCategories = [this.category];
-      this.products = this.productService.getProductsByCategory(this.category);
-    } else {
-      this.products = this.productService.getAllProducts();
-    }
-    this.filteredProducts = [...this.products];
+    this.loadCategories();
+  }
+
+  private loadCategories() {
+    this.loadingCategories = true;
+    this.categoryService.list({ per_page: 200 }).subscribe({
+      next: (res) => {
+        const raw = res as any;
+        const data = Array.isArray(raw) ? raw : (raw?.data ?? []);
+        this.filterCategories = (data as Category[]).filter((c: Category) => c.parent_id == null);
+        this.loadingCategories = false;
+        if (this.category) {
+          const slug = this.category.toString().toLowerCase().replace(/\s+|'/g, '');
+          const match = (this.filterCategories as Category[]).find((c: Category) => {
+            const catSlug = (c.slug || c.name || '').toString().toLowerCase().replace(/\s+|'/g, '');
+            return catSlug === slug;
+          });
+          if (match && match.id != null) {
+            this.selectedCategoryId = match.id;
+            this.initialCategoryId = match.id;
+          }
+        } else {
+          this.initialCategoryId = null;
+        }
+        this.loadProducts();
+      },
+      error: () => {
+        this.loadingCategories = false;
+        this.filterCategories = [];
+        this.loadProducts();
+      },
+    });
+  }
+
+  private loadProducts() {
+    this.loading = true;
+    const params: any = {
+      per_page: 200,
+      is_active: true,
+    };
+    if (this.selectedCategoryId != null) params.category_id = this.selectedCategoryId;
+    if (this.searchQuery?.trim()) params.search = this.searchQuery.trim();
+    if (this.priceRangeMin > 0) params.min_price = this.priceRangeMin;
+    if (this.priceRangeMax < 50000) params.max_price = this.priceRangeMax;
+    if (this.inStockOnly) params.in_stock = true;
+
+    this.productApi.list(params).subscribe({
+      next: (res) => {
+        const data = (res as any)?.data ?? (Array.isArray(res) ? res : (res as any)?.data ?? []);
+        this.products = Array.isArray(data) ? data : [];
+        this.filteredProducts = [...this.products];
+        this.applySorting();
+        this.loading = false;
+      },
+      error: () => {
+        this.products = [];
+        this.filteredProducts = [];
+        this.loading = false;
+      },
+    });
+  }
+
+  selectCategoryById(id: number | string | null) {
+    this.selectedCategoryId = id;
+    this.loadProducts();
   }
 
   onMouseMove(e: MouseEvent) {
@@ -695,15 +765,9 @@ export class ProductListingComponent implements OnInit {
     return c;
   }
 
-  selectCategory(cat: string) {
-    if (cat === 'all') {
-      this.selectedCategories = [];
-    } else {
-      const idx = this.selectedCategories.indexOf(cat);
-      if (idx > -1) this.selectedCategories.splice(idx, 1);
-      else this.selectedCategories = [cat];
-    }
-    this.applyFilters();
+  /** Expose string conversion for template (Angular template has no global String). */
+  strId(val: unknown): string {
+    return val != null ? String(val) : '';
   }
 
   onPriceRangeChange() {
@@ -716,31 +780,23 @@ export class ProductListingComponent implements OnInit {
   }
 
   applyFilters() {
-    const filters: FilterOptions = {};
-    if (this.selectedCategories.length > 0) filters.category = this.selectedCategories;
-    if (this.priceRangeMin > 0 || this.priceRangeMax < 50000) {
-      filters.priceRange = { min: this.priceRangeMin, max: this.priceRangeMax };
-    }
-    if (this.inStockOnly) filters.inStock = true;
-    if (this.searchQuery) filters.search = this.searchQuery;
-    this.filteredProducts = this.productService.filterProducts(filters);
-    this.applySorting();
+    this.loadProducts();
   }
 
   applySorting() {
     const sorted = [...this.filteredProducts];
     switch (this.sortBy) {
-      case 'price-low': sorted.sort((a, b) => a.price - b.price); break;
-      case 'price-high': sorted.sort((a, b) => b.price - a.price); break;
-      case 'name-asc': sorted.sort((a, b) => a.name.localeCompare(b.name)); break;
-      case 'name-desc': sorted.sort((a, b) => b.name.localeCompare(a.name)); break;
-      case 'rating': sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0)); break;
+      case 'price-low': sorted.sort((a, b) => Number(a.price) - Number(b.price)); break;
+      case 'price-high': sorted.sort((a, b) => Number(b.price) - Number(a.price)); break;
+      case 'name-asc': sorted.sort((a, b) => (a.name || '').localeCompare(b.name || '')); break;
+      case 'name-desc': sorted.sort((a, b) => (b.name || '').localeCompare(a.name || '')); break;
+      case 'rating': sorted.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0)); break;
     }
     this.filteredProducts = sorted;
   }
 
   clearFilters() {
-    this.selectedCategories = this.category ? [this.category] : [];
+    this.selectedCategoryId = this.initialCategoryId;
     this.searchQuery = '';
     this.priceRangeMin = 0;
     this.priceRangeMax = 50000;
@@ -750,44 +806,81 @@ export class ProductListingComponent implements OnInit {
     this.applyFilters();
   }
 
-  addToCart(product: Product, event: Event) {
+  addToCart(product: any, event: Event) {
     event.stopPropagation();
     event.preventDefault();
-    this.cartService.addToCart(product, 1);
-    this.addedProductId = product.id;
+    const cartProduct = this.mapApiProductToCartProduct(product);
+    this.cartService.addToCart(cartProduct, 1);
+    this.addedProductId = String(product.id);
     this.toastMessage = `${product.name} added to cart!`;
     this.showToast = true;
     setTimeout(() => this.addedProductId = null, 1500);
     setTimeout(() => this.showToast = false, 3000);
   }
 
-  getDiscountPercent(product: Product): number {
-    if (!product.originalPrice) return 0;
-    return Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+  getDiscountPercent(product: any): number {
+    const orig = product.original_price ?? product.originalPrice;
+    if (!orig) return 0;
+    return Math.round(((Number(orig) - Number(product.price)) / Number(orig)) * 100);
   }
 
-  getProductSizes(product: Product): string[] {
-    const sizeAttr = product.attributes?.find(a => a.name.toLowerCase() === 'size');
-    if (!sizeAttr) return [];
-    return sizeAttr.value.split(',').map(s => s.trim()).filter(s => s);
-  }
-
-  getProductImage(product: Product): string {
-    if (product.images && product.images.length > 0 && product.images[0].startsWith('assets/')) {
-      return product.images[0];
+  getProductSizes(product: any): string[] {
+    if (product.sizes && typeof product.sizes === 'string') {
+      return product.sizes.split(',').map((s: string) => s.trim()).filter((s: string) => s);
     }
+    const sizeAttr = product.attributes?.find((a: any) => a.name?.toLowerCase() === 'size');
+    if (!sizeAttr) return [];
+    return sizeAttr.value.split(',').map((s: string) => s.trim()).filter((s: string) => s);
+  }
+
+  getProductImage(product: any): string {
     if (product.image_url) return product.image_url;
-    if ((product as any).image_urls?.length) return (product as any).image_urls[0];
+    if (product.image_urls?.length) return product.image_urls[0];
+    if (product.images?.length && product.images[0]) {
+      const img = product.images[0];
+      return typeof img === 'string' ? img : (img.path ? (img.path.startsWith('http') ? img.path : '') : '');
+    }
     return '';
   }
 
-  getProductColor(product: Product): string {
+  getProductCategoryName(product: any): string {
+    if (product.category?.name) return product.category.name;
+    if (product.category) return typeof product.category === 'string' ? product.category : '';
+    return 'Shop';
+  }
+
+  getProductColor(product: any): string {
+    const slug = (product.category?.slug || product.category || '').toString().toLowerCase();
     const colors: { [key: string]: string } = {
       'mens': 'linear-gradient(135deg, #1e3a5f 0%, #2a4d7a 100%)',
       'womens': 'linear-gradient(135deg, #a8d5ba 0%, #7fb89a 100%)',
       'collections': 'linear-gradient(135deg, #f5f1e8 0%, #e8e3d8 100%)'
     };
-    return colors[product.category] || colors['collections'];
+    return colors[slug] || colors['collections'];
+  }
+
+  /** Map API product to CartItem-compatible Product shape */
+  private mapApiProductToCartProduct(apiProduct: any): Product {
+    const cat = apiProduct.category;
+    const categoryName = (cat?.name || cat || 'collections').toString().toLowerCase().replace(/\s+/g, '');
+    const catSlug = cat?.slug || categoryName || 'collections';
+    return {
+      id: String(apiProduct.id),
+      name: apiProduct.name,
+      description: apiProduct.description || '',
+      price: Number(apiProduct.price),
+      originalPrice: apiProduct.original_price ? Number(apiProduct.original_price) : undefined,
+      category: (catSlug === 'mens' || catSlug === 'womens' ? catSlug : 'collections') as 'mens' | 'womens' | 'collections',
+      images: apiProduct.image_urls || (apiProduct.image_url ? [apiProduct.image_url] : []),
+      image_url: apiProduct.image_url,
+      image_urls: apiProduct.image_urls,
+      inStock: apiProduct.in_stock !== false,
+      stockQuantity: apiProduct.stock_quantity ?? 0,
+      attributes: apiProduct.sizes ? [{ name: 'Size', value: apiProduct.sizes }] : [],
+      tags: apiProduct.tags || [],
+      rating: apiProduct.rating ? Number(apiProduct.rating) : undefined,
+      reviewCount: apiProduct.review_count,
+    };
   }
 
   formatPrice(price: number): string {

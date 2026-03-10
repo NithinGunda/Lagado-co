@@ -17,8 +17,8 @@ import { RouterModule, Router } from '@angular/router';
           <div class="video-overlay"></div>
 
           <div class="register-branding">
-            <a routerLink="/" class="logo-link">
-              <h1>Legado & Co</h1>
+            <a routerLink="/" class="logo-link" aria-label="Legado & Co home">
+              <img src="assets/Logo.png" alt="Legado & Co" class="auth-logo-img" />
             </a>
             <h2>Join Us</h2>
             <p>Create your account and start your journey with timeless elegance</p>
@@ -292,13 +292,11 @@ import { RouterModule, Router } from '@angular/router';
       transform: scale(1.05);
     }
 
-    .register-branding h1 {
-      font-family: var(--font-logo);
-      font-size: 2.8rem;
-      margin: 0;
-      color: var(--text-white);
-      font-weight: 400;
-      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    .auth-logo-img {
+      height: 40px;
+      width: auto;
+      display: block;
+      filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.4));
     }
 
     .register-branding h2 {
@@ -573,8 +571,8 @@ import { RouterModule, Router } from '@angular/router';
         min-height: 350px;
       }
 
-      .register-branding h1 {
-        font-size: 2.2rem;
+      .auth-logo-img {
+        height: 34px;
       }
 
       .register-branding h2 {
@@ -607,8 +605,8 @@ import { RouterModule, Router } from '@angular/router';
         padding: var(--spacing-md);
       }
 
-      .register-branding h1 {
-        font-size: 1.8rem;
+      .auth-logo-img {
+        height: 30px;
       }
 
       .register-branding h2 {

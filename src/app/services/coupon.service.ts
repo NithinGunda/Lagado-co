@@ -57,4 +57,19 @@ export class CouponService {
   delete(id: number | string): Observable<any> {
     return this.http.delete(`${this.base}/${id}`);
   }
+
+  /** Validate coupon for checkout. orderAmount = cart subtotal. */
+  validate(code: string, orderAmount: number): Observable<{
+    valid: boolean;
+    message?: string;
+    discount_amount?: number;
+    coupon?: { id?: number | string; code: string; discount_type?: string; discount_value?: number };
+  }> {
+    return this.http.post<{
+      valid: boolean;
+      message?: string;
+      discount_amount?: number;
+      coupon?: { id?: number | string; code: string; discount_type?: string; discount_value?: number };
+    }>(`${this.base}/validate`, { code: code.trim(), order_amount: orderAmount });
+  }
 }

@@ -12,7 +12,9 @@ import { RouterModule } from '@angular/router';
         <div class="footer-inner">
           <!-- Brand -->
           <div class="ft-col ft-brand">
-            <h3 class="ft-logo">Legado & Co</h3>
+            <a routerLink="/" class="ft-logo-link" aria-label="Legado & Co home">
+              <img src="assets/Logo.png" alt="Legado & Co" class="ft-logo-img" />
+            </a>
             <p class="ft-tagline">Timeless Style, Quiet Confidence</p>
             <p class="ft-desc">Curating premium fashion for the modern individual who values quality, elegance, and sophistication.</p>
             <div class="ft-social">
@@ -133,13 +135,14 @@ import { RouterModule } from '@angular/router';
       background: rgba(255,255,255,0.3);
     }
 
-    .ft-logo {
-      font-family: var(--font-logo);
-      font-size: 1.6rem;
-      font-weight: 400;
-      letter-spacing: 0.02em;
-      margin: 0 0 6px;
-      color: #fff;
+    .ft-logo-link {
+      display: inline-block;
+      margin: 0 0 10px;
+    }
+    .ft-logo-img {
+      height: 32px;
+      width: auto;
+      display: block;
     }
 
     .ft-tagline {

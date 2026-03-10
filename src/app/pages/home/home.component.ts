@@ -3,8 +3,14 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ProductService } from '../../services/product.service';
 import { ProductApiService } from '../../services/product-api.service';
+import { CategoryService } from '../../services/category.service';
+import { Category } from '../../models/category.model';
+import { Router } from '@angular/router';
+import { FeaturedProductsService } from '../../services/featured-products.service';
 import { BuyTheLookService, Look } from '../../services/buy-the-look.service';
 import { CarouselService, CarouselItem } from '../../services/carousel.service';
+import { AppLoadingService } from '../../services/app-loading.service';
+import { InstagramService, InstagramTaggedPost } from '../../services/instagram.service';
 
 @Component({
   selector: 'app-home',
@@ -16,7 +22,15 @@ import { CarouselService, CarouselItem } from '../../services/carousel.service';
       <section class="hero-section" (mousemove)="onHeroMouseMove($event)" #heroSection>
         <div class="hero-slides">
           <div class="hero-slide" *ngFor="let slide of heroSlides; let i = index" [class.active]="i === activeSlide" [class.prev]="i === prevSlide">
-            <img class="hero-banner-img" [src]="slide.image" [alt]="slide.alt" />
+            <ng-container *ngIf="slide.type !== 'video'; else heroVideo">
+              <picture>
+                <source [srcset]="slide.mobileImage || slide.image" media="(max-width: 768px)" />
+                <img class="hero-banner-img" [src]="slide.image" [alt]="slide.alt" />
+              </picture>
+            </ng-container>
+            <ng-template #heroVideo>
+              <video class="hero-banner-img" [src]="slide.image" autoplay muted loop playsinline></video>
+            </ng-template>
           </div>
         </div>
         <div class="hero-overlay"></div>
@@ -38,18 +52,6 @@ import { CarouselService, CarouselItem } from '../../services/carousel.service';
         </div>
         <div class="hero-scanline"></div>
         <div class="hero-content">
-          <div class="hero-badge" [class.visible]="heroAnimReady">
-            <span class="badge-line"></span>
-            <span class="badge-text">Legado & Co</span>
-            <span class="badge-line"></span>
-          </div>
-          <h1 class="hero-title" [class.visible]="heroAnimReady">
-            <span class="title-line"><span class="title-word">Timeless</span> <span class="title-word accent">Style,</span></span>
-            <span class="title-line"><span class="title-word">Quiet</span> <span class="title-word">Confidence</span></span>
-          </h1>
-          <p class="hero-subtitle" [class.visible]="heroAnimReady">
-            Where timeless elegance meets bold contemporary fashion. Curated for those who dare to stand out.
-          </p>
           <div class="hero-cta-group" [class.visible]="heroAnimReady">
             <button class="hero-cta hero-cta-primary" (click)="scrollToFeatured()">
               <span class="cta-glow"></span>
@@ -134,34 +136,32 @@ import { CarouselService, CarouselItem } from '../../services/carousel.service';
             <h2 class="sec-title">Shop by Category</h2>
             <span class="sec-line"></span>
           </div>
-          <div class="cat-grid">
-            <a routerLink="/mens" class="cat-card">
-              <img src="assets/buythelook2.png" alt="Men's Collection" loading="lazy" />
+          <div class="cat-grid" *ngIf="topCategories.length > 0">
+            <a
+              class="cat-card"
+              *ngFor="let cat of topCategories"
+              (click)="goToCategory(cat)"
+            >
+              <img *ngIf="cat.image_url" [src]="cat.image_url" [alt]="cat.name" loading="lazy" />
               <div class="cat-overlay">
                 <div class="cat-label">
                   <span class="cat-tag">Collection</span>
-                  <h3>Men's</h3>
-                  <span class="cat-cta">Explore <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
-                </div>
-              </div>
-            </a>
-            <a routerLink="/womens" class="cat-card">
-              <img src="assets/buythelook3.png" alt="Women's Collection" loading="lazy" />
-              <div class="cat-overlay">
-                <div class="cat-label">
-                  <span class="cat-tag">Collection</span>
-                  <h3>Women's</h3>
-                  <span class="cat-cta">Explore <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
-                </div>
-              </div>
-            </a>
-            <a routerLink="/collections" class="cat-card cat-card-wide">
-              <img src="assets/homebanner2.png" alt="All Collections" loading="lazy" />
-              <div class="cat-overlay">
-                <div class="cat-label">
-                  <span class="cat-tag">Explore All</span>
-                  <h3>Collections</h3>
-                  <span class="cat-cta">View All <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+                  <h3>{{ cat.name }}</h3>
+                  <span class="cat-cta">
+                    Explore
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                    </svg>
+                  </span>
+                  <div class="cat-subcats" *ngIf="cat.children?.length">
+                    <button
+                      class="subcat-pill"
+                      *ngFor="let sub of cat.children"
+                      (click)="goToCategory(sub, $event)"
+                    >
+                      {{ sub.name }}
+                    </button>
+                  </div>
                 </div>
               </div>
             </a>
@@ -298,13 +298,13 @@ import { CarouselService, CarouselItem } from '../../services/carousel.service';
           </div>
           <p class="sec-sub">Share your style with us — tag <strong>&#64;legadoandco</strong> for a chance to be featured.</p>
           <div class="social-grid">
-            <div class="social-card" *ngFor="let post of socialPosts">
+            <a *ngFor="let post of socialPosts" class="social-card" [href]="post.permalink || '#'" [attr.target]="post.permalink ? '_blank' : null" [attr.rel]="post.permalink ? 'noopener noreferrer' : null">
               <div class="social-img" [style.background-image]="'url(' + post.image + ')'"></div>
               <div class="social-hover">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="#fff" stroke="none"/></svg>
                 <span>{{ post.handle }}</span>
               </div>
-            </div>
+            </a>
           </div>
         </div>
       </section>
@@ -339,7 +339,16 @@ import { CarouselService, CarouselItem } from '../../services/carousel.service';
     .hero-slide.active { opacity: 1; z-index: 1; transform: scale(1); transition: opacity 1.2s ease, transform 8s ease-out; }
     .hero-slide.prev { opacity: 0; z-index: 0; }
     .hero-banner-img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
-    .hero-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; background: linear-gradient(160deg, rgba(10,20,40,0.75) 0%, rgba(15,30,55,0.55) 40%, rgba(20,40,70,0.7) 100%); }
+    .hero-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      /* Removed dark gradient background to show raw carousel image */
+      background: transparent;
+    }
     .hero-gradient-mesh { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; background: radial-gradient(ellipse 600px 400px at 15% 80%, rgba(232,197,71,0.08) 0%, transparent 70%), radial-gradient(ellipse 500px 500px at 85% 20%, rgba(100,180,255,0.06) 0%, transparent 70%), radial-gradient(ellipse 400px 300px at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 70%); animation: meshShift 12s ease-in-out infinite alternate; }
     @keyframes meshShift { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
     .hero-shapes { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; }
@@ -457,23 +466,49 @@ import { CarouselService, CarouselItem } from '../../services/carousel.service';
       background: #fff;
     }
     .featured-carousel-wrapper {
-      display: flex; align-items: center; gap: 16px;
-      max-width: 1400px; margin: 0 auto;
+      position: relative;
+      max-width: 1400px;
+      margin: 0 auto;
     }
     .nav-btn {
-      width: 48px; height: 48px; flex-shrink: 0;
-      background: #fff; border: 1.5px solid var(--border-color);
-      color: var(--text-dark); cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.3s ease;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 44px;
+      border-radius: 999px !important;
+      background: rgba(255,255,255,0.85);
+      border: 1px solid rgba(0,0,0,0.06);
+      color: var(--text-dark);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(15,23,42,0.25);
+      opacity: 0;
+      transition: opacity 0.25s ease, transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .nav-prev { left: 12px; }
+    .nav-next { right: 12px; }
+    .featured-carousel-wrapper:hover .nav-btn:not(:disabled) {
+      opacity: 1;
+      pointer-events: auto;
     }
     .nav-btn:hover:not(:disabled) {
-      background: var(--primary-color); color: #fff;
-      border-color: var(--primary-color);
-      box-shadow: 0 4px 16px rgba(21,42,71,0.2);
+      background: var(--primary-color);
+      color: #fff;
+      box-shadow: 0 12px 30px rgba(15,23,42,0.35);
+      transform: translateY(-50%) scale(1.03);
     }
-    .nav-btn:disabled { opacity: 0.25; cursor: not-allowed; }
-    .featured-track-container { flex: 1; overflow: hidden; }
+    .nav-btn:disabled {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .featured-track-container {
+      overflow: hidden;
+    }
     .featured-track { display: flex; gap: 16px; transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
     .f-card {
       min-width: calc(25% - 12px); flex-shrink: 0;
@@ -600,6 +635,27 @@ import { CarouselService, CarouselItem } from '../../services/carousel.service';
     }
     .cat-cta svg { transition: transform 0.3s; }
     .cat-card:hover .cat-cta svg { transform: translateX(4px); }
+    .cat-subcats {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .subcat-pill {
+      padding: 4px 10px;
+      font-size: 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.6);
+      background: rgba(0,0,0,0.25);
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .subcat-pill:hover {
+      background: #fff;
+      color: #111827;
+      border-color: transparent;
+    }
 
     /* ===== BRAND STORY ===== */
     .story-section {
@@ -827,6 +883,9 @@ import { CarouselService, CarouselItem } from '../../services/carousel.service';
       display: grid; grid-template-columns: repeat(4, 1fr);
       gap: 16px; max-width: 1200px; margin: 0 auto;
     }
+    .social-section a.social-card {
+      display: block; text-decoration: none; color: inherit;
+    }
     .social-card {
       position: relative; overflow: hidden;
       aspect-ratio: 1; cursor: pointer;
@@ -974,57 +1033,99 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   featuredCardWidth = 0;
   private featuredAutoInterval: any;
 
-  private defaultHeroSlides = [
-    { image: 'assets/homebanner.png', alt: 'Legado & Co - Timeless Style' },
-    { image: 'assets/homebanner2.png', alt: 'Legado & Co - Premium Collection' }
-  ];
-  heroSlides: { image: string; alt: string }[] = [...this.defaultHeroSlides];
+  heroSlides: { image: string; mobileImage?: string; alt: string; type: 'image' | 'video' }[] = [];
   activeSlide = 0;
   prevSlide = -1;
   private heroInterval: any;
   currentLookIndex = 0;
-  curatedLooks: any[] = [
-    {
-      id: 1,
-      products: [
-        { id: 1, name: 'Brown Zippered Jacket', price: 3499, image: 'assets/homebanner2.png' },
-        { id: 2, name: 'Brown Leather Brogue Shoes', price: 5679, image: 'assets/buythelook3.png' },
-        { id: 3, name: 'Classic White Shirt', price: 2499, image: 'assets/buythelook2.png' }
-      ]
-    },
-    {
-      id: 2,
-      products: [
-        { id: 4, name: 'Navy Blue Trousers', price: 3299, image: 'assets/homebanner.png' },
-        { id: 5, name: 'Olive Green Sweater', price: 2799, image: 'assets/buythelook2.png' }
-      ]
-    }
+  curatedLooks: any[] = [];
+  socialPosts: InstagramTaggedPost[] = [
+    { id: '1', image: 'assets/buythelook2.png', permalink: '#', handle: '@legadoandco' },
+    { id: '2', image: 'assets/buythelook3.png', permalink: '#', handle: '@legadoandco' },
+    { id: '3', image: 'assets/homebanner2.png', permalink: '#', handle: '@legadoandco' },
+    { id: '4', image: 'assets/ourstory.png', permalink: '#', handle: '@legadoandco' },
   ];
-  socialPosts: any[] = [
-    { id: 1, image: 'assets/buythelook2.png', handle: '@Sannidh123' },
-    { id: 2, image: 'assets/buythelook3.png', handle: '@FashionLover' },
-    { id: 3, image: 'assets/homebanner2.png', handle: '@StyleInspire' },
-    { id: 4, image: 'assets/ourstory.png', handle: '@TrendSetter' }
+  private staticSocialFallback: InstagramTaggedPost[] = [
+    { id: '1', image: 'assets/buythelook2.png', permalink: '#', handle: '@legadoandco' },
+    { id: '2', image: 'assets/buythelook3.png', permalink: '#', handle: '@legadoandco' },
+    { id: '3', image: 'assets/homebanner2.png', permalink: '#', handle: '@legadoandco' },
+    { id: '4', image: 'assets/ourstory.png', permalink: '#', handle: '@legadoandco' },
   ];
+
+  categories: Category[] = [];
+  topCategories: (Category & { children: Category[] })[] = [];
+  openCategoryId: number | string | null = null;
+  private homePendingLoads = 0;
 
   constructor(
     private productService: ProductService,
     private productApi: ProductApiService,
+    private categoryService: CategoryService,
+    private featuredService: FeaturedProductsService,
     private lookService: BuyTheLookService,
-    private carouselService: CarouselService
+    private carouselService: CarouselService,
+    private router: Router,
+    private appLoading: AppLoadingService,
+    private instagramService: InstagramService
   ) {}
 
   ngOnInit() {
+    // Track initial home API loading for the global loader
+    this.homePendingLoads = 4; // hero, featured, categories, looks
+    this.appLoading.setLoading('home', true);
+
     this.loadHeroSlides();
     this.loadFeaturedProducts();
     this.loadSaleProducts();
+    this.loadCategories();
     this.loadLooksFromApi();
+    this.loadSocialPosts();
     this.startHeroAutoSlide();
     this.calcFeaturedLayout();
     this.startFeaturedAuto();
     if (typeof window !== 'undefined') {
       window.addEventListener('resize', this.onResize);
     }
+  }
+
+  private markHomeLoadDone() {
+    if (this.homePendingLoads > 0) {
+      this.homePendingLoads--;
+      if (this.homePendingLoads === 0) {
+        this.appLoading.setLoading('home', false);
+      }
+    }
+  }
+
+  loadCategories() {
+    this.categoryService.list({ per_page: 200 }).subscribe({
+      next: (res) => {
+        const items = (res as any)?.data ?? [];
+        this.categories = items;
+        const map = new Map<number | string | null, Category[]>();
+        for (const c of items) {
+          const pid = (c.parent_id ?? null) as any;
+          if (!map.has(pid)) map.set(pid, []);
+          map.get(pid)!.push(c);
+        }
+        const roots = map.get(null) || [];
+        this.topCategories = roots.map(root => ({
+          ...root,
+          children: map.get(root.id as any) || []
+        }));
+      },
+      error: () => {
+        this.categories = [];
+        this.topCategories = [];
+      }
+    });
+  }
+
+  goToCategory(cat: Category, event?: Event) {
+    if (event) event.stopPropagation();
+    this.router.navigate(['/collections'], {
+      queryParams: { category: cat.slug || cat.id }
+    });
   }
 
   ngAfterViewInit() {
@@ -1136,7 +1237,9 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
           active.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
           this.heroSlides = active.map(i => ({
             image: i.image_url!,
-            alt: i.title || 'Legado & Co'
+            mobileImage: (i as any).mobile_image_url || i.image_url!,
+            alt: i.title || 'Legado & Co',
+            type: (i.media_type === 'video' ? 'video' : 'image') as 'image' | 'video'
           }));
           this.activeSlide = 0;
           this.prevSlide = -1;
@@ -1147,11 +1250,16 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   loadFeaturedProducts() {
-    this.productApi.list({ featured: true, per_page: 12 }).subscribe({
-      next: (res) => {
-        const apiProducts = res?.data || [];
+    this.featuredService.list().subscribe({
+      next: (items: any[]) => {
+        const apiProducts = items || [];
         if (apiProducts.length > 0) {
-          this.featuredProducts = apiProducts;
+          // latest featured first (backend already orders by updated_at desc, but ensure)
+          this.featuredProducts = [...apiProducts].sort((a, b) => {
+            const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
+            const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
+            return bTime - aTime;
+          });
         } else {
           this.loadFeaturedFallback();
         }
@@ -1207,6 +1315,21 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
+  loadSocialPosts() {
+    this.instagramService.getTaggedMedia().subscribe({
+      next: (posts) => {
+        if (posts && posts.length > 0) {
+          this.socialPosts = posts;
+        } else {
+          this.socialPosts = [...this.staticSocialFallback];
+        }
+      },
+      error: () => {
+        this.socialPosts = [...this.staticSocialFallback];
+      },
+    });
+  }
+
   prevLook() {
     if (this.currentLookIndex > 0) this.currentLookIndex--;
   }
@@ -1219,9 +1342,24 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getProductImage(product: any): string {
-    if (product.images?.length && product.images[0].startsWith('assets/')) return product.images[0];
+    // 1) API-provided full URLs (featured/products endpoints)
     if (product.image_url) return product.image_url;
-    if (product.image_urls?.length) return product.image_urls[0];
+    if (Array.isArray(product.image_urls) && product.image_urls.length) {
+      return product.image_urls[0];
+    }
+
+    // 2) Local seed data where images is an array of asset paths
+    if (Array.isArray(product.images) && product.images.length) {
+      const first = product.images[0];
+      if (typeof first === 'string') {
+        return first;
+      }
+      // 3) Fallback: images as objects with "path"
+      if (first && typeof first.path === 'string') {
+        return first.path;
+      }
+    }
+
     return '';
   }
 

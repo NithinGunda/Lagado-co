@@ -1,14 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { CartService } from '../../services/cart.service';
+import { CouponService } from '../../services/coupon.service';
 import { CartItem } from '../../models/product.model';
 
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule],
   template: `
     <div class="checkout-page">
       <div class="container">
@@ -80,6 +81,23 @@ import { CartItem } from '../../models/product.model';
                   </div>
                 </section>
 
+                <!-- Coupon -->
+                <section class="form-section">
+                  <h2>Coupon Code</h2>
+                  <div class="coupon-row" *ngIf="!appliedCoupon">
+                    <input type="text" class="form-input coupon-input" [(ngModel)]="couponCode" [ngModelOptions]="{standalone: true}" placeholder="Enter coupon code" />
+                    <button type="button" class="btn-apply-coupon" (click)="applyCoupon()" [disabled]="!couponCode.trim() || couponLoading">
+                      {{ couponLoading ? 'Checking...' : 'Apply' }}
+                    </button>
+                  </div>
+                  <p class="coupon-error" *ngIf="couponError">{{ couponError }}</p>
+                  <div class="coupon-applied" *ngIf="appliedCoupon">
+                    <span class="coupon-applied-code">{{ appliedCoupon.code }}</span>
+                    <span class="coupon-applied-discount">−{{ formatPrice(couponDiscountAmount) }}</span>
+                    <button type="button" class="btn-remove-coupon" (click)="removeCoupon()">Remove</button>
+                  </div>
+                </section>
+
                 <!-- Payment -->
                 <section class="form-section">
                   <h2>Payment Method</h2>
@@ -131,6 +149,10 @@ import { CartItem } from '../../models/product.model';
                   <span>Shipping</span>
                   <span *ngIf="getSubtotal() >= 5000" class="free">FREE</span>
                   <span *ngIf="getSubtotal() < 5000">{{ formatPrice(500) }}</span>
+                </div>
+                <div class="summary-row discount-row" *ngIf="appliedCoupon">
+                  <span>Discount ({{ appliedCoupon.code }})</span>
+                  <span class="discount-amount">−{{ formatPrice(couponDiscountAmount) }}</span>
                 </div>
                 <div class="summary-row">
                   <span>Payment</span>
@@ -219,6 +241,28 @@ import { CartItem } from '../../models/product.model';
     }
     select.form-input { appearance: auto; }
     .error { display: block; color: #b91c1c; font-size: 11px; margin-top: 4px; }
+
+    .coupon-row { display: flex; gap: 10px; margin-bottom: 8px; }
+    .coupon-input { flex: 1; }
+    .btn-apply-coupon {
+      padding: 11px 20px; background: var(--primary-color); color: #fff;
+      border: none; font-weight: 600; font-size: 14px; cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-apply-coupon:hover:not(:disabled) { opacity: 0.9; }
+    .btn-apply-coupon:disabled { opacity: 0.6; cursor: not-allowed; }
+    .coupon-error { color: #b91c1c; font-size: 13px; margin: 8px 0 0; }
+    .coupon-applied {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 12px 14px; background: #ecfdf5; border: 1px solid #a7f3d0;
+    }
+    .coupon-applied-code { font-weight: 700; color: #065f46; }
+    .coupon-applied-discount { font-weight: 700; color: #059669; }
+    .btn-remove-coupon {
+      margin-left: auto; background: none; border: none; color: var(--primary-color);
+      font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: underline;
+    }
+    .discount-row .discount-amount { color: #059669; font-weight: 700; }
 
     /* COD Section */
     .cod-info {
@@ -310,6 +354,11 @@ export class CheckoutComponent implements OnInit {
   cartItems: CartItem[] = [];
   isLoggedIn = false;
   isProcessing = false;
+  couponCode = '';
+  appliedCoupon: { code: string; discount_type?: string; discount_value?: number } | null = null;
+  couponDiscountAmount = 0;
+  couponError = '';
+  couponLoading = false;
 
   indianStates = [
     'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
@@ -324,6 +373,7 @@ export class CheckoutComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private cartService: CartService,
+    private couponService: CouponService,
     private router: Router
   ) {
     this.checkoutForm = this.fb.group({
@@ -374,7 +424,37 @@ export class CheckoutComponent implements OnInit {
   getTotal(): number {
     const subtotal = this.getSubtotal();
     const shipping = subtotal >= 5000 ? 0 : 500;
-    return subtotal + shipping;
+    const discount = this.appliedCoupon ? this.couponDiscountAmount : 0;
+    return Math.max(0, subtotal + shipping - discount);
+  }
+
+  applyCoupon() {
+    const code = this.couponCode.trim();
+    if (!code) return;
+    this.couponError = '';
+    this.couponLoading = true;
+    this.couponService.validate(code, this.getSubtotal()).subscribe({
+      next: (res) => {
+        this.couponLoading = false;
+        if (res.valid && res.discount_amount != null && res.coupon) {
+          this.appliedCoupon = res.coupon;
+          this.couponDiscountAmount = res.discount_amount;
+          this.couponCode = '';
+        } else {
+          this.couponError = res.message || 'Invalid coupon.';
+        }
+      },
+      error: () => {
+        this.couponLoading = false;
+        this.couponError = 'Could not validate coupon. Try again.';
+      },
+    });
+  }
+
+  removeCoupon() {
+    this.appliedCoupon = null;
+    this.couponDiscountAmount = 0;
+    this.couponError = '';
   }
 
   formatPrice(price: number): string {

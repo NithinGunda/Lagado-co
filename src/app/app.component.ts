@@ -1,10 +1,11 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
+import { RouterOutlet, Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError } from '@angular/router';
 import { HeaderComponent } from './components/header/header.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
+import { AppLoadingService } from './services/app-loading.service';
 
 @Component({
   selector: 'app-root',
@@ -13,6 +14,16 @@ import { filter } from 'rxjs/operators';
   template: `
     <app-header *ngIf="!isAdmin"></app-header>
     <main [class.admin-active]="isAdmin">
+      <div class="global-loader-backdrop" *ngIf="!isAdmin && showLoader">
+        <div class="loader-orbit">
+          <div class="loader-ring loader-ring-outer"></div>
+          <div class="loader-ring loader-ring-inner"></div>
+          <div class="loader-logo-wrap">
+            <img src="assets/Logo.png" alt="Legado & Co" class="loader-logo" />
+          </div>
+        </div>
+      </div>
+
       <router-outlet></router-outlet>
     </main>
     <app-footer *ngIf="!isAdmin"></app-footer>
@@ -37,6 +48,69 @@ import { filter } from 'rxjs/operators';
     </div>
   `,
   styles: [`
+    .global-loader-backdrop {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(253,246,234,0.85), rgba(12,24,48,0.96));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9998;
+      backdrop-filter: blur(6px);
+    }
+    .loader-orbit {
+      position: relative;
+      width: 140px;
+      height: 140px;
+    }
+    .loader-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.14);
+      box-shadow: 0 0 40px rgba(0,0,0,0.4);
+    }
+    .loader-ring-outer {
+      border-top-color: rgba(232,197,71,0.9);
+      border-right-color: rgba(168,213,186,0.7);
+      border-bottom-color: transparent;
+      border-left-color: transparent;
+      animation: spinOuter 1.8s linear infinite;
+    }
+    .loader-ring-inner {
+      inset: 18px;
+      border-top-color: transparent;
+      border-right-color: rgba(255,255,255,0.7);
+      border-bottom-color: rgba(232,197,71,0.9);
+      border-left-color: transparent;
+      animation: spinInner 1.2s linear infinite;
+    }
+    .loader-logo-wrap {
+      position: absolute;
+      inset: 32px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.22), rgba(21,42,71,0.96));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .loader-logo {
+      width: 80%;
+      height: auto;
+      object-fit: contain;
+      animation: logoPulse 1.6s ease-in-out infinite;
+    }
+    @keyframes spinOuter {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes spinInner {
+      to { transform: rotate(-360deg); }
+    }
+    @keyframes logoPulse {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.08); opacity: 1; }
+    }
     main {
       min-height: calc(100vh - 200px);
     }
@@ -151,18 +225,51 @@ export class AppComponent implements OnInit, OnDestroy {
   title = 'Legado & Co';
   showCookieBanner = false;
   isAdmin = false;
+  showLoader = true;
   private routerSub!: Subscription;
+  private loadingSub!: Subscription;
+  private appBusy = false;
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private appLoading: AppLoadingService) {}
 
   ngOnInit() {
-    this.routerSub = this.router.events.pipe(
-      filter(e => e instanceof NavigationEnd)
-    ).subscribe((e: any) => {
-      this.isAdmin = e.urlAfterRedirects?.startsWith('/admin') || e.url?.startsWith('/admin');
+    this.loadingSub = this.appLoading.loading$.subscribe(isLoading => {
+      this.appBusy = isLoading;
+      if (!this.isAdmin && isLoading) {
+        this.showLoader = true;
+      }
+      if (!this.isAdmin && !isLoading && !(this.router as any).navigating) {
+        this.showLoader = false;
+      }
+    });
+
+    this.routerSub = this.router.events.subscribe((e: any) => {
+      if (e instanceof NavigationStart) {
+        this.isAdmin = e.url?.startsWith('/admin');
+        if (!this.isAdmin) {
+          this.showLoader = true;
+        }
+      }
+      if (e instanceof NavigationEnd) {
+        this.isAdmin = e.urlAfterRedirects?.startsWith('/admin') || e.url?.startsWith('/admin');
+        if (!this.isAdmin) {
+          setTimeout(() => this.showLoader = false, 400);
+        } else {
+          this.showLoader = false;
+        }
+      }
+      if (e instanceof NavigationCancel || e instanceof NavigationError) {
+        // cancel/error: just hide loader, keep current isAdmin
+        this.showLoader = false;
+      }
     });
 
     this.isAdmin = this.router.url.startsWith('/admin');
+    if (!this.isAdmin) {
+      setTimeout(() => this.showLoader = false, 700);
+    } else {
+      this.showLoader = false;
+    }
 
     if (typeof localStorage !== 'undefined') {
       const consent = localStorage.getItem('legado_cookie_consent');
@@ -172,6 +279,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.routerSub?.unsubscribe();
+    this.loadingSub?.unsubscribe();
   }
 
   acceptCookies() {

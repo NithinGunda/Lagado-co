@@ -16,8 +16,8 @@ import { RouterModule, Router } from '@angular/router';
           <div class="video-overlay"></div>
 
           <div class="login-branding">
-            <a routerLink="/" class="logo-link">
-              <h1>Legado & Co</h1>
+            <a routerLink="/" class="logo-link" aria-label="Legado & Co home">
+              <img src="assets/Logo.png" alt="Legado & Co" class="auth-logo-img" />
             </a>
             <h2>Welcome Back</h2>
             <p>Sign in to continue your journey with timeless elegance</p>
@@ -196,13 +196,11 @@ import { RouterModule, Router } from '@angular/router';
       transform: scale(1.05);
     }
 
-    .login-branding h1 {
-      font-family: var(--font-logo);
-      font-size: 2.8rem;
-      margin: 0;
-      color: var(--text-white);
-      font-weight: 400;
-      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    .auth-logo-img {
+      height: 40px;
+      width: auto;
+      display: block;
+      filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.4));
     }
 
     .login-branding h2 {
@@ -418,8 +416,8 @@ import { RouterModule, Router } from '@angular/router';
         min-height: 320px;
       }
 
-      .login-branding h1 {
-        font-size: 2.2rem;
+      .auth-logo-img {
+        height: 34px;
       }
 
       .login-branding h2 {
@@ -448,8 +446,8 @@ import { RouterModule, Router } from '@angular/router';
         padding: var(--spacing-md);
       }
 
-      .login-branding h1 {
-        font-size: 1.8rem;
+      .auth-logo-img {
+        height: 30px;
       }
 
       .login-branding h2 {

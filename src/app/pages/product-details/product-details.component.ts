@@ -2,8 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { ProductService } from '../../services/product.service';
+import { ProductApiService } from '../../services/product-api.service';
 import { CartService } from '../../services/cart.service';
+import { PaymentService } from '../../services/payment.service';
 import { Product } from '../../models/product.model';
 
 @Component({
@@ -11,12 +12,17 @@ import { Product } from '../../models/product.model';
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
   template: `
-    <div class="product-details" *ngIf="product">
+    <div class="product-loading" *ngIf="loading">
+      <div class="container">
+        <p>Loading product...</p>
+      </div>
+    </div>
+    <div class="product-details" *ngIf="!loading && product">
       <div class="container">
         <nav class="breadcrumb">
           <a routerLink="/">Home</a>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"></polyline></svg>
-          <a [routerLink]="['/', product.category]">{{ product.category | titlecase }}</a>
+          <a [routerLink]="['/collections']" [queryParams]="getCategoryQueryParams()">{{ getCategoryDisplayName() }}</a>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"></polyline></svg>
           <span class="breadcrumb-current">{{ product.name }}</span>
         </nav>
@@ -26,7 +32,7 @@ import { Product } from '../../models/product.model';
             <div class="main-image" (mouseenter)="imageZoom=true" (mouseleave)="imageZoom=false">
               <img *ngIf="getMainImageUrl()" class="image-actual" [src]="getMainImageUrl()" [alt]="product.name" [class.zoomed]="imageZoom" />
               <div *ngIf="!getMainImageUrl()" class="image-placeholder" [style.background]="getProductColor()" [class.zoomed]="imageZoom"></div>
-              <div class="discount-badge" *ngIf="product.originalPrice">
+              <div class="discount-badge" *ngIf="product.originalPrice || product.original_price">
                 -{{ getDiscountPercent() }}%
               </div>
             </div>
@@ -45,7 +51,7 @@ import { Product } from '../../models/product.model';
 
           <div class="product-info">
             <div class="product-header">
-              <span class="product-category-label">{{ product.category | titlecase }}</span>
+              <span class="product-category-label">{{ getCategoryDisplayName() }}</span>
               <h1 class="product-title">{{ product.name }}</h1>
               <div class="product-rating" *ngIf="product.rating">
                 <div class="stars-container">
@@ -58,8 +64,8 @@ import { Product } from '../../models/product.model';
 
             <div class="product-price-section">
               <span class="current-price">{{ formatPrice(product.price) }}</span>
-              <span class="original-price" *ngIf="product.originalPrice">{{ formatPrice(product.originalPrice) }}</span>
-              <span class="discount-tag" *ngIf="product.originalPrice">
+              <span class="original-price" *ngIf="product.originalPrice || product.original_price">{{ formatPrice(product.originalPrice || product.original_price) }}</span>
+              <span class="discount-tag" *ngIf="product.originalPrice || product.original_price">
                 {{ getDiscountPercent() }}% OFF
               </span>
             </div>
@@ -156,8 +162,8 @@ import { Product } from '../../models/product.model';
                   <svg *ngIf="showAddedFeedback" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
                   {{ showAddedFeedback ? 'Added to Cart!' : 'Add to Cart' }}
                 </button>
-                <button class="btn-buy-now" (click)="buyNow()" [disabled]="!product.inStock || !canAddToCart()">
-                  Buy Now
+                <button class="btn-buy-now" (click)="openBuyNowOptions()" [disabled]="!product.inStock || !canAddToCart() || buyNowLoading">
+                  {{ buyNowLoading ? 'Opening payment…' : 'Buy Now' }}
                 </button>
               </div>
             </div>
@@ -223,6 +229,35 @@ import { Product } from '../../models/product.model';
             </div>
           </div>
         </section>
+      </div>
+    </div>
+
+    <!-- Buy Now payment options modal -->
+    <div class="buynow-modal-backdrop" *ngIf="showBuyNowOptions" (click)="closeBuyNowOptions()">
+      <div class="buynow-modal" (click)="$event.stopPropagation()">
+        <div class="buynow-modal-header">
+          <h3>Choose payment method</h3>
+          <button type="button" class="buynow-modal-close" (click)="closeBuyNowOptions()" aria-label="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <p class="buynow-modal-sub">{{ product?.name }} — {{ quantity }} × {{ product ? formatPrice(product.price) : '' }}</p>
+        <div class="buynow-options">
+          <button type="button" class="buynow-option buynow-option-razorpay" (click)="payWithRazorpay()" [disabled]="buyNowLoading">
+            <span class="buynow-option-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            </span>
+            <span class="buynow-option-title">Pay with Razorpay</span>
+            <span class="buynow-option-desc">UPI, Card, Net Banking, Wallets</span>
+          </button>
+          <button type="button" class="buynow-option buynow-option-cod" (click)="payWithCashOnDelivery()">
+            <span class="buynow-option-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/><path d="M6 14h.01"/><path d="M10 14h.01"/></svg>
+            </span>
+            <span class="buynow-option-title">Cash on Delivery</span>
+            <span class="buynow-option-desc">Pay when your order is delivered</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -791,6 +826,44 @@ import { Product } from '../../models/product.model';
       cursor: not-allowed;
     }
 
+    .buynow-modal-backdrop {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+      padding: 20px; animation: buynowFadeIn 0.2s ease;
+    }
+    @keyframes buynowFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .buynow-modal {
+      background: #fff; border-radius: 12px; max-width: 420px; width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2); animation: buynowSlideIn 0.25s ease;
+    }
+    @keyframes buynowSlideIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
+    .buynow-modal-header {
+      display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 0 20px;
+    }
+    .buynow-modal-header h3 { margin: 0; font-size: 18px; font-weight: 600; color: var(--text-dark, #1a1a1a); }
+    .buynow-modal-close {
+      background: none; border: none; padding: 8px; cursor: pointer; color: #666;
+      border-radius: 8px; line-height: 0;
+    }
+    .buynow-modal-close:hover { background: #f0f0f0; color: #333; }
+    .buynow-modal-sub {
+      margin: 8px 20px 16px; font-size: 14px; color: #666;
+    }
+    .buynow-options { display: flex; flex-direction: column; gap: 12px; padding: 0 20px 20px; }
+    .buynow-option {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+      padding: 16px 18px; border: 2px solid #e5e5e5; border-radius: 10px; background: #fff;
+      cursor: pointer; text-align: left; transition: all 0.2s ease;
+    }
+    .buynow-option:hover:not(:disabled) { border-color: var(--btn-primary, #1e3a5f); background: #f8fafc; }
+    .buynow-option:disabled { opacity: 0.7; cursor: wait; }
+    .buynow-option-razorpay:hover:not(:disabled) { border-color: #3395ff; }
+    .buynow-option-cod:hover:not(:disabled) { border-color: #22c55e; }
+    .buynow-option-icon { color: var(--btn-primary, #1e3a5f); margin-bottom: 2px; }
+    .buynow-option-cod .buynow-option-icon { color: #22c55e; }
+    .buynow-option-title { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+    .buynow-option-desc { font-size: 13px; color: #666; }
+
     .trust-badges {
       display: flex;
       gap: 24px;
@@ -1021,54 +1094,136 @@ export class ProductDetailsComponent implements OnInit {
   toastMessage = '';
   showAddedFeedback = false;
   Math = Math;
+  loading = true;
+
+  buyNowLoading = false;
+  showBuyNowOptions = false;
+
+  private categoryIdForRelated: number | string | null = null;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private productService: ProductService,
-    private cartService: CartService
+    private productApi: ProductApiService,
+    private cartService: CartService,
+    private paymentService: PaymentService
   ) {}
 
   ngOnInit() {
     const productId = this.route.snapshot.paramMap.get('id');
     if (productId) {
-      this.product = this.productService.getProductById(productId);
-      if (this.product) {
-        this.loadRelatedProducts();
-        if (this.hasSizeAttribute()) {
-          this.selectedSize = this.getSizes()[0];
-        }
-        if (this.hasColorAttribute()) {
-          this.selectedColor = this.getColors()[0];
-        }
-      }
+      this.loading = true;
+      this.productApi.get(productId).subscribe({
+        next: (apiProduct) => {
+          this.product = this.mapApiProductToProduct(apiProduct);
+          this.categoryIdForRelated = apiProduct.category_id ?? (apiProduct.category?.id ?? null);
+          this.loadRelatedProducts();
+          if (this.hasSizeAttribute()) {
+            this.selectedSize = this.getSizes()[0];
+          }
+          if (this.hasColorAttribute()) {
+            this.selectedColor = this.getColors()[0];
+          }
+          this.loading = false;
+        },
+        error: () => {
+          this.product = undefined;
+          this.loading = false;
+        },
+      });
+    } else {
+      this.loading = false;
     }
   }
 
   loadRelatedProducts() {
-    if (!this.product) return;
-    const allProducts = this.productService.getAllProducts();
-    this.relatedProducts = allProducts
-      .filter(p => p.id !== this.product!.id && p.category === this.product!.category)
-      .slice(0, 4);
+    if (!this.product || this.categoryIdForRelated == null) return;
+    this.productApi.list({
+      category_id: this.categoryIdForRelated,
+      per_page: 8,
+      is_active: true,
+    }).subscribe({
+      next: (res) => {
+        const raw = res as any;
+        const data = Array.isArray(raw) ? raw : (raw?.data ?? []);
+        const list = Array.isArray(data) ? data : [];
+        this.relatedProducts = list
+          .filter((p: any) => String(p.id) !== String(this.product!.id))
+          .slice(0, 4)
+          .map((p: any) => this.mapApiProductToProduct(p));
+      },
+      error: () => {},
+    });
+  }
+
+  getCategoryDisplayName(): string {
+    if (!this.product) return '';
+    const cat = (this.product as any).category;
+    if (cat && typeof cat === 'object' && cat.name) return cat.name;
+    const slug = (this.product as any).categorySlug || this.product.category;
+    return (slug || '').toString().replace(/^./, (s: string) => s.toUpperCase());
+  }
+
+  getCategoryQueryParams(): { category?: string } {
+    if (!this.product) return {};
+    const cat = (this.product as any).category;
+    const slug = (this.product as any).categorySlug || (cat?.slug ?? this.product.category);
+    return slug ? { category: String(slug) } : {};
+  }
+
+  private mapApiProductToProduct(api: any): Product {
+    const cat = api.category;
+    const slug = (cat?.slug || (cat?.name || '').toString().toLowerCase().replace(/\s+|'/g, '') || 'collections').toString();
+    const categorySlug = slug === 'mens' || slug === 'womens' ? slug : 'collections';
+    const images = api.image_urls?.length ? api.image_urls : (api.image_url ? [api.image_url] : []);
+    const attrs: { name: string; value: string }[] = [];
+    if (api.sizes) attrs.push({ name: 'Size', value: api.sizes });
+    const mapped: Product & { categorySlug?: string; category?: any } = {
+      id: String(api.id),
+      name: api.name || '',
+      description: api.description || '',
+      price: Number(api.price ?? 0),
+      originalPrice: api.original_price != null ? Number(api.original_price) : undefined,
+      original_price: api.original_price,
+      category: categorySlug as 'mens' | 'womens' | 'collections',
+      images,
+      image_url: api.image_url,
+      image_urls: api.image_urls,
+      inStock: api.in_stock !== false,
+      stockQuantity: Number(api.stock_quantity ?? 0),
+      attributes: attrs,
+      tags: api.tags || [],
+      rating: api.rating != null ? Number(api.rating) : undefined,
+      reviewCount: api.review_count,
+      size_guide: api.size_guide,
+      badge: api.badge,
+    };
+    mapped.categorySlug = slug;
+    mapped.category = cat;
+    return mapped;
   }
 
   hasSizeAttribute(): boolean {
-    return this.product?.attributes.some(a => a.name.toLowerCase() === 'size') || false;
+    if (!this.product) return false;
+    if (this.product.attributes?.some((a: any) => a.name?.toLowerCase() === 'size')) return true;
+    return !!(this.product as any).sizes;
   }
 
   hasColorAttribute(): boolean {
-    return this.product?.attributes.some(a => a.name.toLowerCase() === 'color') || false;
+    return this.product?.attributes?.some((a: any) => a.name?.toLowerCase() === 'color') ?? false;
   }
 
   getSizes(): string[] {
-    const sizeAttr = this.product?.attributes.find(a => a.name.toLowerCase() === 'size');
-    return sizeAttr ? sizeAttr.value.split(',').map(s => s.trim()) : [];
+    if ((this.product as any)?.sizes && typeof (this.product as any).sizes === 'string') {
+      return (this.product as any).sizes.split(',').map((s: string) => s.trim()).filter(Boolean);
+    }
+    const sizeAttr = this.product?.attributes?.find((a: any) => a.name?.toLowerCase() === 'size');
+    return sizeAttr ? sizeAttr.value.split(',').map((s: string) => s.trim()) : [];
   }
 
   getColors(): string[] {
-    const colorAttr = this.product?.attributes.find(a => a.name.toLowerCase() === 'color');
-    return colorAttr ? colorAttr.value.split(',').map(c => c.trim()) : [];
+    const colorAttr = this.product?.attributes?.find((a: any) => a.name?.toLowerCase() === 'color');
+    return colorAttr ? colorAttr.value.split(',').map((c: string) => c.trim()) : [];
   }
 
   increaseQuantity() {
@@ -1109,9 +1264,63 @@ export class ProductDetailsComponent implements OnInit {
     setTimeout(() => this.showAddedFeedback = false, 1800);
   }
 
-  buyNow() {
+  openBuyNowOptions() {
+    if (!this.product || !this.canAddToCart()) return;
+    this.showBuyNowOptions = true;
+  }
+
+  closeBuyNowOptions() {
+    if (!this.buyNowLoading) this.showBuyNowOptions = false;
+  }
+
+  payWithRazorpay() {
+    if (!this.product || !this.canAddToCart()) return;
+    const amountPaise = Math.round(Number(this.product.price) * this.quantity * 100);
+    if (amountPaise < 100) {
+      this.showToastMessage('Invalid amount.');
+      return;
+    }
+    this.buyNowLoading = true;
+    this.paymentService.createOrder({
+      product_id: this.product.id,
+      product_name: this.product.name,
+      quantity: this.quantity,
+      amount_paise: amountPaise,
+      size: this.selectedSize,
+      color: this.selectedColor,
+    }).subscribe({
+      next: (data) => {
+        this.showBuyNowOptions = false;
+        this.buyNowLoading = false;
+        this.paymentService.openRazorpayCheckout({
+          keyId: data.keyId,
+          orderId: data.orderId,
+          amount: data.amount,
+          currency: data.currency || 'INR',
+          name: 'Legado & Co',
+          description: `${this.product!.name} (Qty: ${this.quantity})`,
+          handler: () => {
+            this.cartService.addToCart(this.product!, this.quantity, this.selectedSize, this.selectedColor);
+            this.showToastMessage('Payment successful! Order added to cart.');
+            this.router.navigate(['/cart']);
+          },
+          onClose: () => {
+            this.buyNowLoading = false;
+          },
+        });
+      },
+      error: () => {
+        this.buyNowLoading = false;
+        this.showToastMessage('Unable to start payment. Please try again.');
+      },
+    });
+  }
+
+  payWithCashOnDelivery() {
     if (!this.product || !this.canAddToCart()) return;
     this.cartService.addToCart(this.product, this.quantity, this.selectedSize, this.selectedColor);
+    this.showBuyNowOptions = false;
+    this.showToastMessage('Added to cart. Proceeding to checkout for Cash on Delivery.');
     this.router.navigate(['/cart']);
   }
 
@@ -1143,7 +1352,6 @@ export class ProductDetailsComponent implements OnInit {
     if (!this.product) return '';
     const idx = this.selectedImageIndex || 0;
     const img = this.product.images?.[idx] || this.product.images?.[0];
-    if (img && img.startsWith('assets/')) return img;
     if (img && img.startsWith('http')) return img;
     if (this.product.image_url) return this.product.image_url;
     if (this.product.image_urls?.length) return this.product.image_urls[idx] || this.product.image_urls[0];
@@ -1153,14 +1361,14 @@ export class ProductDetailsComponent implements OnInit {
   getThumbnailUrl(index: number): string {
     if (!this.product) return '';
     const img = this.product.images?.[index];
-    if (img && (img.startsWith('assets/') || img.startsWith('http'))) return img;
+    if (img && img.startsWith('http')) return img;
     if (this.product.image_urls?.[index]) return this.product.image_urls[index];
     return '';
   }
 
   getRelatedImageUrl(product: Product): string {
     if (!product) return '';
-    if (product.images?.length && (product.images[0].startsWith('assets/') || product.images[0].startsWith('http'))) return product.images[0];
+    if (product.images?.length && product.images[0].startsWith('http')) return product.images[0];
     if (product.image_url) return product.image_url;
     if (product.image_urls?.length) return product.image_urls[0];
     return '';

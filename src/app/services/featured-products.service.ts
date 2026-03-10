@@ -12,6 +12,7 @@ export interface FeaturedProduct {
   description?: string;
   image_url?: string;
   order?: number;
+  featured?: boolean;
   created_at?: string;
   updated_at?: string;
 }

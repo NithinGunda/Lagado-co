@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { ProductApiService } from '../../../services/product-api.service';
+import { FeaturedProductsService } from '../../../services/featured-products.service';
 
 @Component({
   selector: 'app-admin-featured-products',
@@ -175,7 +175,7 @@ export class AdminFeaturedProductsComponent implements OnInit {
   loading = false;
   searchQuery = '';
 
-  constructor(private productApi: ProductApiService, private router: Router) {}
+  constructor(private featuredApi: FeaturedProductsService, private router: Router) {}
 
   ngOnInit() {
     this.load();
@@ -183,9 +183,17 @@ export class AdminFeaturedProductsComponent implements OnInit {
 
   load() {
     this.loading = true;
-    this.productApi.list({ featured: true, per_page: 200 }).subscribe({
+    this.featuredApi.list().subscribe({
       next: (res) => {
-        this.allFeatured = (res?.data || []).map((p: any) => ({ ...p, _saving: false }));
+        const items = res || [];
+        // latest featured first based on updated_at/created_at
+        this.allFeatured = items
+          .map((p: any) => ({ ...p, _saving: false }))
+          .sort((a: any, b: any) => {
+            const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
+            const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
+            return bTime - aTime;
+          });
         this.filterProducts();
         this.loading = false;
       },
@@ -208,7 +216,7 @@ export class AdminFeaturedProductsComponent implements OnInit {
   removeFeatured(product: any) {
     if (!confirm(`Remove "${product.name}" from featured products?`)) return;
     product._saving = true;
-    this.productApi.update(product.id, { featured: false }).subscribe({
+    this.featuredApi.update(product.id, { featured: false }).subscribe({
       next: () => {
         this.allFeatured = this.allFeatured.filter(p => p.id !== product.id);
         this.filterProducts();

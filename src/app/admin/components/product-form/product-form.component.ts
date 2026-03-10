@@ -89,6 +89,24 @@ import { Category } from '../../../models/category.model';
             </div>
           </div>
 
+          <!-- Stock / Inventory -->
+          <div class="form-section">
+            <h2>Stock &amp; Inventory</h2>
+            <div class="field-row two-col">
+              <div class="field">
+                <label>Stock quantity</label>
+                <input type="number" [(ngModel)]="product.stock_quantity" placeholder="0" class="input" min="0" step="1" />
+                <small class="help-text">Available quantity for this product</small>
+              </div>
+              <div class="field">
+                <label class="toggle-row" style="margin-top: 28px;">
+                  <input type="checkbox" [(ngModel)]="product.in_stock" />
+                  <span>In stock (available to buy)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
           <!-- Size Guide -->
           <div class="form-section">
             <div class="section-header">
@@ -224,6 +242,14 @@ import { Category } from '../../../models/category.model';
               <span>Featured</span>
               <strong>{{ product.featured ? 'Yes' : 'No' }}</strong>
             </div>
+            <div class="summary-row">
+              <span>Stock</span>
+              <strong>{{ product.stock_quantity != null ? product.stock_quantity : '—' }}</strong>
+            </div>
+            <div class="summary-row">
+              <span>In stock</span>
+              <strong>{{ product.in_stock ? 'Yes' : 'No' }}</strong>
+            </div>
           </div>
 
           <div *ngIf="error" class="error-banner">{{ error }}</div>
@@ -355,7 +381,8 @@ export class AdminProductFormComponent implements OnInit {
   product: any = {
     name: '', price: null, category_id: null, description: '',
     is_on_sale: false, original_price: null, discount_percentage: null,
-    is_active: true, featured: false, sizes: ''
+    is_active: true, featured: false, sizes: '',
+    stock_quantity: 0, in_stock: true
   };
 
   imageFiles: File[] = [];
@@ -528,7 +555,9 @@ export class AdminProductFormComponent implements OnInit {
         if (this.product.discount_percentage) fd.append('discount_percentage', String(this.product.discount_percentage));
       }
       this.imageFiles.forEach(f => fd.append('images[]', f));
-      if (existingUrls.length) fd.append('existing_images', JSON.stringify(existingUrls));
+      fd.append('existing_images', JSON.stringify(existingUrls));
+      if (this.product.stock_quantity != null) fd.append('stock_quantity', String(this.product.stock_quantity));
+      fd.append('in_stock', this.product.in_stock === false ? '0' : '1');
       const op = id ? this.api.update(id, fd) : this.api.create(fd);
       op.subscribe({ next: () => this.onSaved(), error: (e) => this.onError(e) });
     } else {
@@ -542,7 +571,10 @@ export class AdminProductFormComponent implements OnInit {
         sizes: this.product.sizes || undefined,
         size_guide: this.sizeGuide.rows.length > 0 ? this.sizeGuide : undefined
       };
-      if (existingUrls.length) payload.existing_images = existingUrls;
+      // Always send existing_images so backend can delete removed ones (including all)
+      payload.existing_images = existingUrls;
+      if (this.product.stock_quantity != null) payload.stock_quantity = Number(this.product.stock_quantity);
+      payload.in_stock = this.product.in_stock !== false;
       if (this.product.is_on_sale) {
         payload.is_on_sale = true;
         if (this.product.original_price) payload.original_price = this.product.original_price;

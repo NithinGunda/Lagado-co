@@ -32,6 +32,7 @@ const MOCK_CATEGORIES: Category[] = [
             <th>ID</th>
             <th>Image</th>
             <th>Name</th>
+            <th>Parent</th>
             <th>Slug</th>
             <th>Status</th>
             <th>Actions</th>
@@ -45,6 +46,7 @@ const MOCK_CATEGORIES: Category[] = [
               <span *ngIf="!c.image_url">—</span>
             </td>
             <td>{{ c.name }}</td>
+            <td>{{ getParentName(c.parent_id) || '—' }}</td>
             <td>{{ c.slug || '—' }}</td>
             <td>
               <span 
@@ -77,6 +79,15 @@ const MOCK_CATEGORIES: Category[] = [
           <div class="form-group">
             <label>Name</label>
             <input [(ngModel)]="editing.name" placeholder="Category name" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Parent category (optional)</label>
+            <select [(ngModel)]="editing.parent_id" class="form-input">
+              <option [ngValue]="null">None</option>
+              <option *ngFor="let c of categories" [ngValue]="c.id" [disabled]="editing.id === c.id">
+                {{ c.name }}
+              </option>
+            </select>
           </div>
           <div class="form-group">
             <label>Slug (optional)</label>
@@ -162,6 +173,12 @@ export class AdminCategoriesComponent implements OnInit {
 
   constructor(private api: CategoryService) {}
 
+  getParentName(parentId?: number | string | null): string | undefined {
+    if (parentId == null) return undefined;
+    const parent = this.categories.find(c => c.id === parentId);
+    return parent?.name;
+  }
+
   ngOnInit() {
     this.load();
   }
@@ -241,6 +258,7 @@ export class AdminCategoriesComponent implements OnInit {
       fd.append('name', this.editing.name);
       if (this.editing.slug) fd.append('slug', this.editing.slug);
       fd.append('is_active', this.editing.is_active === false ? '0' : '1');
+      if (this.editing.parent_id != null) fd.append('parent_id', String(this.editing.parent_id));
       fd.append('image', this.imageFile!);
       const op = id ? this.api.update(id, fd) : this.api.create(fd);
       op.pipe(catchError(() => of(null))).subscribe({
@@ -255,7 +273,12 @@ export class AdminCategoriesComponent implements OnInit {
         }
       });
     } else {
-      const payload = { name: this.editing.name, slug: this.editing.slug || undefined, is_active: this.editing.is_active !== false };
+      const payload = {
+        name: this.editing.name,
+        slug: this.editing.slug || undefined,
+        is_active: this.editing.is_active !== false,
+        parent_id: this.editing.parent_id ?? null
+      };
       const op = id ? this.api.update(id, payload) : this.api.create(payload);
       op.pipe(catchError(() => of(null))).subscribe({
         next: (res) => {

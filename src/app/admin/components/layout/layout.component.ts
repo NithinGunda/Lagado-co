@@ -18,6 +18,7 @@ import { AuthService } from '../../../services/auth.service';
           <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Dashboard</a>
           <a routerLink="/admin/carousel" routerLinkActive="active">Carousel</a>
           <a routerLink="/admin/categories" routerLinkActive="active">Categories</a>
+          <a routerLink="/admin/subcategories" routerLinkActive="active">Subcategories</a>
           <a routerLink="/admin/products" routerLinkActive="active">Products</a>
           <a routerLink="/admin/featured-products" routerLinkActive="active">Featured Products</a>
           <a routerLink="/admin/buy-the-look" routerLinkActive="active">Buy The Look</a>
@@ -149,9 +150,6 @@ export class AdminLayoutComponent implements OnInit {
   constructor(private auth: AuthService, private router: Router) {}
 
   ngOnInit() {
-    if (!this.auth.isLoggedIn()) {
-      this.router.navigate(['/admin/login']);
-    }
   }
 
   logout() {
