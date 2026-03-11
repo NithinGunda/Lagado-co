@@ -10,7 +10,7 @@ import { RouterModule } from '@angular/router';
     <div class="blog-page">
       <div class="container">
         <div class="blog-header">
-          <h1>Our Blog</h1>
+          <h1>Our Journal</h1>
           <p>Fashion insights, style tips, and stories from Legado & Co</p>
         </div>
 

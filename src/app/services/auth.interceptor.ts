@@ -26,7 +26,7 @@ export class AuthInterceptor implements HttpInterceptor {
           try {
             const url = this.router.url || '';
             if (url.startsWith('/admin')) this.router.navigate(['/admin/login']);
-            else this.router.navigate(['/login']);
+            else if (!url.includes('/login')) this.router.navigate(['/login']);
           } catch (e) {}
         }
         return throwError(err);

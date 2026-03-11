@@ -1,10 +1,11 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ProductApiService } from '../../services/product-api.service';
 import { CategoryService } from '../../services/category.service';
 import { CartService } from '../../services/cart.service';
+import { AppLoadingService } from '../../services/app-loading.service';
 import { Product, FilterOptions } from '../../models/product.model';
 import { Category } from '../../models/category.model';
 
@@ -119,10 +120,7 @@ import { Category } from '../../models/category.model';
         </div>
       </div>
 
-      <!-- Products Grid -->
-      <div class="products-loading" *ngIf="loading">
-        <p>Loading products...</p>
-      </div>
+      <!-- Products Grid (global logo loader shows while loading) -->
       <div class="products-grid" *ngIf="!loading">
         <div
           class="product-card"
@@ -147,8 +145,9 @@ import { Category } from '../../models/category.model';
               <button
                 class="action-btn cart-btn"
                 (click)="addToCart(product, $event)"
+                [disabled]="isProductOutOfStock(product)"
                 [class.added]="addedProductId === strId(product.id)"
-                aria-label="Add to cart"
+                [attr.aria-label]="isProductOutOfStock(product) ? 'Out of stock' : 'Add to cart'"
               >
                 <svg *ngIf="addedProductId !== strId(product.id)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
@@ -415,9 +414,6 @@ import { Category } from '../../models/category.model';
     .tag svg { opacity: 0.5; }
 
     /* ===== PRODUCTS GRID ===== */
-    .products-loading {
-      padding: 40px 20px; text-align: center; color: var(--text-muted); font-size: 14px;
-    }
     .products-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -503,6 +499,11 @@ import { Category } from '../../models/category.model';
       box-shadow: 0 6px 20px rgba(21,42,71,0.3);
     }
     .action-btn.added { background: #059669; color: #fff; }
+    .action-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
 
     /* Quick view strip */
     .quick-view-strip {
@@ -649,7 +650,7 @@ import { Category } from '../../models/category.model';
     }
   `]
 })
-export class ProductListingComponent implements OnInit {
+export class ProductListingComponent implements OnInit, OnDestroy {
   @Input() category?: string;
 
   products: any[] = [];
@@ -676,11 +677,17 @@ export class ProductListingComponent implements OnInit {
   constructor(
     private productApi: ProductApiService,
     private categoryService: CategoryService,
-    private cartService: CartService
+    private cartService: CartService,
+    private appLoading: AppLoadingService
   ) {}
 
   ngOnInit() {
+    this.appLoading.setLoading('collections', true);
     this.loadCategories();
+  }
+
+  ngOnDestroy() {
+    this.appLoading.setLoading('collections', false);
   }
 
   private loadCategories() {
@@ -733,11 +740,13 @@ export class ProductListingComponent implements OnInit {
         this.filteredProducts = [...this.products];
         this.applySorting();
         this.loading = false;
+        this.appLoading.setLoading('collections', false);
       },
       error: () => {
         this.products = [];
         this.filteredProducts = [];
         this.loading = false;
+        this.appLoading.setLoading('collections', false);
       },
     });
   }
@@ -806,9 +815,15 @@ export class ProductListingComponent implements OnInit {
     this.applyFilters();
   }
 
+  isProductOutOfStock(p: any): boolean {
+    if (!p) return true;
+    return p.in_stock === false || (Number(p.stock_quantity ?? 0) <= 0);
+  }
+
   addToCart(product: any, event: Event) {
     event.stopPropagation();
     event.preventDefault();
+    if (this.isProductOutOfStock(product)) return;
     const cartProduct = this.mapApiProductToCartProduct(product);
     this.cartService.addToCart(cartProduct, 1);
     this.addedProductId = String(product.id);
@@ -874,8 +889,8 @@ export class ProductListingComponent implements OnInit {
       images: apiProduct.image_urls || (apiProduct.image_url ? [apiProduct.image_url] : []),
       image_url: apiProduct.image_url,
       image_urls: apiProduct.image_urls,
-      inStock: apiProduct.in_stock !== false,
-      stockQuantity: apiProduct.stock_quantity ?? 0,
+      inStock: apiProduct.in_stock !== false && Number(apiProduct.stock_quantity ?? 0) > 0,
+      stockQuantity: Number(apiProduct.stock_quantity ?? 0),
       attributes: apiProduct.sizes ? [{ name: 'Size', value: apiProduct.sizes }] : [],
       tags: apiProduct.tags || [],
       rating: apiProduct.rating ? Number(apiProduct.rating) : undefined,

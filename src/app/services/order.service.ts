@@ -17,4 +17,8 @@ export class OrderService {
   get(id: number | string): Observable<any> {
     return this.http.get(`${this.base}/${id}`);
   }
+
+  update(id: number | string, payload: { status?: string; total?: number }): Observable<any> {
+    return this.http.put(`${this.base}/${id}`, payload);
+  }
 }

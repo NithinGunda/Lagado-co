@@ -7,6 +7,7 @@ import { MensComponent } from './pages/mens/mens.component';
 import { BlogComponent } from './pages/blog/blog.component';
 import { LoginComponent } from './pages/login/login.component';
 import { RegisterComponent } from './pages/register/register.component';
+import { VerifyOtpComponent } from './pages/verify-otp/verify-otp.component';
 import { CartComponent } from './pages/cart/cart.component';
 import { ProductDetailsComponent } from './pages/product-details/product-details.component';
 import { CheckoutComponent } from './pages/checkout/checkout.component';
@@ -18,6 +19,7 @@ export const routes: Routes = [
   { path: '', component: HomeComponent },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
+  { path: 'verify-otp', component: VerifyOtpComponent },
   { path: 'profile', component: ProfileComponent },
   { path: 'cart', component: CartComponent },
   { path: 'checkout', component: CheckoutComponent },

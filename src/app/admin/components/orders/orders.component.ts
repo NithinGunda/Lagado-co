@@ -101,21 +101,100 @@ const MOCK_ORDERS = [
             <th>Status</th>
             <th>Total</th>
             <th>Date</th>
+            <th class="col-actions"></th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let o of filteredOrders" class="order-row">
-            <td><strong>#{{ o.id }}</strong></td>
-            <td>
-              <div class="customer-info">
-                <span class="customer-name" [innerHTML]="highlightMatch(getCustomerName(o))"></span>
-                <span class="customer-email" [innerHTML]="highlightMatch(getCustomerEmail(o))"></span>
-              </div>
-            </td>
-            <td><span class="status-badge" [class]="'status-' + (o.status || '')">{{ o.status || '—' }}</span></td>
-            <td>{{ formatPrice(o.total) }}</td>
-            <td>{{ formatDate(o.created_at) }}</td>
-          </tr>
+          <ng-container *ngFor="let o of filteredOrders">
+            <tr class="order-row" (click)="toggleDetails(o.id)" [class.expanded]="expandedOrderId === o.id">
+              <td><strong>#{{ o.id }}</strong></td>
+              <td>
+                <div class="customer-info">
+                  <span class="customer-name" [innerHTML]="highlightMatch(getCustomerName(o))"></span>
+                  <span class="customer-email" [innerHTML]="highlightMatch(getCustomerEmail(o))"></span>
+                </div>
+              </td>
+              <td><span class="status-badge" [class]="'status-' + (o.status || '')">{{ o.status || '—' }}</span></td>
+              <td>{{ formatPrice(o.total) }}</td>
+              <td>{{ formatDate(o.created_at) }}</td>
+              <td class="col-actions">
+                <button type="button" class="btn-detail" (click)="toggleDetails(o.id); $event.stopPropagation()" [attr.aria-expanded]="expandedOrderId === o.id">
+                  {{ expandedOrderId === o.id ? 'Hide' : 'View' }} details
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="expandedOrderId === o.id" class="detail-row">
+              <td colspan="6" class="detail-cell">
+                <div class="order-detail">
+                  <div class="detail-grid">
+                    <section class="detail-section">
+                      <h4>Order info</h4>
+                      <p><strong>Order #{{ o.id }}</strong> · {{ formatDate(o.created_at) }}</p>
+                      <div class="status-edit">
+                        <label>Status</label>
+                        <select [ngModel]="o.status" (ngModelChange)="onStatusChange(o, $event)" class="status-select">
+                          <option value="pending">Pending</option>
+                          <option value="processing">Processing</option>
+                          <option value="shipped">Shipped</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                        <button type="button" class="btn-save-status" (click)="saveStatus(o)" [disabled]="o.status === o._savedStatus || savingStatusId === o.id">
+                          {{ savingStatusId === o.id ? 'Saving…' : 'Update status' }}
+                        </button>
+                      </div>
+                      <p *ngIf="o.payment_method"><strong>Payment:</strong> {{ o.payment_method === 'cod' ? 'Cash on Delivery' : o.payment_method }}</p>
+                      <p *ngIf="o.notes"><strong>Notes:</strong> {{ o.notes }}</p>
+                      <p *ngIf="o.coupon_code"><strong>Coupon:</strong> {{ o.coupon_code }} <span *ngIf="o.discount != null">(−{{ formatPrice(o.discount) }})</span></p>
+                    </section>
+                    <section class="detail-section">
+                      <h4>Customer</h4>
+                      <p>{{ getCustomerName(o) }}</p>
+                      <p>{{ getCustomerEmail(o) }}</p>
+                      <p *ngIf="getCustomerPhone(o)">{{ getCustomerPhone(o) }}</p>
+                    </section>
+                    <section class="detail-section address-section">
+                      <h4>Shipping address</h4>
+                      <div *ngIf="getOrderAddress(o)" class="address-block">
+                        <p>{{ getOrderAddress(o) }}</p>
+                      </div>
+                      <p *ngIf="!getOrderAddress(o)" class="muted">No address</p>
+                    </section>
+                  </div>
+                  <section class="detail-section products-section">
+                    <h4>Products ({{ getOrderProducts(o).length }})</h4>
+                    <table class="products-table">
+                      <thead>
+                        <tr>
+                          <th>Product</th>
+                          <th>Qty</th>
+                          <th>Unit price</th>
+                          <th>Line total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let line of getOrderProducts(o)">
+                          <td>
+                            <div class="product-cell">
+                              <img *ngIf="getProductImage(line)" [src]="getProductImage(line)" alt="" class="product-thumb">
+                              <span class="product-name">{{ line.name || 'Product #' + line.id }}</span>
+                            </div>
+                          </td>
+                          <td>{{ getOrderQuantity(line) }}</td>
+                          <td>{{ formatPrice(getProductPrice(line)) }}</td>
+                          <td><strong>{{ formatPrice(getLineTotal(line)) }}</strong></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </section>
+                  <div class="order-totals">
+                    <span *ngIf="o.discount > 0" class="total-line">Discount: −{{ formatPrice(o.discount) }}</span>
+                    <span class="total-line total-final">Total: {{ formatPrice(o.total) }}</span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </ng-container>
         </tbody>
       </table>
 
@@ -217,9 +296,59 @@ const MOCK_ORDERS = [
       font-size: 13px; color: var(--text-light);
     }
 
+    .col-actions { width: 120px; text-align: right; }
+    .btn-detail {
+      padding: 6px 12px; font-size: 12px; font-weight: 600;
+      background: var(--primary-color, #3c5a99); color: #fff;
+      border: none; cursor: pointer; border-radius: 4px;
+    }
+    .btn-detail:hover { opacity: 0.9; }
+    .order-row { cursor: pointer; }
+    .order-row.expanded { background: rgba(60,90,153,0.06); }
+
+    .detail-row { vertical-align: top; }
+    .detail-cell { padding: 0 !important; background: var(--secondary-color); border-bottom: 2px solid var(--border-color); }
+    .order-detail { padding: 20px 24px; text-align: left; }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .detail-section h4 {
+      margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;
+      color: #666; font-weight: 700;
+    }
+    .detail-section p { margin: 4px 0; font-size: 14px; color: var(--text-dark); }
+    .detail-section .muted { color: var(--text-light); }
+    .status-edit { margin-top: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .status-edit label { font-size: 12px; font-weight: 600; }
+    .status-select {
+      padding: 6px 10px; border: 1px solid var(--border-color);
+      font-size: 13px; min-width: 140px;
+    }
+    .btn-save-status {
+      padding: 6px 14px; font-size: 12px; font-weight: 600;
+      background: #2e7d32; color: #fff; border: none; cursor: pointer; border-radius: 4px;
+    }
+    .btn-save-status:hover:not(:disabled) { opacity: 0.9; }
+    .btn-save-status:disabled { opacity: 0.6; cursor: not-allowed; }
+    .address-block { background: #fff; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border-color); }
+    .products-section { margin-top: 8px; }
+    .products-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+    .products-table th, .products-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border-color); }
+    .products-table th { background: #fff; font-weight: 600; color: #666; font-size: 11px; text-transform: uppercase; }
+    .product-cell { display: flex; align-items: center; gap: 10px; }
+    .product-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color); }
+    .product-name { font-weight: 500; }
+    .order-totals { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+    .total-line { font-size: 14px; }
+    .total-final { font-weight: 700; font-size: 1rem; color: var(--primary-color); }
+
     :host ::ng-deep .search-highlight { background: #fff3cd; padding: 1px 3px; font-weight: 700; }
 
     @media (max-width: 768px) {
+      .detail-grid { grid-template-columns: 1fr; }
       .toolbar { flex-direction: column; align-items: stretch; }
       .search-box { min-width: 0; }
       .filter-group { width: 100%; }
@@ -233,6 +362,8 @@ export class AdminOrdersComponent implements OnInit, OnDestroy {
   loading = false;
   error = '';
   meta: any = {};
+  expandedOrderId: number | null = null;
+  savingStatusId: number | null = null;
 
   searchQuery = '';
   filterStatus = '';
@@ -273,7 +404,8 @@ export class AdminOrdersComponent implements OnInit, OnDestroy {
       catchError(() => of({ data: MOCK_ORDERS, meta: { current_page: 1, last_page: 1 } }))
     ).subscribe({
       next: (res) => {
-        this.orders = res?.data ?? (Array.isArray(res) ? res : []);
+        const list = res?.data ?? (Array.isArray(res) ? res : []);
+        this.orders = list.map((o: any) => ({ ...o, _savedStatus: o.status }));
         this.meta = (res as any)?.meta ?? {};
         this.loading = false;
         this.applyFilters();
@@ -330,6 +462,72 @@ export class AdminOrdersComponent implements OnInit, OnDestroy {
 
   getCustomerEmail(o: any): string {
     return o.user?.email || o.customer_email || o.email || '';
+  }
+
+  getCustomerPhone(o: any): string {
+    return o.user?.phone || o.phone || '';
+  }
+
+  toggleDetails(orderId: number): void {
+    this.expandedOrderId = this.expandedOrderId === orderId ? null : orderId;
+  }
+
+  getOrderProducts(o: any): any[] {
+    const products = o.products;
+    if (Array.isArray(products)) return products;
+    return [];
+  }
+
+  getOrderQuantity(line: any): number {
+    return line?.pivot?.quantity ?? line?.quantity ?? 1;
+  }
+
+  getProductPrice(line: any): number {
+    const p = line?.price ?? line?.unit_price;
+    return p != null ? Number(p) : 0;
+  }
+
+  getLineTotal(line: any): number {
+    return this.getProductPrice(line) * this.getOrderQuantity(line);
+  }
+
+  getProductImage(line: any): string | null {
+    const url = line?.image_url ?? line?.image_urls?.[0];
+    if (url) return url;
+    const imgs = line?.images;
+    if (Array.isArray(imgs) && imgs.length) return imgs[0]?.url ?? imgs[0];
+    return null;
+  }
+
+  getOrderAddress(o: any): string {
+    const a = o.address;
+    if (!a) return '';
+    const parts = [
+      a.street,
+      a.location,
+      [a.city, a.state].filter(Boolean).join(', '),
+      a.pincode,
+      a.country
+    ].filter(Boolean);
+    return parts.join(', ');
+  }
+
+  onStatusChange(order: any, status: string): void {
+    order.status = status;
+  }
+
+  saveStatus(order: any): void {
+    if (order.status === (order._savedStatus ?? order.status)) return;
+    this.savingStatusId = order.id;
+    this.api.update(order.id, { status: order.status }).subscribe({
+      next: () => {
+        order._savedStatus = order.status;
+        this.savingStatusId = null;
+      },
+      error: () => {
+        this.savingStatusId = null;
+      }
+    });
   }
 
   highlightMatch(text: string): string {

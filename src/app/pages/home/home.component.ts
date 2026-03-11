@@ -84,7 +84,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       </section>
 
       <!-- =============== FEATURED PRODUCTS =============== -->
-      <section class="featured-section" id="featured-products">
+      <section class="featured-section" id="featured-products" *ngIf="featuredProducts.length > 0">
         <div class="container">
           <div class="sec-header">
             <span class="sec-line"></span>
@@ -173,16 +173,16 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       <section class="story-section">
         <div class="story-inner">
           <div class="story-image-wrap">
-            <img src="assets/ourstory.png" alt="Our Story" loading="lazy" />
+            <img src="assets/ourstory.png" alt="Our Philosophy" loading="lazy" />
             <div class="story-accent"></div>
           </div>
           <div class="story-text">
-            <span class="story-label">Our Story</span>
+            <span class="story-label">Our Philosophy</span>
             <h2 class="story-heading">Crafted With<br/><em>Purpose & Passion</em></h2>
             <p>At Legado & Co, we believe fashion is more than fabric — it's a statement of who you are. Every piece is designed with meticulous attention to detail, using premium materials sourced from the finest mills around the world.</p>
             <p>Our collections bridge the gap between timeless elegance and modern sophistication, creating garments that feel as exceptional as they look.</p>
             <a routerLink="/our-story" class="story-cta">
-              <span>Read Our Story</span>
+              <span>Read Our Philosophy</span>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </a>
           </div>
@@ -255,7 +255,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       </section>
 
       <!-- =============== BUY THE LOOK =============== -->
-      <section class="look-section">
+      <section class="look-section" *ngIf="curatedLooks.length > 0">
         <div class="container">
           <div class="sec-header">
             <span class="sec-line"></span>
@@ -263,7 +263,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
             <span class="sec-line"></span>
           </div>
           <p class="sec-sub">Get our curated collection — complete outfits styled by our creative team.</p>
-          <div class="look-carousel" *ngIf="curatedLooks.length > 0">
+          <div class="look-carousel">
             <button class="nav-btn" (click)="prevLook()" [disabled]="currentLookIndex === 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
             <div class="look-grid"
                  [class.two-items]="curatedLooks[currentLookIndex].products.length === 2"
@@ -1070,8 +1070,8 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   ) {}
 
   ngOnInit() {
-    // Track initial home API loading for the global loader
-    this.homePendingLoads = 4; // hero, featured, categories, looks
+    // Track all home API loads; loader stays until every one completes (success or error)
+    this.homePendingLoads = 6; // hero, featured, sale, categories, looks, social
     this.appLoading.setLoading('home', true);
 
     this.loadHeroSlides();
@@ -1113,10 +1113,12 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
           ...root,
           children: map.get(root.id as any) || []
         }));
+        this.markHomeLoadDone();
       },
       error: () => {
         this.categories = [];
         this.topCategories = [];
+        this.markHomeLoadDone();
       }
     });
   }
@@ -1244,8 +1246,9 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
           this.activeSlide = 0;
           this.prevSlide = -1;
         }
+        this.markHomeLoadDone();
       },
-      error: () => {}
+      error: () => { this.markHomeLoadDone(); }
     });
   }
 
@@ -1264,10 +1267,12 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
           this.loadFeaturedFallback();
         }
         this.calcFeaturedLayout();
+        this.markHomeLoadDone();
       },
       error: () => {
         this.loadFeaturedFallback();
         this.calcFeaturedLayout();
+        this.markHomeLoadDone();
       }
     });
   }
@@ -1281,17 +1286,42 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   loadSaleProducts() {
-    const allProducts = this.productService.getAllProducts();
-    this.saleProducts = allProducts.filter(p => p.is_on_sale || (p.originalPrice && p.price < p.originalPrice)).slice(0, 8);
-    this.saleProducts = this.saleProducts.map(p => {
-      if (!p.discount_percentage && p.originalPrice) {
-        const discount = ((p.originalPrice - p.price) / p.originalPrice) * 100;
-        p.discount_percentage = Math.round(discount);
+    this.productApi.list({ is_on_sale: true, per_page: 12 }).subscribe({
+      next: (res: any) => {
+        const list = res?.data ?? (Array.isArray(res) ? res : []);
+        const items = (list.length > 0 ? list : []).map((p: any) => {
+          const price = Number(p.price ?? 0);
+          const orig = Number(p.original_price ?? p.originalPrice ?? price);
+          let discountPct = p.discount_percentage;
+          if (discountPct == null && orig > 0 && price < orig) {
+            discountPct = Math.round(((orig - price) / orig) * 100);
+          }
+          return {
+            ...p,
+            id: p.id,
+            name: p.name,
+            price,
+            original_price: orig,
+            originalPrice: orig,
+            discount_percentage: discountPct,
+            category: p.category?.name ?? p.category
+          };
+        });
+        this.saleProducts = items;
+        this.markHomeLoadDone();
+      },
+      error: () => {
+        const allProducts = this.productService.getAllProducts();
+        const filtered = allProducts.filter((p: any) => p.is_on_sale || (p.originalPrice && p.price < p.originalPrice)).slice(0, 8);
+        this.saleProducts = filtered.map((p: any) => {
+          if (!p.discount_percentage && p.originalPrice) {
+            p.discount_percentage = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
+          }
+          if (!p.original_price && p.originalPrice) p.original_price = p.originalPrice;
+          return p;
+        });
+        this.markHomeLoadDone();
       }
-      if (!p.original_price && p.originalPrice) {
-        p.original_price = p.originalPrice;
-      }
-      return p;
     });
   }
 
@@ -1310,8 +1340,9 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
           }));
           this.currentLookIndex = 0;
         }
+        this.markHomeLoadDone();
       },
-      error: () => {}
+      error: () => { this.markHomeLoadDone(); }
     });
   }
 
@@ -1323,9 +1354,11 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
         } else {
           this.socialPosts = [...this.staticSocialFallback];
         }
+        this.markHomeLoadDone();
       },
       error: () => {
         this.socialPosts = [...this.staticSocialFallback];
+        this.markHomeLoadDone();
       },
     });
   }

@@ -252,10 +252,11 @@ export class AppComponent implements OnInit, OnDestroy {
       }
       if (e instanceof NavigationEnd) {
         this.isAdmin = e.urlAfterRedirects?.startsWith('/admin') || e.url?.startsWith('/admin');
-        if (!this.isAdmin) {
-          setTimeout(() => this.showLoader = false, 400);
-        } else {
+        if (this.isAdmin) {
           this.showLoader = false;
+        } else if (!this.appBusy) {
+          // Page does not use loading service; hide loader after brief delay
+          setTimeout(() => this.showLoader = false, 150);
         }
       }
       if (e instanceof NavigationCancel || e instanceof NavigationError) {
@@ -265,11 +266,8 @@ export class AppComponent implements OnInit, OnDestroy {
     });
 
     this.isAdmin = this.router.url.startsWith('/admin');
-    if (!this.isAdmin) {
-      setTimeout(() => this.showLoader = false, 700);
-    } else {
-      this.showLoader = false;
-    }
+    if (this.isAdmin) this.showLoader = false;
+    // Non-admin: showLoader stays true until loading$ emits false (e.g. home/collections/product done)
 
     if (typeof localStorage !== 'undefined') {
       const consent = localStorage.getItem('legado_cookie_consent');

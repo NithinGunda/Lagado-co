@@ -12,7 +12,7 @@ import { RouterModule } from '@angular/router';
       <!-- ===== HERO BANNER ===== -->
       <section class="story-hero">
         <div class="hero-img-wrap">
-          <img src="assets/ourstory.png" alt="Our Story" class="hero-bg" />
+          <img src="assets/ourstory.png" alt="Our Philosophy" class="hero-bg" />
         </div>
         <div class="hero-overlay"></div>
         <div class="hero-content" [class.visible]="animReady">
@@ -21,7 +21,7 @@ import { RouterModule } from '@angular/router';
             <span>Est. 2024</span>
             <span class="label-line"></span>
           </span>
-          <h1>Our Story</h1>
+          <h1>Our Philosophy</h1>
           <p>Building a legacy of timeless elegance, one garment at a time.</p>
         </div>
       </section>

@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -27,7 +28,7 @@ import { RouterModule, Router } from '@angular/router';
         <div class="login-right">
           <div class="login-form-wrapper">
             <h3>Sign In</h3>
-            
+            <p class="api-error" *ngIf="apiError">{{ apiError }}</p>
             <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
               <div class="form-group">
                 <label for="email">Email Address</label>
@@ -93,11 +94,11 @@ import { RouterModule, Router } from '@angular/router';
                 <span *ngIf="isLoading">Signing In...</span>
               </button>
 
+              <!-- Continue with Google (commented out for now)
               <div class="form-divider">
                 <span>OR</span>
               </div>
-
-              <button type="button" class="btn btn-social">
+              <button type="button" class="btn btn-social" (click)="continueWithGoogle()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -106,6 +107,7 @@ import { RouterModule, Router } from '@angular/router';
                 </svg>
                 Continue with Google
               </button>
+              -->
 
               <p class="signup-link">
                 Don't have an account? 
@@ -197,10 +199,10 @@ import { RouterModule, Router } from '@angular/router';
     }
 
     .auth-logo-img {
-      height: 40px;
+      height: 70px;
       width: auto;
       display: block;
-      filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.4));
+      filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.5));
     }
 
     .login-branding h2 {
@@ -269,6 +271,15 @@ import { RouterModule, Router } from '@angular/router';
 
     .form-input.error {
       border-color: #e74c3c;
+    }
+
+    .api-error {
+      color: #e74c3c;
+      font-size: 14px;
+      margin-bottom: var(--spacing-md);
+      padding: 10px 12px;
+      background: rgba(231, 76, 60, 0.08);
+      border-radius: 8px;
     }
 
     .password-input-wrapper {
@@ -417,7 +428,7 @@ import { RouterModule, Router } from '@angular/router';
       }
 
       .auth-logo-img {
-        height: 34px;
+        height: 60px;
       }
 
       .login-branding h2 {
@@ -447,7 +458,7 @@ import { RouterModule, Router } from '@angular/router';
       }
 
       .auth-logo-img {
-        height: 30px;
+        height: 48px;
       }
 
       .login-branding h2 {
@@ -464,10 +475,12 @@ export class LoginComponent {
   loginForm: FormGroup;
   showPassword = false;
   isLoading = false;
+  apiError = '';
 
   constructor(
     private fb: FormBuilder,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -500,19 +513,32 @@ export class LoginComponent {
   }
 
   onSubmit() {
+    this.apiError = '';
     if (this.loginForm.valid) {
       this.isLoading = true;
-      // Simulate API call
-      setTimeout(() => {
-        this.isLoading = false;
-        // Navigate to home or dashboard after successful login
-        this.router.navigate(['/']);
-      }, 1500);
+      const { email, password } = this.loginForm.value;
+      this.authService.login({ email, password }).subscribe({
+        next: () => {
+          this.isLoading = false;
+          this.router.navigate(['/']);
+        },
+        error: (err) => {
+          this.isLoading = false;
+          const body = err?.error;
+          this.apiError = body?.message || err?.message || 'Invalid email or password. Please try again.';
+        }
+      });
     } else {
-      // Mark all fields as touched to show validation errors
       Object.keys(this.loginForm.controls).forEach(key => {
         this.loginForm.get(key)?.markAsTouched();
       });
     }
   }
+
+  // Continue with Google (commented out for now)
+  // continueWithGoogle() {
+  //   // Placeholder for Google sign-in integration.
+  //   // You can wire this up to your actual Google OAuth flow (e.g. Firebase, OAuth2 backend endpoint).
+  //   console.warn('Google login not yet configured: please connect this to your Google OAuth flow.');
+  // }
 }

@@ -40,7 +40,7 @@ import { RouterModule } from '@angular/router';
               <li><a routerLink="/collections">Collections</a></li>
               <li><a routerLink="/mens">Men's</a></li>
               <li><a routerLink="/womens">Women's</a></li>
-              <li><a routerLink="/our-story">Our Story</a></li>
+              <li><a routerLink="/our-story">Our Philosophy</a></li>
             </ul>
           </div>
 

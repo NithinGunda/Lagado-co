@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-register',
@@ -36,7 +37,7 @@ import { RouterModule, Router } from '@angular/router';
         <div class="register-right">
           <div class="register-form-wrapper">
             <h3>Create Account</h3>
-            
+            <p class="api-error" *ngIf="apiError">{{ apiError }}</p>
             <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
               <div class="form-row">
                 <div class="form-group">
@@ -93,8 +94,9 @@ import { RouterModule, Router } from '@angular/router';
                   formControlName="phone"
                   class="form-input"
                   [class.error]="isFieldInvalid('phone')"
-                  placeholder="+1 (555) 123-4567"
+                  placeholder="+91 98765 43210"
                 >
+                <small class="helper-text">Indian mobile numbers only (starts with 6–9)</small>
                 <span class="error-message" *ngIf="isFieldInvalid('phone')">
                   {{ getFieldError('phone') }}
                 </span>
@@ -189,10 +191,10 @@ import { RouterModule, Router } from '@angular/router';
                 <span *ngIf="isLoading">Creating Account...</span>
               </button>
 
+              <!-- Continue with Google (commented out for now)
               <div class="form-divider">
                 <span>OR</span>
               </div>
-
               <button type="button" class="btn btn-social">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -202,6 +204,7 @@ import { RouterModule, Router } from '@angular/router';
                 </svg>
                 Sign up with Google
               </button>
+              -->
 
               <p class="login-link">
                 Already have an account? 
@@ -293,10 +296,10 @@ import { RouterModule, Router } from '@angular/router';
     }
 
     .auth-logo-img {
-      height: 40px;
+      height: 70px;
       width: auto;
       display: block;
-      filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.4));
+      filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.5));
     }
 
     .register-branding h2 {
@@ -458,6 +461,22 @@ import { RouterModule, Router } from '@angular/router';
       margin: 0;
     }
 
+    .helper-text {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--text-light);
+    }
+
+    .api-error {
+      color: #e74c3c;
+      font-size: 14px;
+      margin-bottom: var(--spacing-md);
+      padding: 10px 12px;
+      background: rgba(231, 76, 60, 0.08);
+      border-radius: 8px;
+    }
+
     .error-message {
       display: block;
       color: #e74c3c;
@@ -572,7 +591,7 @@ import { RouterModule, Router } from '@angular/router';
       }
 
       .auth-logo-img {
-        height: 34px;
+        height: 60px;
       }
 
       .register-branding h2 {
@@ -606,7 +625,7 @@ import { RouterModule, Router } from '@angular/router';
       }
 
       .auth-logo-img {
-        height: 30px;
+        height: 48px;
       }
 
       .register-branding h2 {
@@ -628,6 +647,7 @@ export class RegisterComponent {
   showPassword = false;
   showConfirmPassword = false;
   isLoading = false;
+  apiError = '';
 
   benefits = [
     'Exclusive member discounts',
@@ -637,13 +657,18 @@ export class RegisterComponent {
 
   constructor(
     private fb: FormBuilder,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {
     this.registerForm = this.fb.group({
       firstName: ['', [Validators.required, Validators.minLength(2)]],
       lastName: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
-      phone: ['', [Validators.required, Validators.pattern(/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/)]],
+      phone: ['', [
+        Validators.required,
+        // Indian mobile numbers: optional +91 / 0, then 10 digits starting 6-9
+        Validators.pattern(/^(?:\+91[-\s]?|0)?[6-9]\d{9}$/)
+      ]],
       password: ['', [Validators.required, Validators.minLength(8), this.passwordStrengthValidator]],
       confirmPassword: ['', [Validators.required]],
       agreeToTerms: [false, Validators.requiredTrue]
@@ -703,8 +728,8 @@ export class RegisterComponent {
       const minLength = field.errors?.['minlength'].requiredLength;
       return `Must be at least ${minLength} characters`;
     }
-    if (field?.hasError('pattern')) {
-      return 'Please enter a valid phone number';
+    if (fieldName === 'phone' && field?.hasError('pattern')) {
+      return 'Please enter a valid Indian mobile number';
     }
     if (field?.hasError('weakPassword')) {
       return 'Password is too weak';
@@ -743,16 +768,36 @@ export class RegisterComponent {
   }
 
   onSubmit() {
+    this.apiError = '';
     if (this.registerForm.valid) {
       this.isLoading = true;
-      // Simulate API call
-      setTimeout(() => {
-        this.isLoading = false;
-        // Navigate to home or login after successful registration
-        this.router.navigate(['/login']);
-      }, 1500);
+      const v = this.registerForm.value;
+      const payload = {
+        name: `${(v.firstName || '').trim()} ${(v.lastName || '').trim()}`.trim() || v.firstName,
+        first_name: v.firstName,
+        last_name: v.lastName,
+        email: v.email,
+        phone: v.phone?.replace(/\s/g, '') || v.phone,
+        password: v.password,
+        password_confirmation: v.confirmPassword
+      };
+      this.authService.register(payload).subscribe({
+        next: () => {
+          this.isLoading = false;
+          this.router.navigate(['/verify-otp'], { queryParams: { email: v.email } });
+        },
+        error: (err) => {
+          this.isLoading = false;
+          const body = err?.error;
+          if (body?.errors && typeof body.errors === 'object') {
+            const first = Object.values(body.errors)[0];
+            this.apiError = Array.isArray(first) ? first[0] : String(first);
+          } else {
+            this.apiError = body?.message || err?.message || 'Registration failed. Please try again.';
+          }
+        }
+      });
     } else {
-      // Mark all fields as touched to show validation errors
       Object.keys(this.registerForm.controls).forEach(key => {
         this.registerForm.get(key)?.markAsTouched();
       });

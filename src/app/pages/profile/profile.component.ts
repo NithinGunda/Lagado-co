@@ -1,7 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
+import { OrderService } from '../../services/order.service';
+import { AddressService } from '../../services/address.service';
 
 @Component({
   selector: 'app-profile',
@@ -16,10 +19,11 @@ import { RouterModule } from '@angular/router';
           <!-- Profile Navigation -->
           <aside class="profile-nav">
             <nav class="nav-menu">
-              <a class="nav-item active" (click)="activeTab = 'profile'">Profile</a>
-              <a class="nav-item" (click)="activeTab = 'orders'">Orders</a>
-              <a class="nav-item" (click)="activeTab = 'addresses'">Addresses</a>
-              <a class="nav-item" (click)="activeTab = 'password'">Change Password</a>
+              <a class="nav-item" [class.active]="activeTab === 'profile'" (click)="activeTab = 'profile'">Profile</a>
+              <a class="nav-item" [class.active]="activeTab === 'orders'" (click)="activeTab = 'orders'">My Orders</a>
+              <a class="nav-item" [class.active]="activeTab === 'addresses'" (click)="activeTab = 'addresses'">Addresses</a>
+              <a class="nav-item" [class.active]="activeTab === 'password'" (click)="activeTab = 'password'">Change Password</a>
+              <button type="button" class="nav-item nav-item-logout" (click)="logout()">Logout</button>
             </nav>
           </aside>
 
@@ -61,25 +65,42 @@ import { RouterModule } from '@angular/router';
 
             <!-- Orders Tab -->
             <div class="tab-content" *ngIf="activeTab === 'orders'">
-              <h2>Order History</h2>
-              <div class="orders-list">
+              <h2>My Orders</h2>
+              <div class="orders-list" *ngIf="!ordersLoading">
                 <div class="order-card" *ngFor="let order of orders">
                   <div class="order-header">
                     <div>
                       <h3>Order #{{ order.id }}</h3>
                       <p class="order-date">Placed on {{ order.date }}</p>
                     </div>
-                    <span class="order-status" [class]="order.status">{{ order.status }}</span>
+                    <span class="order-status" [class]="(order.status || 'pending').toLowerCase()">{{ order.status || 'Pending' }}</span>
                   </div>
-                  <div class="order-items">
-                    <div class="order-item" *ngFor="let item of order.items">
-                      <span>{{ item.name }} × {{ item.quantity }}</span>
-                      <span>{{ formatPrice(item.price) }}</span>
+                  <div class="order-products">
+                    <div class="order-products-header">
+                      <span>Product</span>
+                      <span>Qty</span>
+                      <span>Unit price</span>
+                      <span>Amount</span>
+                    </div>
+                    <div class="order-product-row" *ngFor="let item of order.items">
+                      <div class="order-product-info">
+                        <img *ngIf="item.imageUrl" [src]="item.imageUrl" [alt]="item.name" class="order-product-img">
+                        <span class="order-product-name">{{ item.name }}</span>
+                      </div>
+                      <span class="order-product-qty">{{ item.quantity }}</span>
+                      <span class="order-product-unit">{{ formatPrice(item.unitPrice) }}</span>
+                      <span class="order-product-total">{{ formatPrice(item.lineTotal) }}</span>
                     </div>
                   </div>
-                  <div class="order-footer">
-                    <span class="order-total">Total: {{ formatPrice(order.total) }}</span>
-                    <button class="btn btn-secondary">View Details</button>
+                  <div class="order-summary">
+                    <p class="order-summary-line" *ngIf="order.discount > 0">
+                      <span>Discount</span>
+                      <span class="discount">−{{ formatPrice(order.discount) }}</span>
+                    </p>
+                    <p class="order-summary-line order-total-line">
+                      <span>Total</span>
+                      <span class="order-total">{{ formatPrice(order.total) }}</span>
+                    </p>
                   </div>
                 </div>
 
@@ -88,12 +109,13 @@ import { RouterModule } from '@angular/router';
                   <a routerLink="/collections" class="btn btn-primary">Start Shopping</a>
                 </div>
               </div>
+              <div class="profile-loading" *ngIf="ordersLoading">Loading orders...</div>
             </div>
 
             <!-- Addresses Tab -->
             <div class="tab-content" *ngIf="activeTab === 'addresses'">
               <h2>Saved Addresses</h2>
-              <div class="addresses-list">
+              <div class="addresses-list" *ngIf="!addressesLoading">
                 <div class="address-card" *ngFor="let address of addresses">
                   <div class="address-header">
                     <h3>{{ address.label }}</h3>
@@ -102,13 +124,17 @@ import { RouterModule } from '@angular/router';
                       <button class="btn-icon delete" (click)="deleteAddress(address.id)">Delete</button>
                     </div>
                   </div>
-                  <p>{{ address.street }}</p>
+                  <p>{{ address.street }}{{ address.location ? ', ' + address.location : '' }}</p>
                   <p>{{ address.city }}, {{ address.state }} {{ address.zipCode }}</p>
-                  <p>{{ address.country }}</p>
+                  <p *ngIf="address.country">{{ address.country }}</p>
                 </div>
 
+                <div class="empty-state" *ngIf="addresses.length === 0 && !addressesLoading">
+                  <p>No saved addresses</p>
+                </div>
                 <button class="btn btn-primary" (click)="addNewAddress()">Add New Address</button>
               </div>
+              <div class="profile-loading" *ngIf="addressesLoading">Loading addresses...</div>
             </div>
 
             <!-- Change Password Tab -->
@@ -189,6 +215,30 @@ import { RouterModule } from '@angular/router';
     .nav-item.active {
       background: var(--primary-color);
       color: var(--text-white);
+    }
+
+    .nav-item-logout {
+      width: 100%;
+      text-align: left;
+      border: none;
+      background: none;
+      cursor: pointer;
+      margin-top: 8px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+      color: #c0392b;
+      font-weight: 600;
+    }
+
+    .nav-item-logout:hover {
+      background: rgba(192, 57, 43, 0.08);
+      color: #a93226;
+    }
+
+    .profile-loading {
+      padding: var(--spacing-lg);
+      text-align: center;
+      color: var(--text-light);
     }
 
     .profile-main {
@@ -294,29 +344,101 @@ import { RouterModule } from '@angular/router';
       color: white;
     }
 
-    .order-items {
+    .order-products {
       margin: var(--spacing-sm) 0;
       padding: var(--spacing-sm) 0;
       border-top: 1px solid var(--border-color);
       border-bottom: 1px solid var(--border-color);
     }
 
-    .order-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 4px 0;
-      font-size: 14px;
+    .order-products-header {
+      display: grid;
+      grid-template-columns: 1fr 60px 90px 90px;
+      gap: 12px;
+      padding: 8px 0 10px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-light);
+      border-bottom: 1px solid var(--border-color);
     }
 
-    .order-footer {
+    .order-product-row {
+      display: grid;
+      grid-template-columns: 1fr 60px 90px 90px;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 0;
+      font-size: 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .order-product-row:last-child {
+      border-bottom: none;
+    }
+
+    .order-product-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .order-product-img {
+      width: 48px;
+      height: 48px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .order-product-name {
+      font-weight: 500;
+      color: var(--text-dark);
+    }
+
+    .order-product-qty {
+      color: var(--text-dark);
+    }
+
+    .order-product-unit {
+      color: var(--text-light);
+      font-size: 13px;
+    }
+
+    .order-product-total {
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
+    .order-summary {
+      margin-top: var(--spacing-sm);
+      padding-top: var(--spacing-sm);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .order-summary-line {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: var(--spacing-sm);
+      margin: 4px 0;
+      font-size: 14px;
+    }
+
+    .order-summary-line .discount {
+      color: #27ae60;
+      font-weight: 600;
+    }
+
+    .order-total-line {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-color);
+      font-weight: 600;
     }
 
     .order-total {
-      font-weight: 600;
+      font-weight: 700;
       color: var(--primary-color);
       font-size: 1.125rem;
     }
@@ -393,6 +515,18 @@ import { RouterModule } from '@angular/router';
       .form-row {
         grid-template-columns: 1fr;
       }
+
+      .order-products-header,
+      .order-product-row {
+        grid-template-columns: 1fr 50px 70px 80px;
+        gap: 8px;
+        font-size: 13px;
+      }
+
+      .order-product-img {
+        width: 40px;
+        height: 40px;
+      }
     }
   `]
 })
@@ -402,8 +536,16 @@ export class ProfileComponent implements OnInit {
   passwordForm: FormGroup;
   orders: any[] = [];
   addresses: any[] = [];
+  ordersLoading = false;
+  addressesLoading = false;
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private router: Router,
+    private authService: AuthService,
+    private orderService: OrderService,
+    private addressService: AddressService
+  ) {
     this.profileForm = this.fb.group({
       firstName: ['', Validators.required],
       lastName: ['', Validators.required],
@@ -420,24 +562,107 @@ export class ProfileComponent implements OnInit {
   }
 
   ngOnInit() {
-    // Load user data, orders, addresses from service
-    this.loadUserData();
+    // Brief delay so token is available when landing here right after login (avoid immediate redirect to sign-in)
+    setTimeout(() => {
+      if (!this.authService.isLoggedIn()) {
+        this.router.navigate(['/login']);
+        return;
+      }
+      this.loadUserData();
+      this.loadOrders();
+      this.loadAddresses();
+    }, 0);
   }
 
   loadUserData() {
-    // Mock data - would come from service
-    this.orders = [];
-    this.addresses = [
-      {
-        id: 1,
-        label: 'Home',
-        street: '123 Main Street',
-        city: 'New York',
-        state: 'NY',
-        zipCode: '10001',
-        country: 'United States'
-      }
-    ];
+    const user = this.authService.getUser();
+    if (user) {
+      const nameParts = (user.name || '').trim().split(/\s+/);
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      this.profileForm.patchValue({
+        firstName,
+        lastName,
+        email: user.email || '',
+        phone: user.phone || '',
+        dateOfBirth: ''
+      });
+    } else {
+      this.authService.me().subscribe(u => {
+        if (u) {
+          const nameParts = (u.name || '').trim().split(/\s+/);
+          this.profileForm.patchValue({
+            firstName: nameParts[0] || '',
+            lastName: nameParts.slice(1).join(' ') || '',
+            email: u.email || '',
+            phone: u.phone || '',
+            dateOfBirth: ''
+          });
+        }
+      });
+    }
+  }
+
+  loadOrders() {
+    this.ordersLoading = true;
+    this.orderService.list({ user_only: 'true', per_page: '50' }).subscribe({
+      next: (res: any) => {
+        const list = res?.data ?? (Array.isArray(res) ? res : []);
+        this.orders = (list as any[]).map((o: any) => {
+          const products = o.products || [];
+          const items = products.map((p: any) => {
+            const qty = p.pivot?.quantity ?? 1;
+            const unitPrice = Number(p.price ?? p.pivot?.price ?? 0);
+            const imageUrl = p.image_url ?? p.image_urls?.[0] ?? null;
+            return {
+              name: p.name || 'Product',
+              quantity: qty,
+              unitPrice,
+              lineTotal: unitPrice * qty,
+              imageUrl
+            };
+          });
+          return {
+            id: o.id,
+            date: o.created_at ? new Date(o.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
+            status: o.status || 'pending',
+            total: o.total ?? 0,
+            discount: o.discount ?? 0,
+            items
+          };
+        });
+        this.ordersLoading = false;
+      },
+      error: () => { this.ordersLoading = false; }
+    });
+  }
+
+  loadAddresses() {
+    this.addressesLoading = true;
+    this.addressService.list({ per_page: 50 }).subscribe({
+      next: (res: any) => {
+        const list = res?.data ?? (Array.isArray(res) ? res : []);
+        this.addresses = (list as any[]).map((a: any) => ({
+          id: a.id,
+          label: (a.type || 'Address').toString().replace(/\b\w/g, (c: string) => c.toUpperCase()),
+          street: a.street || '',
+          location: a.location || '',
+          city: a.city || '',
+          state: a.state || '',
+          zipCode: a.pincode || '',
+          country: a.country || 'India'
+        }));
+        this.addressesLoading = false;
+      },
+      error: () => { this.addressesLoading = false; }
+    });
+  }
+
+  logout() {
+    this.authService.logout().subscribe({
+      next: () => this.router.navigate(['/']),
+      error: () => { this.authService.clearAuth(); this.router.navigate(['/']); }
+    });
   }
 
   updateProfile() {
@@ -470,7 +695,10 @@ export class ProfileComponent implements OnInit {
 
   deleteAddress(id: number) {
     if (confirm('Are you sure you want to delete this address?')) {
-      this.addresses = this.addresses.filter(a => a.id !== id);
+      this.addressService.delete(id).subscribe({
+        next: () => this.loadAddresses(),
+        error: () => alert('Failed to delete address.')
+      });
     }
   }
 
@@ -480,6 +708,6 @@ export class ProfileComponent implements OnInit {
   }
 
   formatPrice(price: number): string {
-    return `₹${price}`;
+    return `₹${Number(price ?? 0).toLocaleString('en-IN')}`;
   }
 }

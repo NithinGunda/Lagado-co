@@ -1,6 +1,8 @@
 import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
+
 import { CartService } from '../../services/cart.service';
 import { AuthService } from '../../services/auth.service';
 import { CategoryService } from '../../services/category.service';
@@ -45,9 +47,11 @@ import { Subscription } from 'rxjs';
                 routerLinkActive="active"
                 [class.has-dropdown]="cat.children?.length"
               >
-                <span class="nav-text">{{ cat.name }}</span>
-                <span class="nav-chevron" *ngIf="cat.children?.length" aria-hidden="true">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                <span class="nav-label-row">
+                  <span class="nav-text">{{ cat.name }}</span>
+                  <span class="nav-chevron" *ngIf="cat.children?.length" aria-hidden="true">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                  </span>
                 </span>
                 <span class="nav-line"></span>
               </a>
@@ -66,11 +70,15 @@ import { Subscription } from 'rxjs';
               </div>
             </div>
             <a routerLink="/our-story" routerLinkActive="active">
-              <span class="nav-text">Our Story</span>
+              <span class="nav-label-row">
+                <span class="nav-text">Our Philosophy</span>
+              </span>
               <span class="nav-line"></span>
             </a>
             <a routerLink="/blog" routerLinkActive="active">
-              <span class="nav-text">Blog</span>
+              <span class="nav-label-row">
+                <span class="nav-text">Journal</span>
+              </span>
               <span class="nav-line"></span>
             </a>
           </nav>
@@ -146,8 +154,8 @@ import { Subscription } from 'rxjs';
               {{ sub.name }}
             </a>
           </div>
-          <a routerLink="/our-story" routerLinkActive="active" (click)="closeMobileMenu()">Our Story</a>
-          <a routerLink="/blog" routerLinkActive="active" (click)="closeMobileMenu()">Blog</a>
+          <a routerLink="/our-story" routerLinkActive="active" (click)="closeMobileMenu()">Our Philosophy</a>
+          <a routerLink="/blog" routerLinkActive="active" (click)="closeMobileMenu()">Journal</a>
         </div>
         <div class="mobile-footer">
           <a *ngIf="isLoggedIn" routerLink="/profile" (click)="closeMobileMenu()" class="mob-action">
@@ -249,7 +257,8 @@ import { Subscription } from 'rxjs';
       gap: 24px;
     }
 
-    .desktop-nav .nav-item > a {
+    .desktop-nav .nav-item > a,
+    .desktop-nav > a {
       position: relative;
       display: flex;
       flex-direction: column;
@@ -259,11 +268,19 @@ import { Subscription } from 'rxjs';
       color: var(--text-dark, #2c3e50);
       transition: color 0.3s ease;
     }
+    .nav-label-row {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      min-height: 20px;
+    }
     .nav-text {
       font-size: 12.5px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 1.6px;
+      line-height: 1.2;
       transition: transform 0.3s ease, letter-spacing 0.3s ease;
     }
     .nav-line {
@@ -275,25 +292,26 @@ import { Subscription } from 'rxjs';
       transition: width 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
     .desktop-nav .nav-item > a:hover .nav-line,
-    .desktop-nav .nav-item > a.active .nav-line {
+    .desktop-nav .nav-item > a.active .nav-line,
+    .desktop-nav > a:hover .nav-line,
+    .desktop-nav > a.active .nav-line {
       width: 100%;
     }
-    .desktop-nav .nav-item > a:hover .nav-text {
+    .desktop-nav .nav-item > a:hover .nav-text,
+    .desktop-nav .nav-item > a.active .nav-text,
+    .desktop-nav > a:hover .nav-text,
+    .desktop-nav > a.active .nav-text {
       color: var(--primary-color, #3C5A99);
       letter-spacing: 2px;
-    }
-    .desktop-nav .nav-item > a.active .nav-text {
-      color: var(--primary-color, #3C5A99);
     }
 
     .nav-item {
       position: relative;
     }
-    .nav-item > a.has-dropdown .nav-text { margin-right: 4px; }
     .nav-chevron {
       display: inline-flex;
       align-items: center;
-      margin-left: 2px;
+      justify-content: center;
       opacity: 0.7;
       transition: transform 0.25s ease;
     }
@@ -730,31 +748,53 @@ export class HeaderComponent implements OnInit, OnDestroy {
   isScrolled = false;
   searchOpen = false;
   private cartSubscription?: Subscription;
+  private routerSubscription?: Subscription;
 
   headerCategories: (Category & { children?: Category[] })[] = [];
 
   constructor(
     private cartService: CartService,
     private authService: AuthService,
-    private categoryService: CategoryService
+    private categoryService: CategoryService,
+    private router: Router
   ) {}
+
+  private updateLoginState() {
+    this.isLoggedIn = this.authService.isLoggedIn();
+  }
 
   ngOnInit() {
     this.cartSubscription = this.cartService.cart$.subscribe(() => {
       this.cartCount = this.cartService.getCartCount();
     });
     this.cartCount = this.cartService.getCartCount();
-    this.isLoggedIn = this.authService.isLoggedIn();
+    this.updateLoginState();
     this.loadCategories();
+    // Set initial scroll state (e.g. if page loads already scrolled)
+    if (typeof window !== 'undefined') this.onScroll();
+    // Refresh login state after every navigation (e.g. after login so icon goes to profile, not login)
+    this.routerSubscription = this.router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe(() => this.updateLoginState());
   }
 
   ngOnDestroy() {
     this.cartSubscription?.unsubscribe();
+    this.routerSubscription?.unsubscribe();
   }
+
+  private readonly scrollDownThreshold = 60;
+  private readonly scrollUpThreshold = 20;
 
   @HostListener('window:scroll')
   onScroll() {
-    this.isScrolled = (typeof window !== 'undefined') && window.scrollY > 40;
+    if (typeof window === 'undefined') return;
+    const y = window.scrollY;
+    if (this.isScrolled) {
+      if (y <= this.scrollUpThreshold) this.isScrolled = false;
+    } else {
+      if (y > this.scrollDownThreshold) this.isScrolled = true;
+    }
   }
 
   toggleMobileMenu() {

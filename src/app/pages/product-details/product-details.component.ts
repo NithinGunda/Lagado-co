@@ -1,10 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { ProductApiService } from '../../services/product-api.service';
 import { CartService } from '../../services/cart.service';
 import { PaymentService } from '../../services/payment.service';
+import { AppLoadingService } from '../../services/app-loading.service';
 import { Product } from '../../models/product.model';
 
 @Component({
@@ -12,11 +14,6 @@ import { Product } from '../../models/product.model';
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
   template: `
-    <div class="product-loading" *ngIf="loading">
-      <div class="container">
-        <p>Loading product...</p>
-      </div>
-    </div>
     <div class="product-details" *ngIf="!loading && product">
       <div class="container">
         <nav class="breadcrumb">
@@ -64,7 +61,7 @@ import { Product } from '../../models/product.model';
 
             <div class="product-price-section">
               <span class="current-price">{{ formatPrice(product.price) }}</span>
-              <span class="original-price" *ngIf="product.originalPrice || product.original_price">{{ formatPrice(product.originalPrice || product.original_price) }}</span>
+              <span class="original-price" *ngIf="product.originalPrice || product.original_price">{{ formatPrice(getOriginalPrice()) }}</span>
               <span class="discount-tag" *ngIf="product.originalPrice || product.original_price">
                 {{ getDiscountPercent() }}% OFF
               </span>
@@ -134,15 +131,15 @@ import { Product } from '../../models/product.model';
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                   </button>
                   <span class="qty-display">{{ quantity }}</span>
-                  <button class="qty-btn" (click)="increaseQuantity()" [disabled]="quantity >= product.stockQuantity">
+                  <button class="qty-btn" (click)="increaseQuantity()" [disabled]="isOutOfStock() || quantity >= product.stockQuantity">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                   </button>
                 </div>
-                <span class="stock-info" *ngIf="product.inStock">
+                <span class="stock-info" *ngIf="!isOutOfStock()">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
                   {{ product.stockQuantity }} in stock
                 </span>
-                <span class="stock-info out-of-stock" *ngIf="!product.inStock">
+                <span class="stock-info out-of-stock" *ngIf="isOutOfStock()">
                   Out of stock
                 </span>
               </div>
@@ -151,7 +148,7 @@ import { Product } from '../../models/product.model';
                 <button 
                   class="btn-add-to-cart"
                   (click)="addToCart()"
-                  [disabled]="!product.inStock || !canAddToCart()"
+                  [disabled]="isOutOfStock() || !canAddToCart()"
                   [class.added]="showAddedFeedback"
                 >
                   <svg *ngIf="!showAddedFeedback" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -162,7 +159,7 @@ import { Product } from '../../models/product.model';
                   <svg *ngIf="showAddedFeedback" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
                   {{ showAddedFeedback ? 'Added to Cart!' : 'Add to Cart' }}
                 </button>
-                <button class="btn-buy-now" (click)="openBuyNowOptions()" [disabled]="!product.inStock || !canAddToCart() || buyNowLoading">
+                <button class="btn-buy-now" (click)="openBuyNowOptions()" [disabled]="isOutOfStock() || !canAddToCart() || buyNowLoading">
                   {{ buyNowLoading ? 'Opening payment…' : 'Buy Now' }}
                 </button>
               </div>
@@ -194,8 +191,8 @@ import { Product } from '../../models/product.model';
                 </li>
                 <li>
                   <strong>Availability:</strong> 
-                  <span [class.in-stock]="product.inStock" [class.out-of-stock]="!product.inStock">
-                    {{ product.inStock ? 'In Stock' : 'Out of Stock' }}
+                  <span [class.in-stock]="!isOutOfStock()" [class.out-of-stock]="isOutOfStock()">
+                    {{ isOutOfStock() ? 'Out of Stock' : 'In Stock' }}
                   </span>
                 </li>
               </ul>
@@ -267,7 +264,7 @@ import { Product } from '../../models/product.model';
       {{ toastMessage }}
     </div>
 
-    <div class="product-not-found" *ngIf="!product">
+    <div class="product-not-found" *ngIf="!loading && !product">
       <div class="container">
         <div class="not-found-content">
           <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="1.5" opacity="0.4">
@@ -1081,7 +1078,7 @@ import { Product } from '../../models/product.model';
     }
   `]
 })
-export class ProductDetailsComponent implements OnInit {
+export class ProductDetailsComponent implements OnInit, OnDestroy {
   product?: Product;
   relatedProducts: Product[] = [];
   quantity = 1;
@@ -1100,60 +1097,123 @@ export class ProductDetailsComponent implements OnInit {
   showBuyNowOptions = false;
 
   private categoryIdForRelated: number | string | null = null;
+  private routeParamSub?: Subscription;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private productApi: ProductApiService,
     private cartService: CartService,
-    private paymentService: PaymentService
+    private paymentService: PaymentService,
+    private appLoading: AppLoadingService
   ) {}
 
   ngOnInit() {
-    const productId = this.route.snapshot.paramMap.get('id');
-    if (productId) {
-      this.loading = true;
-      this.productApi.get(productId).subscribe({
-        next: (apiProduct) => {
-          this.product = this.mapApiProductToProduct(apiProduct);
-          this.categoryIdForRelated = apiProduct.category_id ?? (apiProduct.category?.id ?? null);
-          this.loadRelatedProducts();
-          if (this.hasSizeAttribute()) {
-            this.selectedSize = this.getSizes()[0];
-          }
-          if (this.hasColorAttribute()) {
-            this.selectedColor = this.getColors()[0];
-          }
-          this.loading = false;
-        },
-        error: () => {
-          this.product = undefined;
-          this.loading = false;
-        },
-      });
-    } else {
-      this.loading = false;
-    }
+    this.routeParamSub = this.route.paramMap.subscribe((params) => {
+      const productId = params.get('id');
+      if (productId) {
+        this.loading = true;
+        this.appLoading.setLoading('product', true);
+        this.product = undefined;
+        this.relatedProducts = [];
+        this.selectedImageIndex = 0;
+        this.quantity = 1;
+        this.showSizeGuide = false;
+        this.productApi.get(productId).subscribe({
+          next: (apiProduct) => {
+            this.product = this.mapApiProductToProduct(apiProduct);
+            this.categoryIdForRelated = apiProduct.category_id ?? (apiProduct.category?.id ?? null);
+            this.loadRelatedProducts();
+            if (this.hasSizeAttribute()) {
+              this.selectedSize = this.getSizes()[0];
+            }
+            if (this.hasColorAttribute()) {
+              this.selectedColor = this.getColors()[0];
+            }
+            this.loading = false;
+            this.appLoading.setLoading('product', false);
+          },
+          error: () => {
+            this.product = undefined;
+            this.loading = false;
+            this.appLoading.setLoading('product', false);
+          },
+        });
+      } else {
+        this.loading = false;
+        this.appLoading.setLoading('product', false);
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    this.routeParamSub?.unsubscribe();
+    this.appLoading.setLoading('product', false);
   }
 
   loadRelatedProducts() {
-    if (!this.product || this.categoryIdForRelated == null) return;
-    this.productApi.list({
+    if (!this.product) return;
+    const currentId = String(this.product.id);
+    const excludeCurrent = (p: any) => String(p.id) !== currentId;
+    const toProducts = (list: any[]) =>
+      list.filter(excludeCurrent).map((p: any) => this.mapApiProductToProduct(p));
+    const take4 = (arr: Product[]) => arr.slice(0, 4);
+
+    const paramsWithCategory = {
       category_id: this.categoryIdForRelated,
-      per_page: 8,
+      per_page: 12,
       is_active: true,
-    }).subscribe({
-      next: (res) => {
-        const raw = res as any;
-        const data = Array.isArray(raw) ? raw : (raw?.data ?? []);
-        const list = Array.isArray(data) ? data : [];
-        this.relatedProducts = list
-          .filter((p: any) => String(p.id) !== String(this.product!.id))
-          .slice(0, 4)
-          .map((p: any) => this.mapApiProductToProduct(p));
-      },
-      error: () => {},
-    });
+    };
+    const paramsFallback = { per_page: 12, is_active: true };
+
+    if (this.categoryIdForRelated != null) {
+      this.productApi.list(paramsWithCategory).subscribe({
+        next: (res) => {
+          const raw = res as any;
+          const data = Array.isArray(raw) ? raw : (raw?.data ?? []);
+          const list = Array.isArray(data) ? data : [];
+          let related = toProducts(list);
+          if (related.length >= 4) {
+            this.relatedProducts = take4(related);
+            return;
+          }
+          this.productApi.list(paramsFallback).subscribe({
+            next: (res2) => {
+              const raw2 = res2 as any;
+              const data2 = Array.isArray(raw2) ? raw2 : (raw2?.data ?? []);
+              const list2 = Array.isArray(data2) ? data2 : [];
+              const ids = new Set(related.map((p) => p.id));
+              const extra = toProducts(list2).filter((p) => !ids.has(p.id));
+              this.relatedProducts = take4([...related, ...extra]);
+            },
+            error: () => {
+              this.relatedProducts = take4(related);
+            },
+          });
+        },
+        error: () => {
+          this.productApi.list(paramsFallback).subscribe({
+            next: (res) => {
+              const raw = res as any;
+              const data = Array.isArray(raw) ? raw : (raw?.data ?? []);
+              const list = Array.isArray(data) ? data : [];
+              this.relatedProducts = take4(toProducts(list));
+            },
+            error: () => {},
+          });
+        },
+      });
+    } else {
+      this.productApi.list(paramsFallback).subscribe({
+        next: (res) => {
+          const raw = res as any;
+          const data = Array.isArray(raw) ? raw : (raw?.data ?? []);
+          const list = Array.isArray(data) ? data : [];
+          this.relatedProducts = take4(toProducts(list));
+        },
+        error: () => {},
+      });
+    }
   }
 
   getCategoryDisplayName(): string {
@@ -1189,7 +1249,7 @@ export class ProductDetailsComponent implements OnInit {
       images,
       image_url: api.image_url,
       image_urls: api.image_urls,
-      inStock: api.in_stock !== false,
+      inStock: api.in_stock !== false && Number(api.stock_quantity ?? 0) > 0,
       stockQuantity: Number(api.stock_quantity ?? 0),
       attributes: attrs,
       tags: api.tags || [],
@@ -1238,8 +1298,14 @@ export class ProductDetailsComponent implements OnInit {
     }
   }
 
+  isOutOfStock(): boolean {
+    if (!this.product) return true;
+    return !this.product.inStock || (this.product.stockQuantity ?? 0) <= 0;
+  }
+
   canAddToCart(): boolean {
     if (!this.product) return false;
+    if (this.isOutOfStock()) return false;
     if (this.hasSizeAttribute() && !this.selectedSize) return false;
     return true;
   }
@@ -1330,9 +1396,15 @@ export class ProductDetailsComponent implements OnInit {
     setTimeout(() => this.showToast = false, 3000);
   }
 
+  getOriginalPrice(): number {
+    const orig = this.product?.originalPrice ?? (this.product as any)?.original_price;
+    return orig != null ? Number(orig) : 0;
+  }
+
   getDiscountPercent(): number {
-    if (!this.product?.originalPrice) return 0;
-    return Math.round(((this.product.originalPrice - this.product.price) / this.product.originalPrice) * 100);
+    const orig = this.product?.originalPrice ?? (this.product as any)?.original_price;
+    if (!orig) return 0;
+    return Math.round(((Number(orig) - Number(this.product!.price)) / Number(orig)) * 100);
   }
 
   getStars(rating: number): string {
