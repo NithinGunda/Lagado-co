@@ -1065,13 +1065,21 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       .story-accent { display: none; }
       .trust-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
       .look-grid { height: 380px; }
-      .look-grid.three-items .hero { grid-row: auto; }
-      .look-grid.three-items { grid-template-columns: 1fr; grid-template-rows: 1.2fr 1fr 1fr; }
       .social-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
     @media (max-width: 768px) {
       .hero-section { width: 80%; margin-left: auto; margin-right: auto; border-radius: 12px; overflow: hidden; }
+      /* Hero mobile: image → button (above dots) → dots at very bottom; no overlap */
+      .hero-content {
+        bottom: 72px;
+        padding-bottom: 24px;
+        gap: 12px;
+      }
+      .hero-progress {
+        bottom: 0;
+        padding-bottom: 20px;
+      }
       .featured-carousel-wrapper .nav-btn,
       .look-carousel .nav-btn { opacity: 1; pointer-events: auto; }
       .f-card { min-width: calc(80% - 8px); }
@@ -1137,7 +1145,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
 
     @media (max-width: 480px) {
       .hero-section { width: 80%; margin-left: auto; margin-right: auto; min-height: 70vh; min-height: 70svh; border-radius: 12px; overflow: hidden; }
-      .hero-content { padding: 0 var(--spacing-sm); }
+      .hero-content { padding: 0 var(--spacing-sm) 24px; }
       .hero-title { font-size: clamp(2rem, 10vw, 2.8rem); }
       .hero-cta-group { flex-direction: column; width: 100%; }
       .hero-cta { width: 100%; }
@@ -1154,10 +1162,9 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       .s-card { min-width: 220px; max-width: 220px; }
       .trust-grid { grid-template-columns: 1fr; }
       .social-grid { grid-template-columns: 1fr 1fr; }
-      .look-carousel { flex-direction: column; }
-      .look-grid { height: auto; }
-      .look-grid.two-items { grid-template-columns: 1fr; grid-template-rows: 260px 260px; }
-      .look-grid.three-items { grid-template-columns: 1fr; grid-template-rows: 260px 200px 200px; }
+      .look-grid { height: 280px; }
+      .look-carousel { gap: 8px; }
+      .look-carousel .nav-btn { width: 36px; height: 36px; }
       .sec-title { font-size: 1.2rem; letter-spacing: 2px; }
     }
   `]

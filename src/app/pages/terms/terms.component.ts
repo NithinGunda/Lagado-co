@@ -325,25 +325,36 @@ import { CommonModule } from '@angular/common';
   `,
   styles: [`
     .terms-page {
+      font-family: var(--font-body);
       padding: var(--spacing-xl) 0;
       min-height: calc(100vh - 200px);
     }
 
+    .terms-page .container {
+      max-width: none;
+      width: 100%;
+      padding-left: var(--spacing-md);
+      padding-right: var(--spacing-md);
+    }
+
     .page-title {
+      font-family: var(--font-body);
       font-size: clamp(2rem, 4vw, 3rem);
       color: var(--primary-color);
       margin-bottom: var(--spacing-sm);
     }
 
     .last-updated {
+      font-family: var(--font-body);
       color: var(--text-light);
       font-size: 14px;
       margin-bottom: var(--spacing-lg);
     }
 
     .terms-content {
-      max-width: 900px;
-      margin: 0 auto;
+      max-width: none;
+      width: 100%;
+      margin: 0;
       background: var(--text-white);
       padding: var(--spacing-xl);
       border-radius: 12px;
@@ -355,6 +366,7 @@ import { CommonModule } from '@angular/common';
     }
 
     .terms-content h2 {
+      font-family: var(--font-body);
       color: var(--primary-color);
       font-size: 1.75rem;
       margin-bottom: var(--spacing-sm);
@@ -362,6 +374,7 @@ import { CommonModule } from '@angular/common';
     }
 
     .terms-content h3 {
+      font-family: var(--font-body);
       color: var(--primary-dark);
       font-size: 1.25rem;
       margin-top: var(--spacing-md);
@@ -369,6 +382,7 @@ import { CommonModule } from '@angular/common';
     }
 
     .terms-content p {
+      font-family: var(--font-body);
       line-height: 1.8;
       color: var(--text-dark);
       margin-bottom: var(--spacing-sm);
@@ -380,6 +394,7 @@ import { CommonModule } from '@angular/common';
     }
 
     .terms-content li {
+      font-family: var(--font-body);
       line-height: 1.8;
       color: var(--text-dark);
       margin-bottom: 8px;
@@ -426,11 +441,25 @@ import { CommonModule } from '@angular/common';
     }
 
     @media (max-width: 768px) {
+      .terms-page .container {
+        padding-left: var(--spacing-sm);
+        padding-right: var(--spacing-sm);
+      }
       .terms-content {
         padding: var(--spacing-md);
       }
 
       .highlight-section {
+        padding: var(--spacing-sm);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .terms-page .container {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+      .terms-content {
         padding: var(--spacing-sm);
       }
     }

@@ -30,6 +30,11 @@ export class CategoryService {
   }
 
   update(id: number | string, payload: Partial<Category> | FormData): Observable<Category> {
+    // PUT + FormData can cause net::ERR_HTTP2_PROTOCOL_ERROR; PHP also doesn't populate $_FILES for PUT
+    if (payload instanceof FormData) {
+      payload.append('_method', 'PUT');
+      return this.http.post<Category>(`${this.base}/${id}`, payload);
+    }
     return this.http.put<Category>(`${this.base}/${id}`, payload);
   }
 

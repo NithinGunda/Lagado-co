@@ -13,7 +13,7 @@ import { RouterModule } from '@angular/router';
           <!-- Brand -->
           <div class="ft-col ft-brand">
             <a routerLink="/" class="ft-logo-link" aria-label="Legado & Co home">
-              <img src="assets/Logo.png" alt="Legado & Co" class="ft-logo-img" />
+              <span class="logo-wordmark">Legado &amp; Co</span>
             </a>
             <p class="ft-tagline">Timeless Style, Quiet Confidence</p>
             <p class="ft-desc">Curating premium fashion for the modern individual who values quality, elegance, and sophistication.</p>
@@ -31,17 +31,6 @@ import { RouterModule } from '@angular/router';
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.236 2.636 7.855 6.356 9.312-.088-.791-.167-2.005.035-2.868.182-.78 1.172-4.97 1.172-4.97s-.299-.598-.299-1.482c0-1.388.806-2.425 1.81-2.425.853 0 1.265.64 1.265 1.408 0 .858-.546 2.14-.828 3.33-.236.995.5 1.807 1.48 1.807 1.778 0 3.144-1.874 3.144-4.58 0-2.393-1.72-4.068-4.177-4.068-2.845 0-4.515 2.135-4.515 4.34 0 .859.331 1.781.745 2.282a.3.3 0 01.069.288l-.278 1.133c-.044.183-.145.222-.335.134-1.249-.581-2.03-2.407-2.03-3.874 0-3.154 2.292-6.052 6.608-6.052 3.469 0 6.165 2.473 6.165 5.776 0 3.447-2.173 6.22-5.19 6.22-1.013 0-1.965-.527-2.291-1.148l-.623 2.378c-.226.869-.835 1.958-1.244 2.621.936.29 1.93.446 2.962.446 5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
               </a>
             </div>
-          </div>
-
-          <!-- Quick Links -->
-          <div class="ft-col">
-            <h4>Quick Links</h4>
-            <ul>
-              <li><a routerLink="/collections">Collections</a></li>
-              <li><a routerLink="/mens">Men's</a></li>
-              <li><a routerLink="/womens">Women's</a></li>
-              <li><a routerLink="/our-story">Our Philosophy</a></li>
-            </ul>
           </div>
 
           <!-- Customer Service -->
@@ -109,7 +98,7 @@ import { RouterModule } from '@angular/router';
 
     .footer-inner {
       display: grid;
-      grid-template-columns: 1.4fr 0.8fr 0.8fr 1fr;
+      grid-template-columns: 1.4fr 0.8fr 1fr;
       gap: 48px;
       max-width: 1200px;
       margin: 0 auto;
@@ -138,11 +127,18 @@ import { RouterModule } from '@angular/router';
     .ft-logo-link {
       display: inline-block;
       margin: 0 0 10px;
+      text-decoration: none;
     }
-    .ft-logo-img {
-      height: 32px;
-      width: auto;
-      display: block;
+    .ft-logo-link .logo-wordmark {
+      font-family: var(--font-body);
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #fff;
+    }
+    .ft-logo-link:hover .logo-wordmark {
+      opacity: 0.9;
     }
 
     .ft-tagline {
@@ -257,8 +253,10 @@ import { RouterModule } from '@angular/router';
       color: rgba(255,255,255,0.35);
     }
     .fb-brand {
-      font-family: var(--font-logo);
-      font-weight: 400;
+      font-family: var(--font-body);
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
       color: #fff;
     }
     .fb-links {
