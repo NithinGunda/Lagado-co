@@ -357,7 +357,7 @@ export class AdminProductsComponent implements OnInit, OnDestroy {
         this.applyFilters();
       },
       error: (err) => {
-        this.error = err?.error?.message || 'Failed to load products';
+        this.error = this.extractApiError(err, 'Failed to load products');
         this.loading = false;
       }
     });
@@ -416,6 +416,15 @@ export class AdminProductsComponent implements OnInit, OnDestroy {
     this.filterStatus = '';
     this.filterSale = '';
     this.applyFilters();
+  }
+
+  private extractApiError(err: any, fallback: string): string {
+    const body = err?.error;
+    if (body?.errors && typeof body.errors === 'object') {
+      const first = Object.values(body.errors)[0];
+      return Array.isArray(first) ? String(first[0]) : String(first);
+    }
+    return body?.message || body?.error || fallback;
   }
 
   highlightMatch(name: string): string {

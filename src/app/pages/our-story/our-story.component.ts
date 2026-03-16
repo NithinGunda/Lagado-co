@@ -57,12 +57,9 @@ import { RouterModule } from '@angular/router';
 
       <!-- ===== MISSION SECTION ===== -->
       <section class="mission-section">
-        <div class="mission-inner">
-          <div class="mission-image">
-            <img src="assets/buythelook2.png" alt="Our Mission" loading="lazy" />
-          </div>
-          <div class="mission-text">
-            <span class="section-label"><span class="label-bar"></span>Our Mission</span>
+        <div class="mission-inner mission-inner-single">
+          <div class="mission-text mission-text-center">
+            <span class="section-label center"><span class="label-bar"></span>Our Mission</span>
             <h2>Empowering<br/><em>Individual Style</em></h2>
             <p>We are dedicated to providing premium fashion that empowers individuals to express their unique identity while maintaining the highest standards of quality and craftsmanship.</p>
             <p>Every piece in our collection is carefully selected to meet our exacting standards for design, materials, and construction — because you deserve nothing less.</p>
@@ -322,9 +319,14 @@ import { RouterModule } from '@angular/router';
       margin: 0 auto;
       padding: 0 var(--spacing-md);
     }
-    .mission-image img {
-      width: 100%; height: 440px;
-      object-fit: cover; display: block;
+    .mission-inner-single {
+      grid-template-columns: 1fr;
+      justify-items: center;
+    }
+    .mission-text-center {
+      text-align: center;
+      max-width: 640px;
+      margin: 0 auto;
     }
     .mission-text h2 {
       font-family: var(--font-heading);

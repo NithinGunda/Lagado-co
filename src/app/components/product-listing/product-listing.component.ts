@@ -1,12 +1,12 @@
 import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ProductApiService } from '../../services/product-api.service';
 import { CategoryService } from '../../services/category.service';
 import { CartService } from '../../services/cart.service';
 import { AppLoadingService } from '../../services/app-loading.service';
-import { Product, FilterOptions } from '../../models/product.model';
+import { Product, FilterOptions, stockBySizeFromArray } from '../../models/product.model';
 import { Category } from '../../models/category.model';
 
 @Component({
@@ -30,7 +30,7 @@ import { Category } from '../../models/category.model';
             <button
               *ngFor="let cat of filterCategories"
               class="chip"
-              [class.active]="selectedCategoryId === cat.id"
+              [class.active]="isCategorySelected(cat)"
               (click)="selectCategoryById(cat.id ?? null)"
             >{{ cat.name }}</button>
           </div>
@@ -213,6 +213,8 @@ import { Category } from '../../models/category.model';
       max-width: 1440px;
       margin: 0 auto;
       padding: 0 clamp(16px, 3vw, 40px) 60px;
+      overflow-x: hidden;
+      box-sizing: border-box;
     }
 
     /* ===== CUSTOM CURSOR GLOW ===== */
@@ -419,6 +421,8 @@ import { Category } from '../../models/category.model';
       grid-template-columns: repeat(4, 1fr);
       gap: 20px;
       padding-top: 8px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     @keyframes cardReveal {
@@ -431,6 +435,7 @@ import { Category } from '../../models/category.model';
       background: #fff;
       border: 1px solid rgba(0,0,0,0.06);
       overflow: hidden; cursor: pointer;
+      min-width: 0;
       animation: cardReveal 0.5s ease both;
       transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
                   box-shadow 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
@@ -449,8 +454,8 @@ import { Category } from '../../models/category.model';
       overflow: hidden;
     }
     .card-img-inner {
-      width: 100%; height: 100%; object-fit: cover;
-      display: block; position: relative; z-index: 1;
+      width: 100%; height: 100%; max-width: 100%;
+      object-fit: cover; display: block; position: relative; z-index: 1;
       transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
     .card-img-fallback {
@@ -642,11 +647,22 @@ import { Category } from '../../models/category.model';
 
     @media (max-width: 480px) {
       .products-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .listing-page { padding-left: 10px; padding-right: 10px; padding-bottom: 40px; }
+      .filter-bar { margin-left: -10px; margin-right: -10px; padding-left: 10px; padding-right: 10px; }
+      .filter-bar-inner { padding: 10px 0; }
       .card-info { padding: 12px; }
       .card-name { font-size: 0.82rem; }
       .card-price { font-size: 0.95rem; }
       .chip { padding: 6px 14px; font-size: 11px; }
       .filter-chips { gap: 4px; }
+      .card-image { aspect-ratio: 3/4; }
+      .results-bar { flex-wrap: wrap; gap: 8px; }
+    }
+
+    @media (max-width: 360px) {
+      .products-grid { gap: 6px; }
+      .card-info { padding: 8px; }
+      .card-name { font-size: 0.78rem; }
     }
   `]
 })
@@ -655,6 +671,9 @@ export class ProductListingComponent implements OnInit, OnDestroy {
 
   products: any[] = [];
   filteredProducts: any[] = [];
+  /** All categories (flat) for resolving parent/children */
+  allCategories: Category[] = [];
+  /** Top-level + subcategories for filter chips (parent first, then their children) */
   filterCategories: Category[] = [];
   selectedCategoryId: number | string | null = null;
   initialCategoryId: number | string | null = null;
@@ -674,33 +693,52 @@ export class ProductListingComponent implements OnInit, OnDestroy {
   cursorY = 0;
   cursorActive = false;
 
+  private queryParamSub?: any;
+
   constructor(
     private productApi: ProductApiService,
     private categoryService: CategoryService,
     private cartService: CartService,
-    private appLoading: AppLoadingService
+    private appLoading: AppLoadingService,
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit() {
     this.appLoading.setLoading('collections', true);
+    this.queryParamSub = this.route.queryParamMap.subscribe(map => {
+      const cat = map.get('category');
+      const id = cat !== null && cat !== '' ? cat : null;
+      if (String(this.selectedCategoryId) !== String(id)) {
+        this.selectedCategoryId = id;
+        this.initialCategoryId = id;
+        if (!this.loadingCategories) this.loadProducts();
+      }
+    });
     this.loadCategories();
   }
 
   ngOnDestroy() {
+    this.queryParamSub?.unsubscribe();
     this.appLoading.setLoading('collections', false);
   }
 
   private loadCategories() {
     this.loadingCategories = true;
-    this.categoryService.list({ per_page: 200 }).subscribe({
+    this.categoryService.getTree().subscribe({
       next: (res) => {
         const raw = res as any;
-        const data = Array.isArray(raw) ? raw : (raw?.data ?? []);
-        this.filterCategories = (data as Category[]).filter((c: Category) => c.parent_id == null);
+        const tree = Array.isArray(raw) ? raw : (raw?.data ?? []);
+        this.allCategories = this.flattenCategoryTree(tree as Category[]);
+        this.filterCategories = (tree as Category[]).filter((c: Category) => c.is_active !== false);
         this.loadingCategories = false;
-        if (this.category) {
+        const categoryParam = this.route.snapshot.queryParamMap.get('category');
+        if (categoryParam !== null && categoryParam !== '') {
+          this.selectedCategoryId = categoryParam;
+          this.initialCategoryId = categoryParam;
+        } else if (this.category) {
           const slug = this.category.toString().toLowerCase().replace(/\s+|'/g, '');
-          const match = (this.filterCategories as Category[]).find((c: Category) => {
+          const match = this.allCategories.find((c: Category) => {
             const catSlug = (c.slug || c.name || '').toString().toLowerCase().replace(/\s+|'/g, '');
             return catSlug === slug;
           });
@@ -715,10 +753,24 @@ export class ProductListingComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.loadingCategories = false;
+        this.allCategories = [];
         this.filterCategories = [];
         this.loadProducts();
       },
     });
+  }
+
+  /** Flatten tree (parent + children) into a single array so we have every category for filtering by parent_id */
+  private flattenCategoryTree(nodes: Category[]): Category[] {
+    let out: Category[] = [];
+    for (const n of nodes || []) {
+      if (n.is_active === false) continue;
+      out.push({ ...n, children: undefined } as Category);
+      if (n.children?.length) {
+        out = out.concat(this.flattenCategoryTree(n.children as Category[]));
+      }
+    }
+    return out;
   }
 
   private loadProducts() {
@@ -727,7 +779,16 @@ export class ProductListingComponent implements OnInit, OnDestroy {
       per_page: 200,
       is_active: true,
     };
-    if (this.selectedCategoryId != null) params.category_id = this.selectedCategoryId;
+    if (this.selectedCategoryId != null) {
+      let categoryId: number | string | null = this.selectedCategoryId;
+      if (this.allCategories.length) {
+        const found = this.allCategories.find(
+          c => String(c.id) === String(categoryId) || (c.slug && String(c.slug) === String(categoryId))
+        );
+        if (found && found.id != null) categoryId = found.id;
+      }
+      params.category_id = categoryId;
+    }
     if (this.searchQuery?.trim()) params.search = this.searchQuery.trim();
     if (this.priceRangeMin > 0) params.min_price = this.priceRangeMin;
     if (this.priceRangeMax < 50000) params.max_price = this.priceRangeMax;
@@ -751,8 +812,18 @@ export class ProductListingComponent implements OnInit, OnDestroy {
     });
   }
 
+  isCategorySelected(cat: Category): boolean {
+    return this.selectedCategoryId != null && cat.id != null && String(this.selectedCategoryId) === String(cat.id);
+  }
+
   selectCategoryById(id: number | string | null) {
     this.selectedCategoryId = id;
+    this.initialCategoryId = id;
+    this.router.navigate(['/collections'], {
+      queryParams: id != null ? { category: id } : {},
+      queryParamsHandling: '',
+      replaceUrl: false
+    });
     this.loadProducts();
   }
 
@@ -891,6 +962,7 @@ export class ProductListingComponent implements OnInit, OnDestroy {
       image_urls: apiProduct.image_urls,
       inStock: apiProduct.in_stock !== false && Number(apiProduct.stock_quantity ?? 0) > 0,
       stockQuantity: Number(apiProduct.stock_quantity ?? 0),
+      stock_by_size: (() => { const o = stockBySizeFromArray(apiProduct.stock_by_size); return Object.keys(o).length > 0 ? o : undefined; })(),
       attributes: apiProduct.sizes ? [{ name: 'Size', value: apiProduct.sizes }] : [],
       tags: apiProduct.tags || [],
       rating: apiProduct.rating ? Number(apiProduct.rating) : undefined,

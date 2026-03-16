@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ImageCropperComponent } from 'ngx-image-cropper';
 import { RouterModule } from '@angular/router';
+import { AuthGuard } from '../services/auth.guard';
 import { AdminLayoutComponent } from './components/layout/layout.component';
 import { AdminLoginComponent } from './components/login/login.component';
 import { AdminDashboardComponent } from './components/dashboard/dashboard.component';
@@ -21,6 +22,7 @@ const routes = [
   {
     path: '',
     component: AdminLayoutComponent,
+    canActivate: [AuthGuard],
     children: [
       { path: '', pathMatch: 'full' as const, redirectTo: 'dashboard' },
       { path: 'dashboard', component: AdminDashboardComponent },

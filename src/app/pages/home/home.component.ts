@@ -19,7 +19,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
   template: `
     <div class="home-page">
       <!-- =============== HERO SECTION =============== -->
-      <section class="hero-section" (mousemove)="onHeroMouseMove($event)" #heroSection>
+      <section class="hero-section" (mousemove)="onHeroMouseMove($event)" (touchstart)="onHeroTouchStart($event)" (touchend)="onHeroTouchEnd($event)" #heroSection>
         <div class="hero-slides">
           <div class="hero-slide" *ngFor="let slide of heroSlides; let i = index" [class.active]="i === activeSlide" [class.prev]="i === prevSlide">
             <ng-container *ngIf="slide.type !== 'video'; else heroVideo">
@@ -61,10 +61,6 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
               </span>
             </button>
-            <a routerLink="/collections" class="hero-cta hero-cta-outline">
-              <span class="cta-shimmer"></span>
-              <span class="cta-content"><span>View Lookbook</span></span>
-            </a>
           </div>
           <div class="hero-scroll-indicator" [class.visible]="heroAnimReady">
             <div class="scroll-mouse"><div class="scroll-wheel"></div></div>
@@ -92,7 +88,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
             <span class="sec-line"></span>
           </div>
           <p class="sec-sub">Hand-picked pieces that define the season. Premium quality, timeless design.</p>
-          <div class="featured-carousel-wrapper">
+          <div class="featured-carousel-wrapper" (touchstart)="onFeaturedTouchStart($event)" (touchend)="onFeaturedTouchEnd($event)">
             <button class="nav-btn nav-prev" (click)="prevFeatured()" [disabled]="featuredOffset === 0" aria-label="Previous">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
@@ -108,7 +104,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
                     <span class="f-card-badge" *ngIf="product.badge">{{ product.badge }}</span>
                   </div>
                   <div class="f-card-info">
-                    <span class="f-card-cat">{{ product.category | titlecase }}</span>
+                    <span class="f-card-cat">{{ getProductCategoryName(product) | titlecase }}</span>
                     <h3 class="f-card-name">{{ product.name }}</h3>
                     <div class="f-card-price-row">
                       <span class="f-card-price">{{ formatPrice(product.price) }}</span>
@@ -136,7 +132,8 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
             <h2 class="sec-title">Shop by Category</h2>
             <span class="sec-line"></span>
           </div>
-          <div class="cat-grid" *ngIf="topCategories.length > 0">
+          <div class="cat-scroll-wrap" *ngIf="topCategories.length > 0">
+            <div class="cat-grid" [class.collage]="topCategories.length > 4" [class.compact-collage]="topCategories.length === 6 || topCategories.length === 7">
             <a
               class="cat-card"
               *ngFor="let cat of topCategories"
@@ -165,6 +162,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
                 </div>
               </div>
             </a>
+            </div>
           </div>
         </div>
       </section>
@@ -233,7 +231,8 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
             <h2 class="sec-title sale-title">On Sale</h2>
             <span class="sec-line accent-line"></span>
           </div>
-          <div class="sale-grid">
+          <div class="sale-scroll-wrap">
+            <div class="sale-grid">
             <div class="s-card" *ngFor="let product of saleProducts" [routerLink]="['/product', product.id]">
               <div class="s-card-img">
                 <img [src]="getProductImage(product)" [alt]="product.name" loading="lazy" />
@@ -242,13 +241,14 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
                 <span class="s-discount" *ngIf="product.discount_percentage">-{{ product.discount_percentage }}%</span>
               </div>
               <div class="s-card-info">
-                <span class="s-cat">{{ product.category | titlecase }}</span>
+                <span class="s-cat">{{ getProductCategoryName(product) | titlecase }}</span>
                 <h3 class="s-name">{{ product.name }}</h3>
                 <div class="s-prices">
                   <span class="s-original">{{ formatPrice(product.original_price || product.price) }}</span>
                   <span class="s-current">{{ formatPrice(product.price) }}</span>
                 </div>
               </div>
+            </div>
             </div>
           </div>
         </div>
@@ -263,7 +263,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
             <span class="sec-line"></span>
           </div>
           <p class="sec-sub">Get our curated collection — complete outfits styled by our creative team.</p>
-          <div class="look-carousel">
+          <div class="look-carousel" (touchstart)="onLookTouchStart($event)" (touchend)="onLookTouchEnd($event)">
             <button class="nav-btn" (click)="prevLook()" [disabled]="currentLookIndex === 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
             <div class="look-grid"
                  [class.two-items]="curatedLooks[currentLookIndex].products.length === 2"
@@ -330,7 +330,8 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
 
     /* ===== HERO (preserved) ===== */
     .hero-section {
-      position: relative; width: 100%; min-height: 100vh;
+      position: relative; width: 100%;
+      min-height: 80vh;
       display: flex; align-items: center; justify-content: center;
       color: var(--text-white); overflow: hidden;
     }
@@ -391,7 +392,20 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
     @keyframes orbDrift3 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-30px, 20px) scale(1.2); } }
     .hero-scanline { position: absolute; top: 0; left: 0; width: 100%; height: 2px; z-index: 5; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(232,197,71,0.15), transparent); animation: scanDown 8s linear infinite; }
     @keyframes scanDown { 0% { top: -2px; } 100% { top: 100%; } }
-    .hero-content { position: relative; z-index: 10; text-align: center; max-width: 800px; padding: 0 var(--spacing-lg); display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .hero-content {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      text-align: center;
+      padding: 0 var(--spacing-lg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding-bottom: 72px;
+    }
     .hero-badge { display: flex; align-items: center; gap: 16px; opacity: 0; transform: translateY(20px); transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
     .hero-badge.visible { opacity: 1; transform: translateY(0); }
     .badge-line { width: 40px; height: 1px; background: rgba(255,255,255,0.4); }
@@ -422,7 +436,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
     .hero-cta-outline .cta-shimmer { position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); transition: left 0.6s; }
     .hero-cta-outline:hover .cta-shimmer { left: 100%; }
     .hero-cta-outline:hover { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.1); }
-    .hero-scroll-indicator { opacity: 0; transform: translateY(20px); transition: all 0.8s ease 1.5s; margin-top: 16px; }
+    .hero-scroll-indicator { opacity: 0; transform: translateY(20px); transition: all 0.8s ease 1.5s; margin-top: 0; order: -1; }
     .hero-scroll-indicator.visible { opacity: 0.6; transform: translateY(0); }
     .scroll-mouse { width: 24px; height: 38px; border: 2px solid rgba(255,255,255,0.5); border-radius: 12px !important; display: flex; justify-content: center; padding-top: 8px; }
     .scroll-wheel { width: 3px; height: 8px; background: rgba(255,255,255,0.7); border-radius: 2px !important; animation: scrollBounce 2s ease-in-out infinite; }
@@ -508,8 +522,9 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
     }
     .featured-track-container {
       overflow: hidden;
+      touch-action: pan-y;
     }
-    .featured-track { display: flex; gap: 16px; transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+    .featured-track { display: flex; gap: 16px; transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); touch-action: pan-y; }
     .f-card {
       min-width: calc(25% - 12px); flex-shrink: 0;
       background: #fff; border: 1px solid var(--border-color);
@@ -582,18 +597,41 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
     .cat-section {
       padding: 80px 0;
       background: var(--secondary-color);
+      overflow: hidden;
+    }
+    .cat-section .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 var(--spacing-md);
+      box-sizing: border-box;
+    }
+    .cat-scroll-wrap {
+      margin-top: 40px;
+      width: 100%;
     }
     .cat-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
+      gap: 20px;
+      width: 100%;
       max-width: 1200px;
       margin: 40px auto 0;
+      box-sizing: border-box;
     }
     .cat-card {
       position: relative; overflow: hidden;
       height: 400px; cursor: pointer;
       text-decoration: none; display: block;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+      transition: box-shadow 0.4s ease, transform 0.3s ease;
+      background: linear-gradient(145deg, #e8e4dc 0%, #d4cfc4 100%);
+      min-width: 0;
+      width: 100%;
+    }
+    .cat-card:hover {
+      box-shadow: 0 16px 48px rgba(0,0,0,0.12);
+      transform: translateY(-4px);
     }
     .cat-card-wide {
       grid-column: 1 / -1;
@@ -606,22 +644,24 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
     .cat-card:hover img { transform: scale(1.06); }
     .cat-overlay {
       position: absolute; inset: 0;
-      background: linear-gradient(to top, rgba(10,20,40,0.7) 0%, rgba(10,20,40,0.15) 60%, transparent 100%);
+      background: linear-gradient(to top, rgba(10,20,40,0.75) 0%, rgba(10,20,40,0.2) 55%, transparent 100%);
       display: flex; align-items: flex-end;
-      padding: 32px; transition: background 0.4s;
+      padding: 28px 24px;
+      transition: background 0.4s;
     }
     .cat-card:hover .cat-overlay {
-      background: linear-gradient(to top, rgba(10,20,40,0.8) 0%, rgba(10,20,40,0.25) 60%, transparent 100%);
+      background: linear-gradient(to top, rgba(10,20,40,0.85) 0%, rgba(10,20,40,0.3) 55%, transparent 100%);
     }
     .cat-label { color: #fff; }
     .cat-tag {
       display: block; font-size: 10px; font-weight: 700;
       letter-spacing: 2px; text-transform: uppercase;
-      color: rgba(255,255,255,0.6); margin-bottom: 6px;
+      color: rgba(255,255,255,0.65); margin-bottom: 6px;
     }
     .cat-label h3 {
       font-family: var(--font-heading); font-size: 1.8rem;
       font-weight: 700; margin: 0 0 12px; color: #fff;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.2);
     }
     .cat-cta {
       display: inline-flex; align-items: center; gap: 8px;
@@ -655,6 +695,39 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       background: #fff;
       color: #111827;
       border-color: transparent;
+    }
+
+    /* Collage layout when more than 4 categories */
+    .cat-grid.collage {
+      grid-template-columns: repeat(4, 1fr);
+      grid-auto-rows: minmax(220px, 1fr);
+      gap: 18px;
+      width: 100%;
+      max-width: 1200px;
+    }
+    .cat-grid.collage .cat-card {
+      height: auto;
+      min-height: 220px;
+      min-width: 0;
+    }
+    .cat-grid.collage .cat-card:first-child {
+      grid-column: span 2;
+      grid-row: span 2;
+      min-height: 100%;
+      min-width: 0;
+    }
+    /* When 6 or 7 categories, keep all in one block: first card 2 cols 1 row, so row1=[1,1,2,3] row2=[4,5,6] or [4,5,6,7] */
+    .cat-grid.collage.compact-collage .cat-card:first-child {
+      grid-row: span 1;
+    }
+    .cat-grid.collage.compact-collage {
+      grid-auto-rows: minmax(240px, 1fr);
+    }
+    .cat-grid.collage .cat-card:first-child .cat-label h3 {
+      font-size: 2rem;
+    }
+    .cat-grid.collage .cat-card:first-child .cat-overlay {
+      padding: 36px 32px;
     }
 
     /* ===== BRAND STORY ===== */
@@ -698,7 +771,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       width: 28px; height: 1px; background: var(--primary-color);
     }
     .story-heading {
-      font-family: var(--font-heading); font-size: clamp(1.8rem, 3vw, 2.5rem);
+      font-family: 'Lato', sans-serif; font-size: clamp(1.8rem, 3vw, 2.5rem);
       font-weight: 700; color: var(--text-dark);
       line-height: 1.2; margin: 0 0 24px;
     }
@@ -761,6 +834,10 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       padding: 80px 0;
       background: #fff;
     }
+    .sale-scroll-wrap {
+      margin-top: 40px;
+      width: 100%;
+    }
     .sale-grid {
       display: grid; grid-template-columns: repeat(4, 1fr);
       gap: 16px; max-width: 1400px; margin: 40px auto 0;
@@ -818,6 +895,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
     .look-carousel {
       display: flex; align-items: center; gap: 16px;
       max-width: 1200px; margin: 0 auto;
+      touch-action: pan-y;
     }
     .look-grid {
       flex: 1; display: grid; gap: 4px; height: 480px;
@@ -961,7 +1039,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
     }
 
     @media (max-width: 968px) {
-      .hero-section { min-height: 85vh; }
+      .hero-section { min-height: 75vh; }
       .hero-content { padding: 0 var(--spacing-md); }
       .hero-title { font-size: clamp(2.2rem, 6vw, 3.5rem); }
       .hero-nav { width: 40px; height: 40px; }
@@ -972,7 +1050,15 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       .f-card { min-width: calc(50% - 8px); }
       .sale-grid { grid-template-columns: repeat(2, 1fr); }
       .cat-grid { grid-template-columns: 1fr; }
+      .cat-grid.collage {
+        grid-template-columns: 1fr 1fr;
+      }
+      .cat-grid.collage .cat-card:first-child {
+        grid-column: span 2;
+        grid-row: span 1;
+      }
       .cat-card { height: 300px; }
+      .cat-grid.collage .cat-card { min-height: 200px; }
       .cat-card-wide { height: 260px; }
       .story-inner { grid-template-columns: 1fr; gap: 40px; }
       .story-image-wrap img { height: 360px; }
@@ -985,16 +1071,72 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
     }
 
     @media (max-width: 768px) {
+      .hero-section { width: 80%; margin-left: auto; margin-right: auto; border-radius: 12px; overflow: hidden; }
+      .featured-carousel-wrapper .nav-btn,
+      .look-carousel .nav-btn { opacity: 1; pointer-events: auto; }
       .f-card { min-width: calc(80% - 8px); }
-      .sale-grid { grid-template-columns: 1fr 1fr; }
-      .cat-card { height: 240px; }
+      .cat-scroll-wrap {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+        margin-left: calc(-1 * var(--spacing-md));
+        margin-right: calc(-1 * var(--spacing-md));
+        padding-left: var(--spacing-md);
+        padding-right: var(--spacing-md);
+      }
+      .cat-scroll-wrap::-webkit-scrollbar { display: none; }
+      .cat-grid {
+        display: flex;
+        flex-wrap: nowrap;
+        grid-template-columns: unset;
+        gap: 16px;
+        width: max-content;
+        margin: 0;
+      }
+      .cat-grid.collage .cat-card:first-child { grid-column: unset; }
+      .cat-card {
+        height: 240px;
+        min-width: 280px;
+        max-width: 280px;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+      }
+      .cat-grid.collage .cat-card { min-height: 200px; min-width: 260px; max-width: 260px; }
+      .sale-scroll-wrap {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+        margin-left: calc(-1 * var(--spacing-md));
+        margin-right: calc(-1 * var(--spacing-md));
+        padding-left: var(--spacing-md);
+        padding-right: var(--spacing-md);
+      }
+      .sale-scroll-wrap::-webkit-scrollbar { display: none; }
+      .sale-grid {
+        display: flex;
+        flex-wrap: nowrap;
+        grid-template-columns: unset;
+        gap: 16px;
+        width: max-content;
+        margin: 0;
+      }
+      .s-card {
+        min-width: 260px;
+        max-width: 260px;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+      }
       .cat-label h3 { font-size: 1.3rem; }
       .newsletter-form { flex-direction: column; }
       .newsletter-form input, .newsletter-form button { width: 100%; }
     }
 
     @media (max-width: 480px) {
-      .hero-section { min-height: 100vh; min-height: 100svh; }
+      .hero-section { width: 80%; margin-left: auto; margin-right: auto; min-height: 70vh; min-height: 70svh; border-radius: 12px; overflow: hidden; }
       .hero-content { padding: 0 var(--spacing-sm); }
       .hero-title { font-size: clamp(2rem, 10vw, 2.8rem); }
       .hero-cta-group { flex-direction: column; width: 100%; }
@@ -1007,7 +1149,9 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       .hero-progress-track { width: 32px; }
       .hero-shapes { display: none; }
       .hero-scroll-indicator { display: none; }
-      .sale-grid { grid-template-columns: 1fr; }
+      .cat-card { min-width: 240px; max-width: 240px; }
+      .cat-grid.collage .cat-card { min-width: 220px; max-width: 220px; }
+      .s-card { min-width: 220px; max-width: 220px; }
       .trust-grid { grid-template-columns: 1fr; }
       .social-grid { grid-template-columns: 1fr 1fr; }
       .look-carousel { flex-direction: column; }
@@ -1037,6 +1181,9 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   activeSlide = 0;
   prevSlide = -1;
   private heroInterval: any;
+  private heroTouchStartX = 0;
+  private featuredTouchStartX = 0;
+  private lookTouchStartX = 0;
   currentLookIndex = 0;
   curatedLooks: any[] = [];
   socialPosts: InstagramTaggedPost[] = [
@@ -1201,17 +1348,20 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   startHeroAutoSlide() {
+    if (!this.heroSlides || this.heroSlides.length <= 1) return;
     this.heroInterval = setInterval(() => this.nextHeroSlide(), 5000);
   }
   stopHeroAutoSlide() {
     if (this.heroInterval) clearInterval(this.heroInterval);
   }
   nextHeroSlide() {
+    if (!this.heroSlides || this.heroSlides.length === 0) return;
     this.prevSlide = this.activeSlide;
     this.activeSlide = (this.activeSlide + 1) % this.heroSlides.length;
     this.resetHeroAutoSlide();
   }
   prevHeroSlide() {
+    if (!this.heroSlides || this.heroSlides.length === 0) return;
     this.prevSlide = this.activeSlide;
     this.activeSlide = (this.activeSlide - 1 + this.heroSlides.length) % this.heroSlides.length;
     this.resetHeroAutoSlide();
@@ -1229,6 +1379,36 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   scrollToFeatured() {
     const el = document.getElementById('featured-products');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  onHeroTouchStart(e: TouchEvent) {
+    if (e.changedTouches?.length) this.heroTouchStartX = e.changedTouches[0].clientX;
+  }
+  onHeroTouchEnd(e: TouchEvent) {
+    if (!e.changedTouches?.length || this.heroSlides.length <= 1) return;
+    const dx = e.changedTouches[0].clientX - this.heroTouchStartX;
+    if (dx > 50) this.prevHeroSlide();
+    else if (dx < -50) this.nextHeroSlide();
+  }
+
+  onFeaturedTouchStart(e: TouchEvent) {
+    if (e.changedTouches?.length) this.featuredTouchStartX = e.changedTouches[0].clientX;
+  }
+  onFeaturedTouchEnd(e: TouchEvent) {
+    if (!e.changedTouches?.length) return;
+    const dx = e.changedTouches[0].clientX - this.featuredTouchStartX;
+    if (dx > 50) this.prevFeatured();
+    else if (dx < -50) this.nextFeatured();
+  }
+
+  onLookTouchStart(e: TouchEvent) {
+    if (e.changedTouches?.length) this.lookTouchStartX = e.changedTouches[0].clientX;
+  }
+  onLookTouchEnd(e: TouchEvent) {
+    if (!e.changedTouches?.length || !this.curatedLooks.length) return;
+    const dx = e.changedTouches[0].clientX - this.lookTouchStartX;
+    if (dx > 50) this.prevLook();
+    else if (dx < -50) this.nextLook();
   }
 
   loadHeroSlides() {
@@ -1264,32 +1444,24 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
             return bTime - aTime;
           });
         } else {
-          this.loadFeaturedFallback();
+          this.featuredProducts = [];
         }
         this.calcFeaturedLayout();
         this.markHomeLoadDone();
       },
       error: () => {
-        this.loadFeaturedFallback();
+        this.featuredProducts = [];
         this.calcFeaturedLayout();
         this.markHomeLoadDone();
       }
     });
   }
 
-  private loadFeaturedFallback() {
-    const allProducts = this.productService.getAllProducts();
-    this.featuredProducts = allProducts.filter(p => p.featured).slice(0, 8);
-    if (this.featuredProducts.length < 4) {
-      this.featuredProducts = allProducts.slice(0, 8);
-    }
-  }
-
   loadSaleProducts() {
-    this.productApi.list({ is_on_sale: true, per_page: 12 }).subscribe({
+    this.productApi.list({ is_on_sale: true, per_page: 50 }).subscribe({
       next: (res: any) => {
         const list = res?.data ?? (Array.isArray(res) ? res : []);
-        const items = (list.length > 0 ? list : []).map((p: any) => {
+        const mapped = (list.length > 0 ? list : []).map((p: any) => {
           const price = Number(p.price ?? 0);
           const orig = Number(p.original_price ?? p.originalPrice ?? price);
           let discountPct = p.discount_percentage;
@@ -1304,16 +1476,27 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
             original_price: orig,
             originalPrice: orig,
             discount_percentage: discountPct,
-            category: p.category?.name ?? p.category
+            category: p.category?.name ?? p.category,
+            created_at: p.created_at
           };
         });
-        this.saleProducts = items;
+        const byDate = (a: any, b: any) => {
+          const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return db - da;
+        };
+        this.saleProducts = [...mapped].sort(byDate).slice(0, 6);
         this.markHomeLoadDone();
       },
       error: () => {
         const allProducts = this.productService.getAllProducts();
-        const filtered = allProducts.filter((p: any) => p.is_on_sale || (p.originalPrice && p.price < p.originalPrice)).slice(0, 8);
-        this.saleProducts = filtered.map((p: any) => {
+        const filtered = allProducts.filter((p: any) => p.is_on_sale || (p.originalPrice && p.price < p.originalPrice));
+        const byDate = (a: any, b: any) => {
+          const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return db - da;
+        };
+        this.saleProducts = [...filtered].sort(byDate).slice(0, 6).map((p: any) => {
           if (!p.discount_percentage && p.originalPrice) {
             p.discount_percentage = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
           }
@@ -1396,12 +1579,22 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     return '';
   }
 
+  /** Returns category as string for display (API may return object or string). */
+  getProductCategoryName(product: any): string {
+    const c = product?.category;
+    if (c == null) return '';
+    if (typeof c === 'string') return c;
+    return (c.name ?? c.title ?? '') || '';
+  }
+
   getProductColor(product: any): string {
     const colors: { [key: string]: string } = {
       'mens': 'linear-gradient(135deg, #1e3a5f 0%, #2a4d7a 100%)',
       'womens': 'linear-gradient(135deg, #a8d5ba 0%, #7fb89a 100%)',
       'collections': 'linear-gradient(135deg, #f5f1e8 0%, #e8e3d8 100%)'
     };
-    return colors[product.category] || colors['collections'];
+    const cat = product?.category;
+    const key = typeof cat === 'string' ? cat : (cat?.slug ?? cat?.name ?? '');
+    return colors[String(key).toLowerCase()] || colors['collections'];
   }
 }

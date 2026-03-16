@@ -198,11 +198,6 @@ import { CartItem } from '../../models/product.model';
                   <span>Subtotal</span>
                   <span>{{ formatPrice(getSubtotal()) }}</span>
                 </div>
-                <div class="summary-row">
-                  <span>Shipping</span>
-                  <span *ngIf="getSubtotal() >= 5000" class="free">FREE</span>
-                  <span *ngIf="getSubtotal() < 5000">{{ formatPrice(500) }}</span>
-                </div>
                 <div class="summary-row discount-row" *ngIf="appliedCoupon">
                   <span>Discount ({{ appliedCoupon.code }})</span>
                   <span class="discount-amount">−{{ formatPrice(couponDiscountAmount) }}</span>
@@ -821,9 +816,8 @@ export class CheckoutComponent implements OnInit {
 
   getTotal(): number {
     const subtotal = this.getSubtotal();
-    const shipping = subtotal >= 5000 ? 0 : 500;
     const discount = this.appliedCoupon ? this.couponDiscountAmount : 0;
-    return Math.max(0, subtotal + shipping - discount);
+    return Math.max(0, subtotal - discount);
   }
 
   applyCoupon() {
@@ -842,9 +836,9 @@ export class CheckoutComponent implements OnInit {
           this.couponError = res.message || 'Invalid coupon.';
         }
       },
-      error: () => {
+      error: (err) => {
         this.couponLoading = false;
-        this.couponError = 'Could not validate coupon. Try again.';
+        this.couponError = this.extractApiError(err, 'Could not validate coupon. Try again.');
       },
     });
   }
@@ -862,5 +856,14 @@ export class CheckoutComponent implements OnInit {
   closeOrderSuccessAndGoHome(): void {
     this.showOrderSuccessModal = false;
     this.router.navigate(['/']);
+  }
+
+  private extractApiError(err: any, fallback: string): string {
+    const body = err?.error;
+    if (body?.errors && typeof body.errors === 'object') {
+      const first = Object.values(body.errors)[0];
+      return Array.isArray(first) ? String(first[0]) : String(first);
+    }
+    return body?.message || body?.error || fallback;
   }
 }

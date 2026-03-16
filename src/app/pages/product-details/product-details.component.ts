@@ -5,9 +5,8 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ProductApiService } from '../../services/product-api.service';
 import { CartService } from '../../services/cart.service';
-import { PaymentService } from '../../services/payment.service';
 import { AppLoadingService } from '../../services/app-loading.service';
-import { Product } from '../../models/product.model';
+import { Product, stockBySizeFromArray } from '../../models/product.model';
 
 @Component({
   selector: 'app-product-details',
@@ -25,7 +24,7 @@ import { Product } from '../../models/product.model';
         </nav>
 
         <div class="product-content">
-          <div class="product-images">
+          <div class="product-images" (touchstart)="onProductImageTouchStart($event)" (touchend)="onProductImageTouchEnd($event)">
             <div class="main-image" (mouseenter)="imageZoom=true" (mouseleave)="imageZoom=false">
               <img *ngIf="getMainImageUrl()" class="image-actual" [src]="getMainImageUrl()" [alt]="product.name" [class.zoomed]="imageZoom" />
               <div *ngIf="!getMainImageUrl()" class="image-placeholder" [style.background]="getProductColor()" [class.zoomed]="imageZoom"></div>
@@ -85,9 +84,11 @@ import { Product } from '../../models/product.model';
                     *ngFor="let size of getSizes()"
                     class="attribute-btn"
                     [class.selected]="selectedSize === size"
-                    (click)="selectedSize = size"
+                    [class.out-of-stock]="getStockForSize(size) <= 0"
+                    [disabled]="getStockForSize(size) <= 0"
+                    (click)="getStockForSize(size) > 0 && (selectedSize = size)"
                   >
-                    {{ size }}
+                    {{ size }}<span *ngIf="hasStockBySize()" class="size-stock"> ({{ getStockForSize(size) }})</span>
                   </button>
                 </div>
               </div>
@@ -131,13 +132,13 @@ import { Product } from '../../models/product.model';
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                   </button>
                   <span class="qty-display">{{ quantity }}</span>
-                  <button class="qty-btn" (click)="increaseQuantity()" [disabled]="isOutOfStock() || quantity >= product.stockQuantity">
+                  <button class="qty-btn" (click)="increaseQuantity()" [disabled]="isOutOfStock() || quantity >= getStockForSelectedSize()">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                   </button>
                 </div>
                 <span class="stock-info" *ngIf="!isOutOfStock()">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  {{ product.stockQuantity }} in stock
+                  {{ getStockForSelectedSize() }} in stock<span *ngIf="hasSizeAttribute() && selectedSize"> ({{ selectedSize }})</span>
                 </span>
                 <span class="stock-info out-of-stock" *ngIf="isOutOfStock()">
                   Out of stock
@@ -159,8 +160,8 @@ import { Product } from '../../models/product.model';
                   <svg *ngIf="showAddedFeedback" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
                   {{ showAddedFeedback ? 'Added to Cart!' : 'Add to Cart' }}
                 </button>
-                <button class="btn-buy-now" (click)="openBuyNowOptions()" [disabled]="isOutOfStock() || !canAddToCart() || buyNowLoading">
-                  {{ buyNowLoading ? 'Opening payment…' : 'Buy Now' }}
+                <button class="btn-buy-now" (click)="payWithCashOnDelivery()" [disabled]="isOutOfStock() || !canAddToCart()">
+                  Buy Now
                 </button>
               </div>
             </div>
@@ -229,34 +230,6 @@ import { Product } from '../../models/product.model';
       </div>
     </div>
 
-    <!-- Buy Now payment options modal -->
-    <div class="buynow-modal-backdrop" *ngIf="showBuyNowOptions" (click)="closeBuyNowOptions()">
-      <div class="buynow-modal" (click)="$event.stopPropagation()">
-        <div class="buynow-modal-header">
-          <h3>Choose payment method</h3>
-          <button type="button" class="buynow-modal-close" (click)="closeBuyNowOptions()" aria-label="Close">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          </button>
-        </div>
-        <p class="buynow-modal-sub">{{ product?.name }} — {{ quantity }} × {{ product ? formatPrice(product.price) : '' }}</p>
-        <div class="buynow-options">
-          <button type="button" class="buynow-option buynow-option-razorpay" (click)="payWithRazorpay()" [disabled]="buyNowLoading">
-            <span class="buynow-option-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-            </span>
-            <span class="buynow-option-title">Pay with Razorpay</span>
-            <span class="buynow-option-desc">UPI, Card, Net Banking, Wallets</span>
-          </button>
-          <button type="button" class="buynow-option buynow-option-cod" (click)="payWithCashOnDelivery()">
-            <span class="buynow-option-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/><path d="M6 14h.01"/><path d="M10 14h.01"/></svg>
-            </span>
-            <span class="buynow-option-title">Cash on Delivery</span>
-            <span class="buynow-option-desc">Pay when your order is delivered</span>
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- Toast notification -->
     <div class="toast-notification" *ngIf="showToast">
@@ -282,6 +255,12 @@ import { Product } from '../../models/product.model';
     .product-details {
       padding: var(--spacing-lg) 0;
       animation: fadeInUp 0.4s ease;
+      font-family: var(--font-body);
+    }
+    .product-details h1,
+    .product-details h2,
+    .product-details h3 {
+      font-family: var(--font-body);
     }
 
     @keyframes fadeInUp {
@@ -430,6 +409,7 @@ import { Product } from '../../models/product.model';
       letter-spacing: 1.5px;
       color: var(--text-muted);
       margin-bottom: 4px;
+      font-family: var(--font-body);
     }
 
     .product-title {
@@ -437,6 +417,7 @@ import { Product } from '../../models/product.model';
       color: var(--text-dark);
       margin: 0;
       line-height: 1.3;
+      font-family: var(--font-body);
     }
 
     .product-rating {
@@ -479,12 +460,14 @@ import { Product } from '../../models/product.model';
       font-size: 1.75rem;
       font-weight: 700;
       color: var(--text-dark);
+      font-family: var(--font-body);
     }
 
     .original-price {
       font-size: 1.1rem;
       color: var(--text-muted);
       text-decoration: line-through;
+      font-family: var(--font-body);
     }
 
     .discount-tag {
@@ -494,6 +477,7 @@ import { Product } from '../../models/product.model';
       font-size: 12px;
       font-weight: 700;
       letter-spacing: 0.3px;
+      font-family: var(--font-body);
     }
 
     .divider {
@@ -521,6 +505,7 @@ import { Product } from '../../models/product.model';
       color: var(--text-dark);
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      font-family: var(--font-body);
     }
 
     .attribute-options {
@@ -540,6 +525,7 @@ import { Product } from '../../models/product.model';
       font-size: 14px;
       font-weight: 500;
       text-align: center;
+      font-family: var(--font-body);
     }
 
     .attribute-btn:hover {
@@ -553,6 +539,19 @@ import { Product } from '../../models/product.model';
       color: var(--text-white);
       border-color: var(--btn-primary);
       box-shadow: 0 2px 8px rgba(30, 58, 95, 0.25);
+    }
+
+    .attribute-btn.out-of-stock,
+    .attribute-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      text-decoration: line-through;
+    }
+
+    .attribute-btn .size-stock {
+      font-size: 0.85em;
+      opacity: 0.9;
+      font-weight: normal;
     }
 
     .size-label-row {
@@ -1064,6 +1063,9 @@ import { Product } from '../../models/product.model';
       .related-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
+    @media (max-width: 768px) {
+      .product-images { touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+    }
     @media (max-width: 640px) {
       .action-buttons { grid-template-columns: 1fr; }
       .trust-badges { flex-direction: column; gap: 12px; }
@@ -1093,18 +1095,15 @@ export class ProductDetailsComponent implements OnInit, OnDestroy {
   Math = Math;
   loading = true;
 
-  buyNowLoading = false;
-  showBuyNowOptions = false;
-
   private categoryIdForRelated: number | string | null = null;
   private routeParamSub?: Subscription;
+  private imageTouchStartX = 0;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private productApi: ProductApiService,
     private cartService: CartService,
-    private paymentService: PaymentService,
     private appLoading: AppLoadingService
   ) {}
 
@@ -1125,7 +1124,9 @@ export class ProductDetailsComponent implements OnInit, OnDestroy {
             this.categoryIdForRelated = apiProduct.category_id ?? (apiProduct.category?.id ?? null);
             this.loadRelatedProducts();
             if (this.hasSizeAttribute()) {
-              this.selectedSize = this.getSizes()[0];
+              const sizes = this.getSizes();
+              const withStock = sizes.find(s => this.getStockForSize(s) > 0);
+              this.selectedSize = withStock ?? sizes[0];
             }
             if (this.hasColorAttribute()) {
               this.selectedColor = this.getColors()[0];
@@ -1251,6 +1252,7 @@ export class ProductDetailsComponent implements OnInit, OnDestroy {
       image_urls: api.image_urls,
       inStock: api.in_stock !== false && Number(api.stock_quantity ?? 0) > 0,
       stockQuantity: Number(api.stock_quantity ?? 0),
+      stock_by_size: (() => { const o = stockBySizeFromArray(api.stock_by_size); return Object.keys(o).length > 0 ? o : undefined; })(),
       attributes: attrs,
       tags: api.tags || [],
       rating: api.rating != null ? Number(api.rating) : undefined,
@@ -1260,7 +1262,43 @@ export class ProductDetailsComponent implements OnInit, OnDestroy {
     };
     mapped.categorySlug = slug;
     mapped.category = cat;
+    const sbs = mapped.stock_by_size;
+    if (sbs && typeof sbs === 'object' && Object.keys(sbs).length > 0) {
+      const total = Object.values(sbs).reduce((a: number, b: number) => a + Number(b || 0), 0);
+      mapped.stockQuantity = total;
+      mapped.inStock = total > 0;
+    }
     return mapped;
+  }
+
+  onProductImageTouchStart(e: TouchEvent) {
+    if (e.changedTouches?.length) this.imageTouchStartX = e.changedTouches[0].clientX;
+  }
+  onProductImageTouchEnd(e: TouchEvent) {
+    if (typeof window !== 'undefined' && window.innerWidth > 768) return;
+    if (!e.changedTouches?.length || !this.product?.images?.length) return;
+    const dx = e.changedTouches[0].clientX - this.imageTouchStartX;
+    const len = this.product.images.length;
+    if (dx > 50) this.selectedImageIndex = (this.selectedImageIndex - 1 + len) % len;
+    else if (dx < -50) this.selectedImageIndex = (this.selectedImageIndex + 1) % len;
+  }
+
+  getStockForSize(size: string): number {
+    if (!this.product) return 0;
+    const sbs = (this.product as any).stock_by_size;
+    if (sbs && typeof sbs === 'object' && size in sbs) return Number(sbs[size] ?? 0);
+    return this.product.stockQuantity ?? 0;
+  }
+
+  getStockForSelectedSize(): number {
+    if (!this.product) return 0;
+    if (this.hasSizeAttribute() && this.selectedSize) return this.getStockForSize(this.selectedSize);
+    return this.product.stockQuantity ?? 0;
+  }
+
+  hasStockBySize(): boolean {
+    const sbs = this.product && (this.product as any).stock_by_size;
+    return !!(sbs && typeof sbs === 'object' && Object.keys(sbs).length > 0);
   }
 
   hasSizeAttribute(): boolean {
@@ -1287,7 +1325,8 @@ export class ProductDetailsComponent implements OnInit, OnDestroy {
   }
 
   increaseQuantity() {
-    if (this.product && this.quantity < this.product.stockQuantity) {
+    const max = this.getStockForSelectedSize();
+    if (this.product && this.quantity < max) {
       this.quantity++;
     }
   }
@@ -1300,6 +1339,7 @@ export class ProductDetailsComponent implements OnInit, OnDestroy {
 
   isOutOfStock(): boolean {
     if (!this.product) return true;
+    if (this.hasSizeAttribute() && this.selectedSize) return this.getStockForSize(this.selectedSize) <= 0;
     return !this.product.inStock || (this.product.stockQuantity ?? 0) <= 0;
   }
 
@@ -1330,62 +1370,9 @@ export class ProductDetailsComponent implements OnInit, OnDestroy {
     setTimeout(() => this.showAddedFeedback = false, 1800);
   }
 
-  openBuyNowOptions() {
-    if (!this.product || !this.canAddToCart()) return;
-    this.showBuyNowOptions = true;
-  }
-
-  closeBuyNowOptions() {
-    if (!this.buyNowLoading) this.showBuyNowOptions = false;
-  }
-
-  payWithRazorpay() {
-    if (!this.product || !this.canAddToCart()) return;
-    const amountPaise = Math.round(Number(this.product.price) * this.quantity * 100);
-    if (amountPaise < 100) {
-      this.showToastMessage('Invalid amount.');
-      return;
-    }
-    this.buyNowLoading = true;
-    this.paymentService.createOrder({
-      product_id: this.product.id,
-      product_name: this.product.name,
-      quantity: this.quantity,
-      amount_paise: amountPaise,
-      size: this.selectedSize,
-      color: this.selectedColor,
-    }).subscribe({
-      next: (data) => {
-        this.showBuyNowOptions = false;
-        this.buyNowLoading = false;
-        this.paymentService.openRazorpayCheckout({
-          keyId: data.keyId,
-          orderId: data.orderId,
-          amount: data.amount,
-          currency: data.currency || 'INR',
-          name: 'Legado & Co',
-          description: `${this.product!.name} (Qty: ${this.quantity})`,
-          handler: () => {
-            this.cartService.addToCart(this.product!, this.quantity, this.selectedSize, this.selectedColor);
-            this.showToastMessage('Payment successful! Order added to cart.');
-            this.router.navigate(['/cart']);
-          },
-          onClose: () => {
-            this.buyNowLoading = false;
-          },
-        });
-      },
-      error: () => {
-        this.buyNowLoading = false;
-        this.showToastMessage('Unable to start payment. Please try again.');
-      },
-    });
-  }
-
   payWithCashOnDelivery() {
     if (!this.product || !this.canAddToCart()) return;
     this.cartService.addToCart(this.product, this.quantity, this.selectedSize, this.selectedColor);
-    this.showBuyNowOptions = false;
     this.showToastMessage('Added to cart. Proceeding to checkout for Cash on Delivery.');
     this.router.navigate(['/cart']);
   }

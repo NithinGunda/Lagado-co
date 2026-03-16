@@ -129,10 +129,67 @@ import { AddressService } from '../../services/address.service';
                   <p *ngIf="address.country">{{ address.country }}</p>
                 </div>
 
-                <div class="empty-state" *ngIf="addresses.length === 0 && !addressesLoading">
+                <div class="empty-state" *ngIf="addresses.length === 0 && !showAddressForm">
                   <p>No saved addresses</p>
                 </div>
-                <button class="btn btn-primary" (click)="addNewAddress()">Add New Address</button>
+
+                <!-- Add new address form -->
+                <div class="address-form-wrap" *ngIf="showAddressForm">
+                  <h3>New Address</h3>
+                  <p class="form-error" *ngIf="addressFormError">{{ addressFormError }}</p>
+                  <form [formGroup]="addressForm" (ngSubmit)="saveNewAddress()" class="profile-form address-form-inline">
+                    <div class="form-group">
+                      <label>Address type</label>
+                      <select formControlName="type" class="form-input">
+                        <option value="shipping">Shipping</option>
+                        <option value="billing">Billing</option>
+                        <option value="home">Home</option>
+                        <option value="work">Work</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>Street / Address line *</label>
+                      <input type="text" formControlName="street" class="form-input" placeholder="House no., building, street">
+                      <span class="field-error" *ngIf="addressForm.get('street')?.invalid && addressForm.get('street')?.touched">Required</span>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label>Location / Area</label>
+                        <input type="text" formControlName="location" class="form-input" placeholder="Area, locality">
+                      </div>
+                      <div class="form-group">
+                        <label>Landmark</label>
+                        <input type="text" formControlName="landmark" class="form-input" placeholder="Near ...">
+                      </div>
+                    </div>
+                    <div class="form-row three-cols">
+                      <div class="form-group">
+                        <label>City *</label>
+                        <input type="text" formControlName="city" class="form-input">
+                        <span class="field-error" *ngIf="addressForm.get('city')?.invalid && addressForm.get('city')?.touched">Required</span>
+                      </div>
+                      <div class="form-group">
+                        <label>State *</label>
+                        <select formControlName="state" class="form-input">
+                          <option value="">Select state</option>
+                          <option *ngFor="let s of states" [value]="s">{{ s }}</option>
+                        </select>
+                        <span class="field-error" *ngIf="addressForm.get('state')?.invalid && addressForm.get('state')?.touched">Required</span>
+                      </div>
+                      <div class="form-group">
+                        <label>Pincode *</label>
+                        <input type="text" formControlName="pincode" class="form-input" placeholder="6 digits" maxlength="6">
+                        <span class="field-error" *ngIf="addressForm.get('pincode')?.invalid && addressForm.get('pincode')?.touched">Required (6 digits)</span>
+                      </div>
+                    </div>
+                    <div class="form-actions">
+                      <button type="submit" class="btn btn-primary" [disabled]="addressForm.invalid || addressSaving">Save Address</button>
+                      <button type="button" class="btn btn-outline" (click)="cancelAddAddress()">Cancel</button>
+                    </div>
+                  </form>
+                </div>
+
+                <button class="btn btn-primary" *ngIf="!showAddressForm" (click)="addNewAddress()">Add New Address</button>
               </div>
               <div class="profile-loading" *ngIf="addressesLoading">Loading addresses...</div>
             </div>
@@ -168,6 +225,7 @@ import { AddressService } from '../../services/address.service';
     .profile-page {
       padding: var(--spacing-xl) 0;
       min-height: calc(100vh - 200px);
+      overflow-x: hidden;
     }
 
     .page-title {
@@ -190,6 +248,7 @@ import { AddressService } from '../../services/address.service';
       height: fit-content;
       position: sticky;
       top: 120px;
+      min-width: 0;
     }
 
     .nav-menu {
@@ -246,6 +305,8 @@ import { AddressService } from '../../services/address.service';
       padding: var(--spacing-lg);
       border-radius: 12px;
       box-shadow: 0 2px 8px var(--shadow-light);
+      min-width: 0;
+      overflow-x: hidden;
     }
 
     .tab-content h2 {
@@ -263,12 +324,14 @@ import { AddressService } from '../../services/address.service';
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: var(--spacing-sm);
+      min-width: 0;
     }
 
     .form-group {
       display: flex;
       flex-direction: column;
       gap: 8px;
+      min-width: 0;
     }
 
     .form-group label {
@@ -382,6 +445,13 @@ import { AddressService } from '../../services/address.service';
       display: flex;
       align-items: center;
       gap: 12px;
+      min-width: 0;
+    }
+
+    .order-product-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .order-product-img {
@@ -492,6 +562,35 @@ import { AddressService } from '../../services/address.service';
       font-size: 14px;
     }
 
+    .address-form-wrap {
+      margin-top: var(--spacing-lg);
+      padding: var(--spacing-lg);
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      background: var(--secondary-color);
+      min-width: 0;
+      overflow-x: hidden;
+    }
+    .address-form-wrap h3 { margin: 0 0 var(--spacing-md) 0; color: var(--primary-color); font-size: 1.1rem; }
+    .address-form-wrap .profile-form {
+      min-width: 0;
+    }
+    .address-form-inline .form-row.three-cols { grid-template-columns: 1fr 1fr 1fr; }
+    .form-error { color: #c0392b; font-size: 13px; margin-bottom: var(--spacing-sm); }
+    .field-error { color: #c0392b; font-size: 12px; margin-top: 4px; }
+    .form-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+    .btn-outline {
+      padding: 12px 24px;
+      border: 2px solid var(--primary-color);
+      background: transparent;
+      color: var(--primary-color);
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition-normal);
+    }
+    .btn-outline:hover { background: var(--secondary-color); }
+
     .empty-state {
       text-align: center;
       padding: var(--spacing-xl) 0;
@@ -509,10 +608,25 @@ import { AddressService } from '../../services/address.service';
 
       .nav-menu {
         flex-direction: row;
+        flex-wrap: nowrap;
         overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        padding-bottom: 4px;
+        gap: 4px;
+      }
+
+      .nav-item {
+        flex-shrink: 0;
+        white-space: nowrap;
       }
 
       .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .address-form-inline .form-row.three-cols {
         grid-template-columns: 1fr;
       }
 
@@ -528,16 +642,110 @@ import { AddressService } from '../../services/address.service';
         height: 40px;
       }
     }
+
+    @media (max-width: 768px) {
+      .address-form-inline .form-row.three-cols {
+        grid-template-columns: 1fr;
+      }
+      .address-form-wrap {
+        padding: var(--spacing-md);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .profile-page {
+        padding: var(--spacing-md) 0;
+      }
+
+      .profile-main {
+        padding: var(--spacing-md);
+      }
+
+      .address-form-wrap {
+        padding: var(--spacing-sm);
+        margin-left: 0;
+        margin-right: 0;
+      }
+
+      .order-card {
+        padding: var(--spacing-sm);
+      }
+
+      .order-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      .order-products {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-left: calc(-1 * var(--spacing-sm));
+        margin-right: calc(-1 * var(--spacing-sm));
+        padding-left: var(--spacing-sm);
+        padding-right: var(--spacing-sm);
+      }
+
+      .order-products-header,
+      .order-product-row {
+        grid-template-columns: minmax(120px, 1fr) 44px 64px 72px;
+        gap: 8px;
+        font-size: 12px;
+      }
+
+      .address-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      .address-actions {
+        flex-wrap: wrap;
+      }
+
+      .form-actions {
+        flex-direction: column;
+      }
+
+      .form-actions .btn {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .page-title {
+        font-size: 1.5rem;
+      }
+
+      .nav-item {
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+    }
   `]
 })
 export class ProfileComponent implements OnInit {
   activeTab = 'profile';
   profileForm: FormGroup;
   passwordForm: FormGroup;
+  addressForm: FormGroup;
   orders: any[] = [];
   addresses: any[] = [];
   ordersLoading = false;
   addressesLoading = false;
+  showAddressForm = false;
+  addressFormError = '';
+  addressSaving = false;
+
+  states: string[] = [
+    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
+    'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh',
+    'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+    'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh',
+    'Uttarakhand', 'West Bengal',
+    'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu',
+    'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
+  ];
 
   constructor(
     private fb: FormBuilder,
@@ -558,6 +766,16 @@ export class ProfileComponent implements OnInit {
       currentPassword: ['', Validators.required],
       newPassword: ['', [Validators.required, Validators.minLength(8)]],
       confirmPassword: ['', Validators.required]
+    });
+
+    this.addressForm = this.fb.group({
+      type: ['shipping'],
+      street: ['', Validators.required],
+      location: [''],
+      landmark: [''],
+      city: ['', Validators.required],
+      state: ['', Validators.required],
+      pincode: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]]
     });
   }
 
@@ -703,8 +921,57 @@ export class ProfileComponent implements OnInit {
   }
 
   addNewAddress() {
-    // Add new address logic
-    alert('Add new address functionality');
+    this.addressFormError = '';
+    this.addressForm.reset({ type: 'shipping', street: '', location: '', landmark: '', city: '', state: '', pincode: '' });
+    this.showAddressForm = true;
+  }
+
+  cancelAddAddress() {
+    this.showAddressForm = false;
+    this.addressFormError = '';
+    this.addressForm.reset({ type: 'shipping', street: '', location: '', landmark: '', city: '', state: '', pincode: '' });
+  }
+
+  saveNewAddress() {
+    if (this.addressForm.invalid) {
+      this.addressForm.markAllAsTouched();
+      return;
+    }
+    this.addressFormError = '';
+    this.addressSaving = true;
+    const v = this.addressForm.value;
+    this.addressService.create({
+      type: v.type || 'shipping',
+      street: v.street?.trim(),
+      location: v.location?.trim() || undefined,
+      landmark: v.landmark?.trim() || undefined,
+      city: v.city?.trim(),
+      state: v.state?.trim(),
+      pincode: v.pincode?.trim()
+    }).subscribe({
+      next: () => {
+        this.addressSaving = false;
+        this.showAddressForm = false;
+        this.addressForm.reset({ type: 'shipping', street: '', location: '', landmark: '', city: '', state: '', pincode: '' });
+        this.loadAddresses();
+      },
+      error: (err) => {
+        this.addressSaving = false;
+        this.addressFormError = this.extractApiError(err, 'Could not save address. Please try again.');
+      }
+    });
+  }
+
+  private extractApiError(err: any, fallback: string): string {
+    const body = err?.error;
+    if (body?.message && typeof body.message === 'string') return body.message;
+    if (body?.error && typeof body.error === 'string') return body.error;
+    if (body?.errors && typeof body.errors === 'object') {
+      const first = Object.values(body.errors)[0];
+      if (Array.isArray(first) && first[0]) return String(first[0]);
+      if (typeof first === 'string') return first;
+    }
+    return fallback;
   }
 
   formatPrice(price: number): string {

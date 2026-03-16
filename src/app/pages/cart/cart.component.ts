@@ -69,24 +69,6 @@ import { Subscription } from 'rxjs';
               <span>Subtotal ({{ cartItems.length }} items)</span>
               <span class="summary-value">{{ formatPrice(getSubtotal()) }}</span>
             </div>
-            
-            <div class="summary-row">
-              <span>Estimated Tax</span>
-              <span class="summary-value">{{ formatPrice(getTax()) }}</span>
-            </div>
-            
-            <div class="summary-row">
-              <span>Shipping</span>
-              <span class="free-shipping" *ngIf="getSubtotal() >= 5000">FREE</span>
-              <span class="summary-value" *ngIf="getSubtotal() < 5000">{{ formatPrice(500) }}</span>
-            </div>
-
-            <div class="shipping-progress" *ngIf="getSubtotal() < 5000">
-              <div class="progress-bar">
-                <div class="progress-fill" [style.width.%]="(getSubtotal() / 5000) * 100"></div>
-              </div>
-              <p class="progress-text">Add {{ formatPrice(getRemainingForFreeShipping()) }} more for <strong>free shipping!</strong></p>
-            </div>
 
             <div class="summary-divider"></div>
 
@@ -363,40 +345,10 @@ import { Subscription } from 'rxjs';
       margin-bottom: 0;
     }
 
-    .free-shipping {
-      color: #27ae60;
-      font-weight: 700;
-      font-size: 13px;
-    }
-
     .summary-divider {
       height: 1px;
       background: var(--border-color);
       margin: 14px 0;
-    }
-
-    .shipping-progress {
-      margin: 4px 0 12px;
-    }
-
-    .progress-bar {
-      height: 4px;
-      background: var(--grey-light);
-      margin-bottom: 8px;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--primary-color), var(--btn-accent));
-      transition: width 0.4s ease;
-      max-width: 100%;
-    }
-
-    .progress-text {
-      margin: 0;
-      font-size: 12px;
-      color: var(--text-muted);
     }
 
     .btn-checkout {
@@ -542,23 +494,12 @@ export class CartComponent implements OnInit, OnDestroy {
     return this.cartService.getCartSubtotal();
   }
 
-  getTax(): number {
-    return this.cartService.getEstimatedTax();
-  }
-
   getTotal(): number {
-    const subtotal = this.getSubtotal();
-    const tax = this.getTax();
-    const shipping = subtotal >= 5000 ? 0 : 500;
-    return subtotal + tax + shipping;
+    return this.getSubtotal();
   }
 
   formatPrice(price: number): string {
     return `₹${price}`;
-  }
-
-  getRemainingForFreeShipping(): number {
-    return 5000 - this.getSubtotal();
   }
 
   getProductColor(product: any): string {

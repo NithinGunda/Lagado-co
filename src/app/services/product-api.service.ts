@@ -26,6 +26,11 @@ export class ProductApiService {
   }
 
   update(id: number | string, payload: ProductPayload | FormData): Observable<any> {
+    // PHP does not populate $_FILES for PUT; use POST when sending FormData (e.g. new images)
+    if (payload instanceof FormData) {
+      payload.append('_method', 'PUT');
+      return this.http.post(`${this.base}/${id}`, payload);
+    }
     return this.http.put(`${this.base}/${id}`, payload);
   }
 

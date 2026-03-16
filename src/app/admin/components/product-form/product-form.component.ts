@@ -5,6 +5,7 @@ import { catchError } from 'rxjs/operators';
 import { ProductApiService } from '../../../services/product-api.service';
 import { CategoryService } from '../../../services/category.service';
 import { Category } from '../../../models/category.model';
+import { stockBySizeToArray, stockBySizeFromArray } from '../../../models/product.model';
 
 @Component({
   selector: 'app-admin-product-form',
@@ -58,7 +59,7 @@ import { Category } from '../../../models/category.model';
           <div class="form-section">
             <h2>Sizes</h2>
             <div class="field">
-              <input [(ngModel)]="product.sizes" placeholder="e.g. S, M, L, XL, XXL" class="input" />
+              <input [(ngModel)]="product.sizes" (ngModelChange)="ensureStockBySize()" placeholder="e.g. S, M, L, XL, XXL" class="input" />
               <small class="help-text">Enter comma-separated sizes</small>
               <div *ngIf="product.sizes" class="size-tags">
                 <span class="size-tag" *ngFor="let s of parseSizes(product.sizes)">{{ s }}</span>
@@ -92,11 +93,21 @@ import { Category } from '../../../models/category.model';
           <!-- Stock / Inventory -->
           <div class="form-section">
             <h2>Stock &amp; Inventory</h2>
-            <div class="field-row two-col">
+            <div *ngIf="parseSizes(product.sizes).length > 0" class="stock-by-size">
+              <label>Quantity per size</label>
+              <small class="help-text">Set available quantity for each size. Stock is tracked per size on the storefront.</small>
+              <div class="stock-by-size-grid">
+                <div class="stock-size-row" *ngFor="let s of parseSizes(product.sizes)">
+                  <span class="stock-size-label">{{ s }}</span>
+                  <input type="number" [(ngModel)]="product.stock_by_size[s]" (ngModelChange)="ensureStockBySize()" placeholder="0" class="input stock-qty-input" min="0" step="1" />
+                </div>
+              </div>
+            </div>
+            <div class="field-row two-col" [class.mt-1]="parseSizes(product.sizes).length > 0">
               <div class="field">
-                <label>Stock quantity</label>
+                <label>Stock quantity (fallback)</label>
                 <input type="number" [(ngModel)]="product.stock_quantity" placeholder="0" class="input" min="0" step="1" />
-                <small class="help-text">Available quantity for this product</small>
+                <small class="help-text">Used when no sizes are set, or total when using quantity per size</small>
               </div>
               <div class="field">
                 <label class="toggle-row" style="margin-top: 28px;">
@@ -365,6 +376,15 @@ import { Category } from '../../../models/category.model';
     .sg-remove-row:hover { color: var(--accent-color); }
     .sg-empty { padding: 20px; text-align: center; color: var(--text-light); font-size: 13px; background: var(--grey-light); border: 1px dashed var(--border-color); }
 
+    .stock-by-size { margin-bottom: 16px; }
+    .stock-by-size label { display: block; font-weight: 600; margin-bottom: 4px; }
+    .stock-by-size .help-text { display: block; margin-bottom: 10px; color: var(--text-light); font-size: 12px; }
+    .stock-by-size-grid { display: flex; flex-wrap: wrap; gap: 12px 20px; }
+    .stock-size-row { display: flex; align-items: center; gap: 8px; }
+    .stock-size-label { min-width: 32px; font-weight: 500; font-size: 14px; }
+    .stock-qty-input { width: 80px; }
+    .mt-1 { margin-top: 16px; }
+
     @media (max-width: 900px) {
       .form-layout { grid-template-columns: 1fr; }
       .form-sidebar { position: static; }
@@ -382,7 +402,7 @@ export class AdminProductFormComponent implements OnInit {
     name: '', price: null, category_id: null, description: '',
     is_on_sale: false, original_price: null, discount_percentage: null,
     is_active: true, featured: false, sizes: '',
-    stock_quantity: 0, in_stock: true
+    stock_quantity: 0, in_stock: true, stock_by_size: {}
   };
 
   imageFiles: File[] = [];
@@ -423,6 +443,8 @@ export class AdminProductFormComponent implements OnInit {
       this.loadingProduct = false;
       if (!p) { this.error = 'Product not found.'; return; }
       this.product = { ...p };
+      this.product.stock_by_size = stockBySizeFromArray(p.stock_by_size);
+      this.ensureStockBySize();
       const urls: string[] = p.image_urls && p.image_urls.length
         ? p.image_urls
         : (p.image_url ? [p.image_url] : []);
@@ -436,6 +458,13 @@ export class AdminProductFormComponent implements OnInit {
   parseSizes(sizes: string): string[] {
     if (!sizes) return [];
     return sizes.split(',').map((s: string) => s.trim()).filter((s: string) => s);
+  }
+
+  ensureStockBySize() {
+    if (!this.product.stock_by_size) this.product.stock_by_size = {};
+    this.parseSizes(this.product.sizes).forEach((s: string) => {
+      if (this.product.stock_by_size[s] === undefined || this.product.stock_by_size[s] === null) this.product.stock_by_size[s] = 0;
+    });
   }
 
   goBack() {
@@ -558,6 +587,7 @@ export class AdminProductFormComponent implements OnInit {
       fd.append('existing_images', JSON.stringify(existingUrls));
       if (this.product.stock_quantity != null) fd.append('stock_quantity', String(this.product.stock_quantity));
       fd.append('in_stock', this.product.in_stock === false ? '0' : '1');
+      if (this.product.stock_by_size && Object.keys(this.product.stock_by_size).length > 0) fd.append('stock_by_size', JSON.stringify(stockBySizeToArray(this.product.stock_by_size)));
       const op = id ? this.api.update(id, fd) : this.api.create(fd);
       op.subscribe({ next: () => this.onSaved(), error: (e) => this.onError(e) });
     } else {
@@ -574,6 +604,7 @@ export class AdminProductFormComponent implements OnInit {
       // Always send existing_images so backend can delete removed ones (including all)
       payload.existing_images = existingUrls;
       if (this.product.stock_quantity != null) payload.stock_quantity = Number(this.product.stock_quantity);
+      if (this.product.stock_by_size && Object.keys(this.product.stock_by_size).length > 0) payload.stock_by_size = stockBySizeToArray(this.product.stock_by_size);
       payload.in_stock = this.product.in_stock !== false;
       if (this.product.is_on_sale) {
         payload.is_on_sale = true;

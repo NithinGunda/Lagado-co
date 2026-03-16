@@ -2,9 +2,6 @@ import { Component, OnDestroy, AfterViewInit, ElementRef, ViewChild } from '@ang
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 
-const ADMIN_EMAIL = 'admin@legadoandco.com';
-const ADMIN_PASS = 'Legadoandco@123';
-
 @Component({
   selector: 'app-admin-login',
   template: `
@@ -137,7 +134,7 @@ const ADMIN_PASS = 'Legadoandco@123';
                 <input
                   id="email" type="email" [(ngModel)]="email" name="email"
                   (focus)="emailFocused=true" (blur)="emailFocused=false"
-                  placeholder="admin@legadoandco.com" required autocomplete="email"
+                  placeholder="Enter your email" required autocomplete="email"
                 />
               </div>
             </div>

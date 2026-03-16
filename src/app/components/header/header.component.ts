@@ -31,7 +31,7 @@ import { Subscription } from 'rxjs';
           <!-- Logo (top-left) -->
           <div class="logo-left">
             <a routerLink="/" class="logo-link" aria-label="Legado & Co home">
-              <img src="assets/Logo_new.png" alt="Legado & Co" class="logo-img" />
+              <span class="logo-wordmark">Legado &amp; Co</span>
             </a>
           </div>
 
@@ -232,7 +232,7 @@ import { Subscription } from 'rxjs';
     .h-container {
       max-width: 1400px;
       margin: 0 auto;
-      padding: 0 40px 0 20px;
+      padding: 0 28px 0 0;
       display: grid;
       grid-template-columns: auto 1fr auto;
       align-items: center;
@@ -247,7 +247,10 @@ import { Subscription } from 'rxjs';
     .desktop-nav {
       display: flex;
       align-items: center;
-      gap: 36px;
+      gap: 22px;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+      min-width: 0;
     }
     .nav-main { justify-self: center; }
     .nav-right {
@@ -267,6 +270,7 @@ import { Subscription } from 'rxjs';
       padding: 4px 0;
       color: var(--text-dark, #2c3e50);
       transition: color 0.3s ease;
+      white-space: nowrap;
     }
     .nav-label-row {
       display: inline-flex;
@@ -274,13 +278,15 @@ import { Subscription } from 'rxjs';
       justify-content: center;
       gap: 4px;
       min-height: 20px;
+      white-space: nowrap;
     }
     .nav-text {
-      font-size: 12.5px;
+      font-size: 11.5px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 1.6px;
+      letter-spacing: 1.2px;
       line-height: 1.2;
+      white-space: nowrap;
       transition: transform 0.3s ease, letter-spacing 0.3s ease;
     }
     .nav-line {
@@ -369,28 +375,30 @@ import { Subscription } from 'rxjs';
       justify-self: start;
       align-self: center;
       overflow: visible;
+      margin-left: -40px;
     }
     .logo-link {
       text-decoration: none;
       display: flex;
       align-items: center;
     }
-    .logo-img {
-      width: 190px;
-      height: auto;
-      max-height: none;
-      display: block;
-      object-fit: contain;
-      transform: translateY(-4px);
-      transition: transform 0.25s ease, opacity 0.2s ease, width 0.25s ease;
+    .logo-wordmark {
+      font-family: var(--font-body, 'Lato', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #1e3a5f;
+      white-space: nowrap;
+      transition: transform 0.25s ease, opacity 0.2s ease;
     }
-    .scrolled .logo-img {
-      width: 170px;
-      transform: translateY(-2px);
+    .scrolled .logo-wordmark {
+      transform: translateY(-1px) scale(0.96);
+      opacity: 0.95;
     }
-    .logo-link:hover .logo-img {
-      opacity: 0.85;
-      transform: translateY(-1px);
+    .logo-link:hover .logo-wordmark {
+      opacity: 0.9;
+      transform: translateY(-1px) scale(1.02);
     }
 
     /* ==================== DIVIDER ==================== */
@@ -706,9 +714,9 @@ import { Subscription } from 'rxjs';
 
     /* ==================== RESPONSIVE ==================== */
     @media (max-width: 1024px) {
-      .h-container { padding: 0 24px 0 16px; }
-      .desktop-nav { gap: 24px; }
-      .nav-text { font-size: 11.5px; letter-spacing: 1.2px; }
+      .h-container { padding: 0 20px 0 12px; }
+      .desktop-nav { gap: 18px; }
+      .nav-text { font-size: 11px; letter-spacing: 1px; }
       .search-overlay { padding: 0 24px; }
       .search-overlay.open { padding: 12px 24px; }
     }
@@ -722,8 +730,7 @@ import { Subscription } from 'rxjs';
         height: 60px;
       }
       .scrolled .h-container { height: 54px; }
-      .logo-img { width: 170px; }
-      .scrolled .logo-img { width: 150px; }
+      .logo-left { margin-left: 0; }
       .nav-right { justify-self: end; gap: 4px; }
       .mobile-toggle { display: flex; }
       .search-overlay { padding: 0 16px; }
@@ -733,8 +740,11 @@ import { Subscription } from 'rxjs';
     @media (max-width: 480px) {
       .h-container { padding: 0 10px 0 8px; height: 56px; }
       .scrolled .h-container { height: 50px; }
-      .logo-img { width: 140px; }
-      .scrolled .logo-img { width: 120px; }
+      .logo-left { margin-left: 0; }
+      .logo-wordmark {
+        font-size: 1.1rem;
+        letter-spacing: 0.14em;
+      }
       .announce-inner { font-size: 11px; padding: 8px 12px; }
       .action-icon, .search-btn { width: 36px; height: 36px; }
       .action-icon svg, .search-btn svg { width: 17px; height: 17px; }

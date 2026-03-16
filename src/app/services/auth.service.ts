@@ -28,6 +28,10 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${environment.apiBaseUrl}/login`, credentials).pipe(
       tap(res => {
         if (res && (res as any).token) {
+          // Clear any previous session so this login is the single source of truth
+          // (allows admin to log in as customer with a different email without cached role/token)
+          this.clearAuth();
+          this.clearAdminAuth();
           this.setToken((res as any).token);
           if ((res as any).user) this.setUser((res as any).user);
         }

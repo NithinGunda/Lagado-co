@@ -304,19 +304,20 @@ import { AuthService } from '../../services/auth.service';
 
     .register-branding h2 {
       font-family: var(--font-heading);
-      font-size: 2.2rem;
+      font-size: 2.75rem;
       margin-bottom: var(--spacing-xs);
-      color: var(--text-white);
+      color: #FDF6EA;
       font-weight: 600;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
     }
 
     .register-branding p {
-      font-size: 1rem;
-      opacity: 0.95;
-      line-height: 1.6;
+      font-size: 1.2rem;
+      line-height: 1.65;
       margin-bottom: var(--spacing-md);
-      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      color: #FDF6EA;
+      opacity: 0.98;
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
     }
 
     .benefits-list {
@@ -329,13 +330,14 @@ import { AuthService } from '../../services/auth.service';
       align-items: center;
       gap: var(--spacing-sm);
       margin-bottom: var(--spacing-sm);
-      font-size: 0.95rem;
-      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      font-size: 1.1rem;
+      color: #FDF6EA;
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
     }
 
     .benefit-item svg {
       flex-shrink: 0;
-      color: rgba(168, 213, 186, 0.95);
+      color: rgba(253, 246, 234, 0.95);
     }
 
     .register-right {
@@ -788,13 +790,7 @@ export class RegisterComponent {
         },
         error: (err) => {
           this.isLoading = false;
-          const body = err?.error;
-          if (body?.errors && typeof body.errors === 'object') {
-            const first = Object.values(body.errors)[0];
-            this.apiError = Array.isArray(first) ? first[0] : String(first);
-          } else {
-            this.apiError = body?.message || err?.message || 'Registration failed. Please try again.';
-          }
+          this.apiError = this.extractApiError(err, 'Registration failed. Please try again.');
         }
       });
     } else {
@@ -802,5 +798,14 @@ export class RegisterComponent {
         this.registerForm.get(key)?.markAsTouched();
       });
     }
+  }
+
+  private extractApiError(err: any, fallback: string): string {
+    const body = err?.error;
+    if (body?.errors && typeof body.errors === 'object') {
+      const first = Object.values(body.errors)[0];
+      return Array.isArray(first) ? String(first[0]) : String(first);
+    }
+    return body?.message || body?.error || fallback;
   }
 }

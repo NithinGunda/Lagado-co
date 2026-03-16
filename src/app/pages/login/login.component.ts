@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
@@ -11,15 +11,13 @@ import { AuthService } from '../../services/auth.service';
     <div class="login-page">
       <div class="login-container">
         <div class="login-left">
-          <video class="bg-video" autoplay muted loop playsinline>
-            <source src="assets/login_video_1.mp4" type="video/mp4" />
+          <video #loginVideo class="bg-video" autoplay muted loop playsinline [attr.muted]="true">
+            <source src="assets/login_video.mp4" type="video/mp4" />
           </video>
           <div class="video-overlay"></div>
 
           <div class="login-branding">
-            <a routerLink="/" class="logo-link" aria-label="Legado & Co home">
-              <img src="assets/Logo.png" alt="Legado & Co" class="auth-logo-img" />
-            </a>
+            <h1 class="brand-title">Legado & Co</h1>
             <h2>Welcome Back</h2>
             <p>Sign in to continue your journey with timeless elegance</p>
           </div>
@@ -184,40 +182,31 @@ import { AuthService } from '../../services/auth.service';
       padding: var(--spacing-xl) var(--spacing-lg);
     }
 
-    .logo-link {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-md);
-      color: var(--text-white);
-      transition: var(--transition-normal);
-    }
-
-    .logo-link:hover {
-      transform: scale(1.05);
-    }
-
-    .auth-logo-img {
-      height: 70px;
-      width: auto;
-      display: block;
-      filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.5));
+    .brand-title {
+      font-family: 'Lato', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 600;
+      margin: 0 0 var(--spacing-sm) 0;
+      color: #FDF6EA;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      letter-spacing: 0.02em;
     }
 
     .login-branding h2 {
-      font-family: var(--font-heading);
+      font-family: 'Lato', sans-serif;
       font-size: 2.2rem;
       margin-bottom: var(--spacing-xs);
-      color: var(--text-white);
+      color: #FDF6EA;
       font-weight: 600;
       text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     }
 
     .login-branding p {
+      font-family: 'Lato', sans-serif;
       font-size: 1rem;
       opacity: 0.95;
       line-height: 1.6;
+      color: #FDF6EA;
       text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
     }
 
@@ -427,10 +416,7 @@ import { AuthService } from '../../services/auth.service';
         min-height: 320px;
       }
 
-      .auth-logo-img {
-        height: 60px;
-      }
-
+      .brand-title,
       .login-branding h2 {
         font-size: 1.8rem;
       }
@@ -457,10 +443,7 @@ import { AuthService } from '../../services/auth.service';
         padding: var(--spacing-md);
       }
 
-      .auth-logo-img {
-        height: 48px;
-      }
-
+      .brand-title,
       .login-branding h2 {
         font-size: 1.5rem;
       }
@@ -471,7 +454,8 @@ import { AuthService } from '../../services/auth.service';
     }
   `]
 })
-export class LoginComponent {
+export class LoginComponent implements AfterViewInit {
+  @ViewChild('loginVideo') loginVideoRef?: ElementRef<HTMLVideoElement>;
   loginForm: FormGroup;
   showPassword = false;
   isLoading = false;
@@ -487,6 +471,15 @@ export class LoginComponent {
       password: ['', [Validators.required, Validators.minLength(6)]],
       rememberMe: [false]
     });
+  }
+
+  ngAfterViewInit(): void {
+    const video = this.loginVideoRef?.nativeElement;
+    if (video) {
+      video.muted = true;
+      video.setAttribute('muted', '');
+      video.volume = 0;
+    }
   }
 
   togglePassword() {
@@ -524,8 +517,7 @@ export class LoginComponent {
         },
         error: (err) => {
           this.isLoading = false;
-          const body = err?.error;
-          this.apiError = body?.message || err?.message || 'Invalid email or password. Please try again.';
+          this.apiError = this.extractApiError(err, 'Invalid email or password. Please try again.');
         }
       });
     } else {
@@ -533,6 +525,15 @@ export class LoginComponent {
         this.loginForm.get(key)?.markAsTouched();
       });
     }
+  }
+
+  private extractApiError(err: any, fallback: string): string {
+    const body = err?.error;
+    if (body?.errors && typeof body.errors === 'object') {
+      const first = Object.values(body.errors)[0];
+      return Array.isArray(first) ? String(first[0]) : String(first);
+    }
+    return body?.message || body?.error || fallback;
   }
 
   // Continue with Google (commented out for now)

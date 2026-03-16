@@ -360,8 +360,7 @@ export class VerifyOtpComponent {
       },
       error: (err) => {
         this.isLoading = false;
-        const body = err?.error;
-        this.apiError = body?.message || err?.message || 'Verification failed. Please try again.';
+        this.apiError = this.extractApiError(err, 'Verification failed. Please try again.');
       },
     });
   }
@@ -377,10 +376,18 @@ export class VerifyOtpComponent {
       },
       error: (err) => {
         this.resendLoading = false;
-        const body = err?.error;
-        this.apiError = body?.message || err?.message || 'Failed to resend OTP.';
+        this.apiError = this.extractApiError(err, 'Failed to resend OTP.');
       },
     });
+  }
+
+  private extractApiError(err: any, fallback: string): string {
+    const body = err?.error;
+    if (body?.errors && typeof body.errors === 'object') {
+      const first = Object.values(body.errors)[0];
+      return Array.isArray(first) ? String(first[0]) : String(first);
+    }
+    return body?.message || body?.error || fallback;
   }
 }
 
