@@ -3,6 +3,7 @@ import { of, Subject } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { CategoryService } from '../../../services/category.service';
 import { Category } from '../../../models/category.model';
+import { environment } from '../../../../environments/environment';
 
 const MOCK_CATEGORIES: Category[] = [
   { id: 1, name: 'Men\'s', slug: 'mens' },
@@ -104,8 +105,8 @@ const MOCK_CATEGORIES: Category[] = [
             <td>{{ c.id }}</td>
             <td>
               <div class="thumb">
-                <img *ngIf="c.image_url" [src]="c.image_url" [alt]="c.name" class="table-image" />
-                <span *ngIf="!c.image_url" class="no-img">—</span>
+                <img *ngIf="getCategoryImageUrl(c)" [src]="getCategoryImageUrl(c)" [alt]="c.name" class="table-image" />
+                <span *ngIf="!getCategoryImageUrl(c)" class="no-img">—</span>
               </div>
             </td>
             <td><strong>{{ c.name }}</strong></td>
@@ -170,7 +171,7 @@ const MOCK_CATEGORIES: Category[] = [
             <input type="file" (change)="onFileChange($event)" accept="image/*" class="form-input" />
             <div *ngIf="imageError" class="image-error">{{ imageError }}</div>
             <img *ngIf="imagePreview" [src]="imagePreview" alt="Preview" class="image-preview" />
-            <img *ngIf="!imagePreview && editing.image_url" [src]="editing.image_url" alt="Current" class="image-preview" />
+            <img *ngIf="!imagePreview && getCategoryImageUrl(editing)" [src]="getCategoryImageUrl(editing)" alt="Current" class="image-preview" />
           </div>
           <div class="form-actions">
             <button type="button" class="btn btn-primary" (click)="save()" [disabled]="saving || !editing.name">Save</button>
@@ -318,6 +319,19 @@ export class AdminCategoriesComponent implements OnInit, OnDestroy {
 
   constructor(private api: CategoryService) {}
 
+  /** Resolve category image URL: API may return image_url (full or path) or image (path). */
+  getCategoryImageUrl(c: Partial<Category> | Category | null | undefined): string | null {
+    if (!c) return null;
+    const url = c.image_url || c.image;
+    if (!url || typeof url !== 'string') return null;
+    const s = url.trim();
+    if (!s) return null;
+    if (s.startsWith('http://') || s.startsWith('https://')) return s;
+    const base = environment.apiBaseUrl.replace(/\/api\/?$/, '');
+    if (s.startsWith('/')) return base + s;
+    return base + '/storage/' + s.replace(/^\//, '');
+  }
+
   getParentName(parentId?: number | string | null): string | undefined {
     if (parentId == null) return undefined;
     const parent = this.categories.find(c => c.id === parentId);
@@ -407,7 +421,7 @@ export class AdminCategoriesComponent implements OnInit, OnDestroy {
   edit(c: Category) {
     this.editing = { ...c };
     this.imageFile = null;
-    this.imagePreview = (c as any).image_url ? (c as any).image_url : null;
+    this.imagePreview = null;
     this.imageError = null;
   }
 
@@ -449,7 +463,7 @@ export class AdminCategoriesComponent implements OnInit, OnDestroy {
       if (this.editing.slug) fd.append('slug', this.editing.slug);
       fd.append('is_active', this.editing.is_active === false ? '0' : '1');
       if (this.editing.parent_id != null) fd.append('parent_id', String(this.editing.parent_id));
-      fd.append('image', this.imageFile!);
+      fd.append('image', this.imageFile!, this.imageFile!.name);
       const op = id ? this.api.update(id, fd) : this.api.create(fd);
       op.pipe(catchError(() => of(null))).subscribe({
         next: (res) => {

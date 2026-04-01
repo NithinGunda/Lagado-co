@@ -2,14 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, of, throwError } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { CartService } from '../../services/cart.service';
 import { CouponService } from '../../services/coupon.service';
 import { AuthService } from '../../services/auth.service';
 import { AddressService } from '../../services/address.service';
 import { CartApiService } from '../../services/cart-api.service';
-import { CartItem } from '../../models/product.model';
+import { CartItem, Product } from '../../models/product.model';
 
 @Component({
   selector: 'app-checkout',
@@ -774,6 +774,7 @@ export class CheckoutComponent implements OnInit {
       },
       error: (err) => {
         this.isProcessing = false;
+        if (err?.message === 'cart_missing_size' && this.checkoutError) return;
         const body = err?.error || {};
         const msg = body.error ?? body.message ?? 'Checkout failed. Try again.';
         this.checkoutError = typeof msg === 'string' ? msg : 'Checkout failed. Try again.';
@@ -795,15 +796,55 @@ export class CheckoutComponent implements OnInit {
       }),
       switchMap(() => {
         if (localItems.length === 0) return of(null);
-        const adds = localItems.map((item: CartItem) =>
-          this.cartApi.add({
+        const missing = localItems.filter(
+          (item: CartItem) => this.productNeedsCartApiSize(item.product) && !this.resolveLineSize(item)
+        );
+        if (missing.length > 0) {
+          this.checkoutError =
+            'Some items need a size for checkout. Remove them from your cart and re-add with a size selected.';
+          return throwError(() => new Error('cart_missing_size'));
+        }
+        const adds = localItems.map((item: CartItem) => {
+          const size = this.resolveLineSize(item);
+          const body: Record<string, unknown> = {
             product_id: Number(item.product.id),
             quantity: item.quantity,
-          })
-        );
+          };
+          if (size) {
+            body['size'] = size;
+            body['selected_size'] = size;
+          }
+          return this.cartApi.add(body);
+        });
         return forkJoin(adds);
       })
     );
+  }
+
+  /** Backend requires size when product uses per-size stock. */
+  private productNeedsCartApiSize(product: Product): boolean {
+    const sbs = (product as any).stock_by_size;
+    if (sbs && typeof sbs === 'object' && Object.keys(sbs).length > 0) return true;
+    const opts = this.sizesFromProductAttributes(product);
+    return opts.length > 0;
+  }
+
+  private sizesFromProductAttributes(product: Product): string[] {
+    const sizeAttr = product.attributes?.find((a) => a.name?.toLowerCase() === 'size');
+    if (!sizeAttr?.value) return [];
+    return sizeAttr.value
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  /** Effective size for API: cart selection, or single-size auto-fill. */
+  private resolveLineSize(item: CartItem): string | undefined {
+    const fromCart = item.selectedSize?.trim();
+    if (fromCart) return fromCart;
+    const opts = this.sizesFromProductAttributes(item.product);
+    if (opts.length === 1) return opts[0];
+    return undefined;
   }
 
   getItemTotal(item: CartItem): number {

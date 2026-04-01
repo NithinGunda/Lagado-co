@@ -1,4 +1,5 @@
 export const environment = {
   production: false,
-  apiBaseUrl: 'https://legadoandco.com/api_backend/api'
+  apiBaseUrl: 'http://localhost/api_backend/api',
+  inactivityTimeoutMinutes: 60
 };

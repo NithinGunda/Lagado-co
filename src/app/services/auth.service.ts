@@ -1,16 +1,25 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { tap, catchError, map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { AuthResponse, User } from '../models/user.model';
 
+const INACTIVITY_CHECK_MS = 60 * 1000;
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private tokenKey = 'legado_auth_token';
   private userKey = 'legado_auth_user';
+  private adminTokenKey = 'legado_admin_token';
+  private adminUserKey = 'legado_admin_user';
+  private lastActivityKey = 'legado_last_activity';
+  private inactivityCheckInterval: ReturnType<typeof setInterval> | null = null;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private router: Router) {
+    this.startInactivityTimer();
+  }
 
   register(payload: any): Observable<any> {
     return this.http.post(`${environment.apiBaseUrl}/register`, payload).pipe(
@@ -41,10 +50,11 @@ export class AuthService {
   }
 
   logout(): Observable<any> {
-    const headers = new HttpHeaders({ Authorization: `Bearer ${this.getToken()}` });
+    const token = this.getToken() || this.getAdminToken();
+    const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : new HttpHeaders();
     return this.http.post(`${environment.apiBaseUrl}/logout`, {}, { headers }).pipe(
-      tap(() => this.clearAuth()),
-      catchError(err => { this.clearAuth(); throw err; })
+      tap(() => { this.clearAuth(); this.clearAdminAuth(); }),
+      catchError(err => { this.clearAuth(); this.clearAdminAuth(); throw err; })
     );
   }
 
@@ -89,15 +99,77 @@ export class AuthService {
     localStorage.removeItem(this.userKey);
   }
 
+  /** Customer logged in (main site). Admin login does NOT count. */
   isLoggedIn(): boolean {
-    return !!this.getToken() || localStorage.getItem('admin_auth') === 'true';
+    return !!this.getToken();
   }
 
+  setAdminToken(token: string) {
+    localStorage.setItem(this.adminTokenKey, token);
+  }
+
+  getAdminToken(): string | null {
+    return localStorage.getItem(this.adminTokenKey);
+  }
+
+  setAdminUser(user: User) {
+    try {
+      localStorage.setItem(this.adminUserKey, JSON.stringify(user));
+    } catch (e) {}
+  }
+
+  getAdminUser(): User | null {
+    const raw = localStorage.getItem(this.adminUserKey);
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  }
+
+  /** Admin logged in (admin panel). Separate from customer session. */
   isAdminAuth(): boolean {
-    return localStorage.getItem('admin_auth') === 'true';
+    return !!this.getAdminToken();
   }
 
   clearAdminAuth() {
     localStorage.removeItem('admin_auth');
+    localStorage.removeItem(this.adminTokenKey);
+    localStorage.removeItem(this.adminUserKey);
+  }
+
+  /** Call on user activity (click, key, navigation) or API requests to reset inactivity. */
+  recordActivity() {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(this.lastActivityKey, String(Date.now()));
+    }
+  }
+
+  private startInactivityTimer() {
+    this.recordActivity();
+    if (typeof document !== 'undefined') {
+      const bound = () => this.recordActivity();
+      document.addEventListener('click', bound);
+      document.addEventListener('keydown', bound);
+      document.addEventListener('mousemove', bound);
+    }
+    if (typeof setInterval !== 'undefined') {
+      this.inactivityCheckInterval = setInterval(() => this.checkInactivity(), INACTIVITY_CHECK_MS);
+    }
+  }
+
+  private checkInactivity() {
+    if (typeof localStorage === 'undefined') return;
+    const raw = localStorage.getItem(this.lastActivityKey);
+    if (!raw) return;
+    const minutes = environment.inactivityTimeoutMinutes ?? 30;
+    const elapsed = Date.now() - parseInt(raw, 10);
+    if (elapsed >= minutes * 60 * 1000) {
+      const url = typeof this.router?.url === 'string' ? this.router.url : '';
+      if (url.startsWith('/admin') && this.getAdminToken()) {
+        this.clearAdminAuth();
+        this.router.navigate(['/admin/login'], { queryParams: { timeout: '1' } });
+      } else if (this.getToken()) {
+        this.clearAuth();
+        this.router.navigate(['/']);
+      }
+    }
   }
 }

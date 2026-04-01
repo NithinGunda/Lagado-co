@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ProductApiService } from '../../services/product-api.service';
 import { CartService } from '../../services/cart.service';
+import { WishlistService } from '../../services/wishlist.service';
 import { AppLoadingService } from '../../services/app-loading.service';
 import { Product, stockBySizeFromArray } from '../../models/product.model';
 
@@ -163,6 +164,16 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
                 <button class="btn-buy-now" (click)="payWithCashOnDelivery()" [disabled]="isOutOfStock() || !canAddToCart()">
                   Buy Now
                 </button>
+                <button 
+                  class="btn-wishlist"
+                  (click)="toggleWishlist()"
+                  [class.added]="isInWishlist()"
+                  type="button"
+                  aria-label="Wishlist"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  {{ isInWishlist() ? 'In Wishlist' : 'Add to Wishlist' }}
+                </button>
               </div>
             </div>
 
@@ -312,11 +323,14 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
       gap: var(--spacing-sm);
       position: sticky;
       top: 100px;
+      min-width: 0;
+      width: 100%;
     }
 
     .main-image {
       width: 100%;
       aspect-ratio: 1;
+      min-height: 0;
       overflow: hidden;
       background: var(--secondary-color);
       position: relative;
@@ -326,7 +340,10 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
     .image-actual {
       width: 100%;
       height: 100%;
+      min-width: 0;
+      min-height: 0;
       object-fit: cover;
+      object-position: center;
       display: block;
       transition: transform 0.5s ease;
     }
@@ -337,6 +354,8 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
     .image-placeholder {
       width: 100%;
       height: 100%;
+      min-width: 0;
+      min-height: 0;
       transition: transform 0.5s ease;
     }
 
@@ -359,12 +378,16 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
 
     .thumbnail-images {
       display: flex;
+      flex-wrap: wrap;
       gap: 10px;
     }
 
     .thumbnail {
       width: 72px;
       height: 72px;
+      min-width: 72px;
+      min-height: 72px;
+      flex-shrink: 0;
       overflow: hidden;
       cursor: pointer;
       border: 2px solid var(--border-color);
@@ -388,6 +411,7 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
       width: 100%;
       height: 100%;
       object-fit: cover;
+      object-position: center;
       display: block;
     }
     .thumbnail-placeholder {
@@ -753,7 +777,8 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
 
     .action-buttons {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      /* Single column: product-info is ~½ container width — 3 columns force label wrap */
+      grid-template-columns: 1fr;
       gap: 12px;
     }
 
@@ -765,6 +790,7 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
       gap: 10px;
       font-size: 15px;
       font-weight: 600;
+      white-space: nowrap;
       background: var(--btn-primary);
       color: var(--text-white);
       border: 2px solid var(--btn-primary);
@@ -796,6 +822,10 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
 
     .btn-buy-now {
       padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
       font-size: 15px;
       font-weight: 600;
       background: transparent;
@@ -806,6 +836,7 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
       font-family: var(--font-body);
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      white-space: nowrap;
     }
 
     .btn-buy-now:hover:not(:disabled) {
@@ -820,6 +851,31 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
     .btn-buy-now:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+
+    .btn-wishlist {
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      background: transparent;
+      color: #dc2626;
+      border: 2px solid #dc2626;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+    .btn-wishlist:hover {
+      background: #dc2626;
+      color: #fff;
+    }
+    .btn-wishlist.added {
+      background: #dc2626;
+      border-color: #dc2626;
+      color: #fff;
     }
 
     .buynow-modal-backdrop {
@@ -947,11 +1003,15 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 20px;
+      align-items: start;
     }
 
     .related-card {
+      display: flex;
+      flex-direction: column;
       cursor: pointer;
       transition: all 0.3s ease;
+      min-width: 0;
     }
 
     .related-card:hover {
@@ -961,6 +1021,8 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
     .related-image {
       width: 100%;
       aspect-ratio: 1;
+      min-height: 0;
+      flex-shrink: 0;
       overflow: hidden;
       margin-bottom: 12px;
       position: relative;
@@ -970,6 +1032,7 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
       width: 100%;
       height: 100%;
       object-fit: cover;
+      object-position: center;
       display: block;
       transition: transform 0.4s ease;
     }
@@ -1014,6 +1077,7 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
 
     .related-info {
       padding: 0 4px;
+      min-width: 0;
     }
 
     .related-card h4 {
@@ -1059,24 +1123,29 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
         grid-template-columns: 1fr;
         gap: var(--spacing-lg);
       }
-      .product-images { position: static; }
+      .product-images { position: static; max-width: 100%; }
+      .main-image { max-width: 100%; }
       .related-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
     @media (max-width: 768px) {
-      .product-images { touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+      .product-images { touch-action: pan-y; -webkit-user-select: none; user-select: none; max-width: 100%; }
+      .main-image { max-width: 100%; }
     }
     @media (max-width: 640px) {
-      .action-buttons { grid-template-columns: 1fr; }
+      .btn-wishlist { padding: 14px 16px; font-size: 13px; }
       .trust-badges { flex-direction: column; gap: 12px; }
       .quantity-row { flex-direction: column; align-items: flex-start; }
       .related-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .thumbnail { width: 56px; height: 56px; min-width: 56px; min-height: 56px; }
     }
 
     @media (max-width: 480px) {
       .product-title { font-size: 1.3rem; }
       .current-price { font-size: 1.4rem; }
       .btn-add-to-cart, .btn-buy-now { padding: 14px 16px; font-size: 13px; }
+      .product-images { max-width: 100%; }
+      .main-image { max-width: 100%; }
     }
   `]
 })
@@ -1104,6 +1173,7 @@ export class ProductDetailsComponent implements OnInit, OnDestroy {
     private router: Router,
     private productApi: ProductApiService,
     private cartService: CartService,
+    private wishlistService: WishlistService,
     private appLoading: AppLoadingService
   ) {}
 
@@ -1368,6 +1438,33 @@ export class ProductDetailsComponent implements OnInit, OnDestroy {
     this.showAddedFeedback = true;
     this.showToastMessage(`${this.product.name} added to cart!`);
     setTimeout(() => this.showAddedFeedback = false, 1800);
+  }
+
+  isInWishlist(): boolean {
+    if (!this.product) return false;
+    if (this.hasSizeAttribute()) {
+      if (!this.selectedSize) return false;
+      return this.wishlistService.hasLine({ ...this.product, wishlistSize: this.selectedSize });
+    }
+    return this.wishlistService.hasLine({ ...this.product, wishlistSize: undefined });
+  }
+
+  toggleWishlist() {
+    if (!this.product) return;
+    if (this.hasSizeAttribute() && !this.selectedSize) {
+      this.showToastMessage('Please select a size to add to wishlist');
+      return;
+    }
+    const line: Product = {
+      ...this.product,
+      wishlistSize: this.hasSizeAttribute() && this.selectedSize ? this.selectedSize : undefined,
+    };
+    const added = this.wishlistService.toggle(line);
+    this.showToastMessage(
+      added
+        ? (line.wishlistSize ? `Added to wishlist (Size ${line.wishlistSize})` : 'Added to wishlist')
+        : 'Removed from wishlist'
+    );
   }
 
   payWithCashOnDelivery() {

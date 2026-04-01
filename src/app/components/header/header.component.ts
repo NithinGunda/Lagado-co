@@ -1,9 +1,11 @@
-import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 
 import { CartService } from '../../services/cart.service';
+import { WishlistService } from '../../services/wishlist.service';
 import { AuthService } from '../../services/auth.service';
 import { CategoryService } from '../../services/category.service';
 import { Category } from '../../models/category.model';
@@ -12,7 +14,7 @@ import { Subscription } from 'rxjs';
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule],
   template: `
     <div class="header-wrap" [class.scrolled]="isScrolled" [class.hide-bar]="isScrolled">
       <!-- Announcement Bar -->
@@ -96,6 +98,10 @@ import { Subscription } from 'rxjs';
               <a *ngIf="!isLoggedIn" routerLink="/login" class="action-icon" aria-label="Login">
                 <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </a>
+              <a routerLink="/wishlist" class="action-icon wishlist-icon" aria-label="Wishlist">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                <span class="wishlist-badge" *ngIf="wishlistCount > 0">{{ wishlistCount }}</span>
+              </a>
               <a routerLink="/cart" class="action-icon cart-icon" aria-label="Cart">
                 <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
                 <span class="cart-badge" *ngIf="cartCount > 0">{{ cartCount }}</span>
@@ -113,8 +119,20 @@ import { Subscription } from 'rxjs';
       <!-- Search Overlay -->
       <div class="search-overlay" [class.open]="searchOpen">
         <div class="search-inner">
-          <input #searchInput type="text" placeholder="Search collections, products..." class="search-input" (keyup.escape)="closeSearch()" />
-          <button class="search-close" (click)="closeSearch()" aria-label="Close search">
+          <form class="search-form" (ngSubmit)="submitSearch()">
+            <input
+              #searchInput
+              type="search"
+              name="hq"
+              [(ngModel)]="searchDraft"
+              autocomplete="off"
+              placeholder="Search collections, products..."
+              class="search-input"
+              (keyup.escape)="closeSearch()"
+            />
+            <button type="submit" class="search-submit" aria-label="Search">Search</button>
+          </form>
+          <button type="button" class="search-close" (click)="closeSearch()" aria-label="Close search">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
@@ -158,6 +176,10 @@ import { Subscription } from 'rxjs';
           <a routerLink="/blog" routerLinkActive="active" (click)="closeMobileMenu()">Journal</a>
         </div>
         <div class="mobile-footer">
+          <a routerLink="/wishlist" (click)="closeMobileMenu()" class="mob-action mob-action-wishlist">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            Wishlist <span class="mob-wishlist-count" *ngIf="wishlistCount > 0">({{ wishlistCount }})</span>
+          </a>
           <a *ngIf="isLoggedIn" routerLink="/profile" (click)="closeMobileMenu()" class="mob-action">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             My Account
@@ -414,6 +436,7 @@ import { Subscription } from 'rxjs';
       display: flex;
       align-items: center;
       gap: 2px;
+      flex-shrink: 0;
     }
     .action-icon, .search-btn {
       display: flex;
@@ -421,12 +444,15 @@ import { Subscription } from 'rxjs';
       justify-content: center;
       width: 40px;
       height: 40px;
+      min-width: 40px;
+      min-height: 40px;
       background: transparent;
       border: none;
       color: var(--text-dark, #2c3e50);
       cursor: pointer;
       position: relative;
       transition: color 0.25s ease, background 0.25s ease;
+      flex-shrink: 0;
     }
     .action-icon:hover, .search-btn:hover {
       color: var(--primary-color, #3C5A99);
@@ -439,8 +465,10 @@ import { Subscription } from 'rxjs';
       transform: scale(1.08);
     }
 
-    .cart-icon { position: relative; }
-    .cart-badge {
+    .cart-icon, .wishlist-icon { position: relative; }
+    .wishlist-icon { color: #dc2626; }
+    .wishlist-icon:hover { color: #b91c1c; }
+    .cart-badge, .wishlist-badge {
       position: absolute;
       top: 4px;
       right: 3px;
@@ -508,18 +536,26 @@ import { Subscription } from 'rxjs';
       transition: max-height 0.35s ease, padding 0.35s ease;
     }
     .search-overlay.open {
-      max-height: 80px;
+      max-height: 120px;
       padding: 16px 40px;
     }
     .search-inner {
-      max-width: 600px;
+      max-width: 720px;
       margin: 0 auto;
       display: flex;
       align-items: center;
       gap: 12px;
     }
+    .search-form {
+      flex: 1;
+      display: flex;
+      align-items: stretch;
+      gap: 10px;
+      min-width: 0;
+    }
     .search-input {
       flex: 1;
+      min-width: 0;
       padding: 10px 16px;
       border: 1px solid var(--border-color, #e4e8ec);
       background: #fff;
@@ -535,6 +571,23 @@ import { Subscription } from 'rxjs';
     .search-input::placeholder {
       color: var(--text-muted, #8896a7);
     }
+    .search-submit {
+      flex-shrink: 0;
+      padding: 10px 18px;
+      background: var(--primary-color, #1e3a5f);
+      color: #fff;
+      border: none;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+    .search-submit:hover { opacity: 0.92; }
+    .search-submit:active { transform: scale(0.98); }
     .search-close {
       display: flex;
       align-items: center;
@@ -711,6 +764,9 @@ import { Subscription } from 'rxjs';
       transition: color 0.2s;
     }
     .mob-action:hover { color: var(--primary-color); }
+    .mob-action-wishlist { color: #dc2626; }
+    .mob-action-wishlist:hover { color: #b91c1c; }
+    .mob-wishlist-count { font-weight: 700; opacity: 0.9; }
 
     /* ==================== RESPONSIVE ==================== */
     @media (max-width: 1024px) {
@@ -731,10 +787,13 @@ import { Subscription } from 'rxjs';
       }
       .scrolled .h-container { height: 54px; }
       .logo-left { margin-left: 0; }
-      .nav-right { justify-self: end; gap: 4px; }
+      .nav-right { justify-self: end; gap: 2px; min-width: 0; }
+      .header-actions { gap: 0; }
       .mobile-toggle { display: flex; }
       .search-overlay { padding: 0 16px; }
-      .search-overlay.open { padding: 12px 16px; }
+      .search-overlay.open { padding: 12px 16px; max-height: 200px; }
+      .search-form { flex-wrap: wrap; }
+      .search-submit { width: 100%; }
     }
 
     @media (max-width: 480px) {
@@ -746,24 +805,33 @@ import { Subscription } from 'rxjs';
         letter-spacing: 0.14em;
       }
       .announce-inner { font-size: 11px; padding: 8px 12px; }
-      .action-icon, .search-btn { width: 36px; height: 36px; }
+      .action-icon, .search-btn {
+        width: 36px; height: 36px;
+        min-width: 36px; min-height: 36px;
+      }
       .action-icon svg, .search-btn svg { width: 17px; height: 17px; }
     }
   `]
 })
 export class HeaderComponent implements OnInit, OnDestroy {
   cartCount = 0;
+  wishlistCount = 0;
   isLoggedIn = false;
   mobileMenuOpen = false;
   isScrolled = false;
   searchOpen = false;
+  /** Header search overlay draft (submitted → /collections?q=…) */
+  searchDraft = '';
+  @ViewChild('searchInput') private searchInputRef?: ElementRef<HTMLInputElement>;
   private cartSubscription?: Subscription;
+  private wishlistSubscription?: Subscription;
   private routerSubscription?: Subscription;
 
   headerCategories: (Category & { children?: Category[] })[] = [];
 
   constructor(
     private cartService: CartService,
+    private wishlistService: WishlistService,
     private authService: AuthService,
     private categoryService: CategoryService,
     private router: Router
@@ -778,6 +846,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
       this.cartCount = this.cartService.getCartCount();
     });
     this.cartCount = this.cartService.getCartCount();
+    this.wishlistSubscription = this.wishlistService.wishlist$.subscribe(() => {
+      this.wishlistCount = this.wishlistService.getCount();
+    });
+    this.wishlistCount = this.wishlistService.getCount();
     this.updateLoginState();
     this.loadCategories();
     // Set initial scroll state (e.g. if page loads already scrolled)
@@ -790,6 +862,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.cartSubscription?.unsubscribe();
+    this.wishlistSubscription?.unsubscribe();
     this.routerSubscription?.unsubscribe();
   }
 
@@ -817,10 +890,25 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   toggleSearch() {
     this.searchOpen = !this.searchOpen;
+    if (this.searchOpen) {
+      setTimeout(() => this.searchInputRef?.nativeElement?.focus(), 80);
+    }
   }
 
   closeSearch() {
     this.searchOpen = false;
+  }
+
+  /** Go to Collections with search query (API uses search param from listing). */
+  submitSearch() {
+    const q = (this.searchDraft || '').trim();
+    this.closeSearch();
+    this.searchDraft = '';
+    if (q) {
+      this.router.navigate(['/collections'], { queryParams: { q } });
+    } else {
+      this.router.navigate(['/collections']);
+    }
   }
 
   private loadCategories() {

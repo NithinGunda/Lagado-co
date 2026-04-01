@@ -12,10 +12,34 @@ import { AuthService } from '../../services/auth.service';
     <div class="otp-page">
       <div class="otp-container">
         <div class="otp-left">
-          <video class="bg-video" autoplay muted loop playsinline>
+          <video
+            class="bg-video"
+            autoplay
+            [muted]="videoMuted"
+            loop
+            playsinline
+          >
             <source src="assets/login_video.mp4" type="video/mp4" />
           </video>
           <div class="video-overlay"></div>
+
+          <button
+            type="button"
+            class="video-sound-toggle"
+            (click)="toggleVideoMute()"
+            [attr.aria-label]="videoMuted ? 'Unmute background video' : 'Mute background video'"
+            [attr.title]="videoMuted ? 'Unmute' : 'Mute'"
+          >
+            <svg *ngIf="videoMuted" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <line x1="23" y1="9" x2="17" y2="15"/>
+              <line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+            <svg *ngIf="!videoMuted" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+          </button>
 
           <div class="otp-branding">
             <a routerLink="/" class="logo-link" aria-label="Legado & Co home">
@@ -126,6 +150,34 @@ import { AuthService } from '../../services/auth.service';
         rgba(21, 42, 71, 0.75) 100%
       );
       z-index: 1;
+    }
+
+    .video-sound-toggle {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 3;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      background: rgba(0, 0, 0, 0.45);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, border-color 0.2s, transform 0.2s;
+      backdrop-filter: blur(8px);
+    }
+    .video-sound-toggle:hover {
+      background: rgba(0, 0, 0, 0.65);
+      border-color: rgba(255, 255, 255, 0.85);
+      transform: scale(1.05);
+    }
+    .video-sound-toggle:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: 2px;
     }
 
     .otp-branding {
@@ -315,6 +367,13 @@ import { AuthService } from '../../services/auth.service';
       .otp-right {
         padding: var(--spacing-md);
       }
+
+      .video-sound-toggle {
+        bottom: 14px;
+        left: 14px;
+        width: 42px;
+        height: 42px;
+      }
     }
   `]
 })
@@ -324,6 +383,8 @@ export class VerifyOtpComponent {
   isLoading = false;
   resendLoading = false;
   apiError = '';
+  /** Muted by default so autoplay works; user can unmute via control */
+  videoMuted = true;
 
   constructor(
     private fb: FormBuilder,
@@ -335,6 +396,10 @@ export class VerifyOtpComponent {
     this.form = this.fb.group({
       otp: ['', [Validators.required, Validators.minLength(4)]],
     });
+  }
+
+  toggleVideoMute(): void {
+    this.videoMuted = !this.videoMuted;
   }
 
   isFieldInvalid(fieldName: string): boolean {

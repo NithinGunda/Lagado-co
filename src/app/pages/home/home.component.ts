@@ -88,12 +88,12 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
             <span class="sec-line"></span>
           </div>
           <p class="sec-sub">Hand-picked pieces that define the season. Premium quality, timeless design.</p>
-          <div class="featured-carousel-wrapper" (touchstart)="onFeaturedTouchStart($event)" (touchend)="onFeaturedTouchEnd($event)">
+          <div class="featured-carousel-wrapper" (touchstart)="onFeaturedTouchStart($event)" (touchend)="onFeaturedTouchEnd($event)" #featuredCarouselWrapper>
             <button class="nav-btn nav-prev" (click)="prevFeatured()" [disabled]="featuredOffset === 0" aria-label="Previous">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
-            <div class="featured-track-container">
-              <div class="featured-track" [style.transform]="'translateX(-' + featuredOffset * featuredCardWidth + 'px)'">
+            <div class="featured-track-container" #featuredTrackContainer>
+              <div class="featured-track" [style.transform]="'translateX(-' + featuredOffset * featuredCardWidth + 'px)'" [style.--featured-card-width.px]="getFeaturedCardWidthPx()">
                 <div class="f-card" *ngFor="let product of featuredProducts" [routerLink]="['/product', product.id]">
                   <div class="f-card-img">
                     <img [src]="getProductImage(product)" [alt]="product.name" loading="lazy" />
@@ -526,7 +526,9 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
     }
     .featured-track { display: flex; gap: 16px; transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); touch-action: pan-y; }
     .f-card {
-      min-width: calc(25% - 12px); flex-shrink: 0;
+      width: var(--featured-card-width, 260px);
+      min-width: var(--featured-card-width, 260px);
+      flex-shrink: 0;
       background: #fff; border: 1px solid var(--border-color);
       overflow: hidden; cursor: pointer; position: relative;
       transition: all 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -537,10 +539,10 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       border-color: transparent;
     }
     .f-card-img {
-      position: relative; width: 100%; height: 240px; overflow: hidden;
+      position: relative; width: 100%; aspect-ratio: 1; min-height: 0; overflow: hidden;
     }
     .f-card-img img {
-      width: 100%; height: 100%; object-fit: cover; display: block;
+      width: 100%; height: 100%; object-fit: cover; object-position: center; display: block;
       transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
       position: relative; z-index: 1;
     }
@@ -1034,7 +1036,6 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
 
     /* ===== RESPONSIVE ===== */
     @media (max-width: 1200px) {
-      .f-card { min-width: calc(33.333% - 12px); }
       .sale-grid { grid-template-columns: repeat(3, 1fr); }
     }
 
@@ -1047,7 +1048,6 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       .hero-nav-right { right: 12px; }
       .orb-1 { width: 200px; height: 200px; }
       .orb-2 { width: 150px; height: 150px; }
-      .f-card { min-width: calc(50% - 8px); }
       .sale-grid { grid-template-columns: repeat(2, 1fr); }
       .cat-grid { grid-template-columns: 1fr; }
       .cat-grid.collage {
@@ -1082,7 +1082,6 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       }
       .featured-carousel-wrapper .nav-btn,
       .look-carousel .nav-btn { opacity: 1; pointer-events: auto; }
-      .f-card { min-width: calc(80% - 8px); }
       .cat-scroll-wrap {
         overflow-x: auto;
         overflow-y: hidden;
@@ -1093,25 +1092,56 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
         margin-right: calc(-1 * var(--spacing-md));
         padding-left: var(--spacing-md);
         padding-right: var(--spacing-md);
+        /* One full-width slide per view (same idea as featured products carousel) */
+        container-type: inline-size;
+        container-name: cat-carousel;
       }
       .cat-scroll-wrap::-webkit-scrollbar { display: none; }
       .cat-grid {
         display: flex;
         flex-wrap: nowrap;
         grid-template-columns: unset;
-        gap: 16px;
+        gap: 0;
         width: max-content;
         margin: 0;
       }
       .cat-grid.collage .cat-card:first-child { grid-column: unset; }
       .cat-card {
         height: 240px;
-        min-width: 280px;
-        max-width: 280px;
         flex-shrink: 0;
         scroll-snap-align: start;
+        scroll-snap-stop: always;
+        box-sizing: border-box;
+        /* Exactly one card visible — no peek of next (100% of scroll container width) */
+        flex: 0 0 100cqi;
+        width: 100cqi;
+        min-width: 100cqi;
+        max-width: 100cqi;
       }
-      .cat-grid.collage .cat-card { min-height: 200px; min-width: 260px; max-width: 260px; }
+      /* Fallback when container queries are not supported */
+      @supports not (width: 1cqi) {
+        .cat-card {
+          flex: 0 0 calc(100vw - 2 * var(--spacing-md));
+          width: calc(100vw - 2 * var(--spacing-md));
+          min-width: calc(100vw - 2 * var(--spacing-md));
+          max-width: calc(100vw - 2 * var(--spacing-md));
+        }
+      }
+      .cat-grid.collage .cat-card {
+        min-height: 200px;
+        flex: 0 0 100cqi;
+        width: 100cqi;
+        min-width: 100cqi;
+        max-width: 100cqi;
+      }
+      @supports not (width: 1cqi) {
+        .cat-grid.collage .cat-card {
+          flex: 0 0 calc(100vw - 2 * var(--spacing-md));
+          width: calc(100vw - 2 * var(--spacing-md));
+          min-width: calc(100vw - 2 * var(--spacing-md));
+          max-width: calc(100vw - 2 * var(--spacing-md));
+        }
+      }
       .sale-scroll-wrap {
         overflow-x: auto;
         overflow-y: hidden;
@@ -1157,8 +1187,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       .hero-progress-track { width: 32px; }
       .hero-shapes { display: none; }
       .hero-scroll-indicator { display: none; }
-      .cat-card { min-width: 240px; max-width: 240px; }
-      .cat-grid.collage .cat-card { min-width: 220px; max-width: 220px; }
+      /* Keep one full-width category slide (inherit 768px rules; do not shrink card width) */
       .s-card { min-width: 220px; max-width: 220px; }
       .trust-grid { grid-template-columns: 1fr; }
       .social-grid { grid-template-columns: 1fr 1fr; }
@@ -1171,6 +1200,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
 })
 export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('heroSection') heroSection!: ElementRef;
+  @ViewChild('featuredTrackContainer') featuredTrackContainer!: ElementRef;
 
   heroAnimReady = false;
   private heroMouseX = 0.5;
@@ -1286,6 +1316,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngAfterViewInit() {
     setTimeout(() => this.heroAnimReady = true, 200);
+    setTimeout(() => this.calcFeaturedLayout(), 100);
   }
 
   ngOnDestroy() {
@@ -1310,6 +1341,12 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private onResize = () => this.calcFeaturedLayout();
 
+  getFeaturedCardWidthPx(): number {
+    const gap = 16;
+    const w = this.featuredCardWidth - gap;
+    return w > 0 ? w : 260;
+  }
+
   calcFeaturedLayout() {
     if (typeof window === 'undefined') return;
     const w = window.innerWidth;
@@ -1318,7 +1355,14 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     else if (w <= 1200) { this.featuredVisible = 3; }
     else { this.featuredVisible = 4; }
     const gap = 16;
-    const containerW = Math.min(1400, w - 140);
+    let containerW: number;
+    const el = this.featuredTrackContainer?.nativeElement;
+    if (el && typeof el.getBoundingClientRect === 'function') {
+      containerW = el.clientWidth || Math.min(1400, w - 48);
+    } else {
+      containerW = Math.min(1400, w - 48);
+    }
+    if (containerW <= 0) containerW = Math.min(1400, w - 48);
     this.featuredCardWidth = (containerW + gap) / this.featuredVisible;
     if (this.featuredOffset > this.featuredProducts.length - this.featuredVisible) {
       this.featuredOffset = Math.max(0, this.featuredProducts.length - this.featuredVisible);
@@ -1454,11 +1498,13 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
           this.featuredProducts = [];
         }
         this.calcFeaturedLayout();
+        setTimeout(() => this.calcFeaturedLayout(), 80);
         this.markHomeLoadDone();
       },
       error: () => {
         this.featuredProducts = [];
         this.calcFeaturedLayout();
+        setTimeout(() => this.calcFeaturedLayout(), 80);
         this.markHomeLoadDone();
       }
     });

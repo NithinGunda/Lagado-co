@@ -12,10 +12,34 @@ import { AuthService } from '../../services/auth.service';
     <div class="register-page">
       <div class="register-container">
         <div class="register-left">
-          <video class="bg-video" autoplay muted loop playsinline>
+          <video
+            class="bg-video"
+            autoplay
+            [muted]="videoMuted"
+            loop
+            playsinline
+          >
             <source src="assets/login_video.mp4" type="video/mp4" />
           </video>
           <div class="video-overlay"></div>
+
+          <button
+            type="button"
+            class="video-sound-toggle"
+            (click)="toggleVideoMute()"
+            [attr.aria-label]="videoMuted ? 'Unmute background video' : 'Mute background video'"
+            [attr.title]="videoMuted ? 'Unmute' : 'Mute'"
+          >
+            <svg *ngIf="videoMuted" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <line x1="23" y1="9" x2="17" y2="15"/>
+              <line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+            <svg *ngIf="!videoMuted" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+          </button>
 
           <div class="register-branding">
             <a routerLink="/" class="logo-link" aria-label="Legado & Co home">
@@ -220,10 +244,13 @@ import { AuthService } from '../../services/auth.service';
     .register-page {
       min-height: calc(100vh - 200px);
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
       background: var(--secondary-color);
       padding: var(--spacing-lg) var(--spacing-sm);
+      padding-top: max(var(--spacing-lg), 24px);
+      padding-bottom: var(--spacing-xl);
+      box-sizing: border-box;
     }
 
     .register-container {
@@ -271,6 +298,34 @@ import { AuthService } from '../../services/auth.service';
         rgba(21, 42, 71, 0.75) 100%
       );
       z-index: 1;
+    }
+
+    .video-sound-toggle {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 3;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      background: rgba(0, 0, 0, 0.45);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, border-color 0.2s, transform 0.2s;
+      backdrop-filter: blur(8px);
+    }
+    .video-sound-toggle:hover {
+      background: rgba(0, 0, 0, 0.65);
+      border-color: rgba(255, 255, 255, 0.85);
+      transform: scale(1.05);
+    }
+    .video-sound-toggle:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: 2px;
     }
 
     .register-branding {
@@ -342,29 +397,44 @@ import { AuthService } from '../../services/auth.service';
 
     .register-right {
       padding: var(--spacing-xl);
+      padding-top: max(var(--spacing-xl), 28px);
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
+      overflow-x: hidden;
       overflow-y: auto;
       max-height: calc(100vh - 200px);
+      min-height: 0;
     }
 
     .register-form-wrapper {
       width: 100%;
       max-width: 450px;
+      flex-shrink: 0;
     }
 
     .register-form-wrapper h3 {
       font-size: 2rem;
       color: var(--primary-color);
-      margin-bottom: var(--spacing-md);
+      margin: 0 0 var(--spacing-md);
+      padding-top: 2px;
       text-align: center;
+    }
+
+    .register-form {
+      padding-top: 2px;
     }
 
     .form-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: var(--spacing-sm);
+      align-items: start;
+      min-width: 0;
+    }
+
+    .form-row .form-group {
+      min-width: 0;
     }
 
     .form-group {
@@ -377,6 +447,8 @@ import { AuthService } from '../../services/auth.service';
       font-size: 14px;
       font-weight: 500;
       color: var(--primary-color);
+      line-height: 1.4;
+      padding-top: 1px;
     }
 
     .form-input {
@@ -584,6 +656,13 @@ import { AuthService } from '../../services/auth.service';
     }
 
     @media (max-width: 968px) {
+      /* Tall card: centering clips the top of the form (First Name hidden) */
+      .register-page {
+        align-items: flex-start;
+        padding-top: var(--spacing-md);
+        padding-bottom: var(--spacing-xl);
+      }
+
       .register-container {
         grid-template-columns: 1fr;
       }
@@ -602,6 +681,15 @@ import { AuthService } from '../../services/auth.service';
 
       .register-right {
         padding: var(--spacing-lg);
+        align-items: flex-start;
+        justify-content: flex-start;
+        max-height: none;
+        overflow-y: visible;
+      }
+
+      .register-form-wrapper {
+        width: 100%;
+        max-width: none;
       }
 
       .form-row {
@@ -612,6 +700,7 @@ import { AuthService } from '../../services/auth.service';
     @media (max-width: 480px) {
       .register-page {
         padding: var(--spacing-sm);
+        padding-top: var(--spacing-sm);
       }
 
       .register-container {
@@ -636,10 +725,18 @@ import { AuthService } from '../../services/auth.service';
 
       .register-right {
         padding: var(--spacing-md);
+        align-items: flex-start;
       }
 
       .benefits-list {
         display: none;
+      }
+
+      .video-sound-toggle {
+        bottom: 14px;
+        left: 14px;
+        width: 42px;
+        height: 42px;
       }
     }
   `]
@@ -650,6 +747,8 @@ export class RegisterComponent {
   showConfirmPassword = false;
   isLoading = false;
   apiError = '';
+  /** Muted by default so autoplay works in browsers; user can unmute via control */
+  videoMuted = true;
 
   benefits = [
     'Exclusive member discounts',
@@ -677,6 +776,10 @@ export class RegisterComponent {
     }, {
       validators: this.passwordMatchValidator
     });
+  }
+
+  toggleVideoMute(): void {
+    this.videoMuted = !this.videoMuted;
   }
 
   passwordStrengthValidator(control: AbstractControl): ValidationErrors | null {

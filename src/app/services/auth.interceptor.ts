@@ -10,7 +10,9 @@ export class AuthInterceptor implements HttpInterceptor {
   constructor(private auth: AuthService, private router: Router) {}
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    const token = this.auth.getToken();
+    this.auth.recordActivity();
+    const isAdminRoute = typeof this.router?.url === 'string' && this.router.url.startsWith('/admin');
+    const token = isAdminRoute ? this.auth.getAdminToken() : this.auth.getToken();
     let cloned = req;
     if (token) {
       cloned = req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });

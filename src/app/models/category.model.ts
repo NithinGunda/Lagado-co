@@ -4,6 +4,8 @@ export interface Category {
   slug?: string;
   description?: string;
   image_url?: string;
+  /** Backend may return image path as `image` instead of full `image_url` */
+  image?: string;
   parent_id?: number | null;
   sort_order?: number;
   is_active?: boolean;

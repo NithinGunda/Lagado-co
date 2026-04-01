@@ -1,4 +1,4 @@
-import { Component, OnDestroy, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnDestroy, AfterViewInit, OnInit, ElementRef, ViewChild } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 
@@ -159,6 +159,10 @@ import { AuthService } from '../../../services/auth.service';
               </div>
             </div>
 
+            <div *ngIf="timeoutMessage" class="timeout-box">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              {{ timeoutMessage }}
+            </div>
             <div *ngIf="error" class="error-box">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
               {{ error }}
@@ -247,16 +251,18 @@ import { AuthService } from '../../../services/auth.service';
     }
 
     .visual-text {
-      text-align: center; position: relative; z-index: 2; color: #fff;
+      text-align: center; position: relative; z-index: 2; color: #f5f1e8;
     }
     .visual-text h1 {
-      font-family: var(--font-logo); font-size: 2.8rem;
+      font-family: 'Lato', sans-serif; font-size: 2.8rem;
       font-weight: 400; margin: 0; letter-spacing: 0.5px;
+      color: #f5f1e8;
       text-shadow: 0 2px 20px rgba(0,0,0,0.3);
     }
     .visual-text p {
-      font-size: 14px; opacity: 0.6; margin-top: 8px;
+      font-size: 14px; color: rgba(245, 241, 232, 0.7); margin-top: 8px;
       text-transform: uppercase; letter-spacing: 3px;
+      font-family: 'Lato', sans-serif;
     }
 
     /* ===== RIGHT FORM PANEL ===== */
@@ -277,9 +283,11 @@ import { AuthService } from '../../../services/auth.service';
     }
     .form-header h2 {
       margin: 0; font-size: 1.5rem; color: var(--text-dark);
+      font-family: 'Lato', sans-serif;
     }
     .form-header p {
       margin: 6px 0 0; font-size: 14px; color: var(--text-light);
+      font-family: 'Lato', sans-serif;
     }
 
     /* Fields */
@@ -315,6 +323,13 @@ import { AuthService } from '../../../services/auth.service';
     .toggle-pass:hover { color: var(--primary-color); }
 
     /* Error */
+    .timeout-box {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; margin-bottom: 16px;
+      background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #b45309; font-size: 14px; border-radius: 8px;
+    }
+    .timeout-box svg { flex-shrink: 0; }
     .error-box {
       display: flex; align-items: center; gap: 8px;
       padding: 12px 14px; background: #fff0f0; color: #c62828;
@@ -365,7 +380,7 @@ import { AuthService } from '../../../services/auth.service';
       animation: fadeIn 0.3s ease;
     }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    .success-content { text-align: center; color: #fff; }
+    .success-content { text-align: center; color: #fff; font-family: 'Lato', sans-serif; }
     .success-emoji {
       font-size: 80px; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
     }
@@ -374,11 +389,12 @@ import { AuthService } from '../../../services/auth.service';
       to { transform: scale(1) rotate(0deg); opacity: 1; }
     }
     .success-content h2 {
-      font-size: 2rem; margin: 16px 0 8px;
+      font-family: 'Lato', sans-serif; font-size: 2rem; margin: 16px 0 8px;
+      color: #f5f1e8;
       animation: fadeIn 0.4s ease 0.3s both;
     }
     .success-content p {
-      font-size: 14px; opacity: 0.7;
+      font-size: 14px; opacity: 0.7; font-family: 'Lato', sans-serif;
       animation: fadeIn 0.4s ease 0.5s both;
     }
     .success-dots {
@@ -408,10 +424,11 @@ import { AuthService } from '../../../services/auth.service';
     }
   `]
 })
-export class AdminLoginComponent implements AfterViewInit, OnDestroy {
+export class AdminLoginComponent implements AfterViewInit, OnDestroy, OnInit {
   email = '';
   password = '';
   error = '';
+  timeoutMessage = '';
   loading = false;
   showPass = false;
   emailFocused = false;
@@ -429,6 +446,12 @@ export class AdminLoginComponent implements AfterViewInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute
   ) {}
+
+  ngOnInit() {
+    if (this.route.snapshot.queryParams['timeout'] === '1') {
+      this.timeoutMessage = 'You were logged out due to inactivity. Please sign in again.';
+    }
+  }
 
   ngAfterViewInit() {
     this.animatePupil();
@@ -477,9 +500,14 @@ export class AdminLoginComponent implements AfterViewInit, OnDestroy {
     this.loading = true;
 
     this.auth.login({ email: this.email.trim(), password: this.password }).subscribe({
-      next: () => {
+      next: (res: any) => {
         this.loading = false;
         this.loginSuccess = true;
+        if (res?.token) {
+          this.auth.setAdminToken(res.token);
+          if (res.user) this.auth.setAdminUser(res.user);
+          this.auth.clearAuth();
+        }
         localStorage.setItem('admin_auth', 'true');
         setTimeout(() => {
           const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/admin';

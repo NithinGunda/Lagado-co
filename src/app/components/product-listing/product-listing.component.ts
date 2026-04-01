@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ProductApiService } from '../../services/product-api.service';
 import { CategoryService } from '../../services/category.service';
 import { CartService } from '../../services/cart.service';
+import { WishlistService } from '../../services/wishlist.service';
 import { AppLoadingService } from '../../services/app-loading.service';
 import { Product, FilterOptions, stockBySizeFromArray } from '../../models/product.model';
 import { Category } from '../../models/category.model';
@@ -21,18 +22,20 @@ import { Category } from '../../models/category.model';
       <!-- Floating filter bar -->
       <div class="filter-bar">
         <div class="filter-bar-inner">
-          <div class="filter-chips">
-            <button
-              class="chip"
-              [class.active]="!selectedCategoryId"
-              (click)="selectCategoryById(null)"
-            >All</button>
-            <button
-              *ngFor="let cat of filterCategories"
-              class="chip"
-              [class.active]="isCategorySelected(cat)"
-              (click)="selectCategoryById(cat.id ?? null)"
-            >{{ cat.name }}</button>
+          <div class="filter-chips-scroll" role="region" aria-label="Filter by category">
+            <div class="filter-chips">
+              <button
+                class="chip"
+                [class.active]="!selectedCategoryId"
+                (click)="selectCategoryById(null)"
+              >All</button>
+              <button
+                *ngFor="let cat of filterCategories"
+                class="chip"
+                [class.active]="isCategorySelected(cat)"
+                (click)="selectCategoryById(cat.id ?? null)"
+              >{{ cat.name }}</button>
+            </div>
           </div>
 
           <div class="filter-controls">
@@ -108,7 +111,7 @@ import { Category } from '../../models/category.model';
           <strong>{{ filteredProducts.length }}</strong> product{{ filteredProducts.length !== 1 ? 's' : '' }}
         </p>
         <div class="active-tags" *ngIf="hasActiveFilters">
-          <span class="tag" *ngIf="searchQuery" (click)="searchQuery=''; applyFilters()">
+          <span class="tag" *ngIf="searchQuery" (click)="clearSearchFromUrl()">
             "{{ searchQuery }}" <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </span>
           <span class="tag" *ngIf="inStockOnly" (click)="inStockOnly=false; applyFilters()">
@@ -142,6 +145,14 @@ import { Category } from '../../models/category.model';
 
             <!-- Quick actions -->
             <div class="card-actions">
+              <button
+                class="action-btn wishlist-btn"
+                (click)="onWishlistHeartClick(product, $event)"
+                [class.added]="wishlistService.hasProductId(product.id)"
+                aria-label="Add to wishlist"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              </button>
               <button
                 class="action-btn cart-btn"
                 (click)="addToCart(product, $event)"
@@ -194,6 +205,27 @@ import { Category } from '../../models/category.model';
         {{ toastMessage }}
       </div>
 
+      <!-- Wishlist / cart: pick size -->
+      <div class="wishlist-size-modal" *ngIf="sizePickerOpen" (click)="closeSizePicker()">
+        <div class="wishlist-size-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="size-picker-title">
+          <h3 id="size-picker-title">{{ sizePickerMode === 'cart' ? 'Select size to add to cart' : 'Select size' }}</h3>
+          <p class="wishlist-size-sub" *ngIf="sizePickerProduct">{{ sizePickerProduct.name }}</p>
+          <div class="wishlist-size-btns" *ngIf="sizePickerProduct">
+            <button
+              type="button"
+              class="wishlist-size-btn"
+              *ngFor="let size of sizePickerSizes"
+              [disabled]="getListingStockForSize(sizePickerProduct, size) <= 0"
+              (click)="confirmSizePicker(size)"
+            >
+              {{ size }}
+              <span class="wishlist-size-stock" *ngIf="hasListingStockBySize(sizePickerProduct)">({{ getListingStockForSize(sizePickerProduct, size) }})</span>
+            </button>
+          </div>
+          <button type="button" class="wishlist-size-cancel" (click)="closeSizePicker()">Cancel</button>
+        </div>
+      </div>
+
       <!-- Empty state -->
       <div class="empty-state" *ngIf="!loading && filteredProducts.length === 0">
         <div class="empty-icon">
@@ -210,13 +242,13 @@ import { Category } from '../../models/category.model';
 
     .listing-page {
       position: relative;
-      max-width: 1440px;
+      /* Wider than 1440 so 5 columns ≈ same card width as 4 columns had before */
+      max-width: 1800px;
       margin: 0 auto;
       padding: 0 clamp(16px, 3vw, 40px) 60px;
       overflow-x: hidden;
       box-sizing: border-box;
     }
-
     /* ===== CUSTOM CURSOR GLOW ===== */
     .cursor-glow {
       position: fixed; width: 320px; height: 320px; border-radius: 50%;
@@ -232,7 +264,10 @@ import { Category } from '../../models/category.model';
 
     /* ===== FILTER BAR ===== */
     .filter-bar {
-      position: sticky; top: 70px; z-index: 50;
+      position: sticky;
+      /* Align with sticky header (~announcement + main row); avoid a band of empty space below header */
+      top: 70px;
+      z-index: 50;
       background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);
       border-bottom: 1px solid rgba(0,0,0,0.06);
       margin: 0 -clamp(16px, 3vw, 40px);
@@ -243,6 +278,10 @@ import { Category } from '../../models/category.model';
       gap: 16px; padding: 14px 0; flex-wrap: wrap;
     }
 
+    /* Wrapper for horizontal scroll on mobile; desktop chips wrap inside */
+    .filter-chips-scroll {
+      min-width: 0;
+    }
     .filter-chips {
       display: flex; gap: 6px; flex-wrap: wrap;
     }
@@ -418,7 +457,7 @@ import { Category } from '../../models/category.model';
     /* ===== PRODUCTS GRID ===== */
     .products-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 20px;
       padding-top: 8px;
       width: 100%;
@@ -484,6 +523,11 @@ import { Category } from '../../models/category.model';
     /* Card actions */
     .card-actions {
       position: absolute; top: 12px; right: 12px; z-index: 4;
+      display: flex;
+      flex-direction: row;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
       opacity: 0; transform: translateY(-10px) scale(0.9);
       transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
@@ -504,6 +548,9 @@ import { Category } from '../../models/category.model';
       box-shadow: 0 6px 20px rgba(21,42,71,0.3);
     }
     .action-btn.added { background: #059669; color: #fff; }
+    .action-btn.wishlist-btn { color: #dc2626; }
+    .action-btn.wishlist-btn:hover { background: #dc2626; color: #fff; }
+    .action-btn.wishlist-btn.added { background: #dc2626; color: #fff; }
     .action-btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -599,6 +646,52 @@ import { Category } from '../../models/category.model';
       transform: translateX(-50%) translateY(0); opacity: 1;
     }
 
+    .wishlist-size-modal {
+      position: fixed; inset: 0; z-index: 10050;
+      background: rgba(15, 23, 42, 0.55);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+      animation: wlFadeIn 0.2s ease;
+    }
+    @keyframes wlFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .wishlist-size-dialog {
+      background: #fff; border-radius: 16px; padding: 24px;
+      max-width: 360px; width: 100%;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.2);
+    }
+    .wishlist-size-dialog h3 {
+      margin: 0 0 8px; font-size: 1.15rem; color: var(--primary-color);
+      font-family: var(--font-heading, inherit);
+    }
+    .wishlist-size-sub {
+      margin: 0 0 16px; font-size: 14px; color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .wishlist-size-btns {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;
+    }
+    .wishlist-size-btn {
+      min-width: 52px; padding: 12px 16px; border: 2px solid var(--border-color);
+      background: #fff; border-radius: 8px; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: border-color 0.2s, background 0.2s;
+      font-family: inherit; color: var(--text-dark);
+    }
+    .wishlist-size-btn:hover:not(:disabled) {
+      border-color: var(--primary-color); background: rgba(30, 58, 95, 0.06);
+    }
+    .wishlist-size-btn:disabled {
+      opacity: 0.4; cursor: not-allowed;
+    }
+    .wishlist-size-stock { font-weight: 500; font-size: 12px; opacity: 0.85; margin-left: 2px; }
+    .wishlist-size-cancel {
+      width: 100%; padding: 12px; border: none; background: transparent;
+      color: var(--text-muted); font-size: 14px; cursor: pointer; font-family: inherit;
+    }
+    .wishlist-size-cancel:hover { color: var(--text-dark); }
+
     /* Empty state */
     .empty-state {
       text-align: center; padding: 80px 20px;
@@ -625,8 +718,9 @@ import { Category } from '../../models/category.model';
     .btn-reset:hover { background: var(--primary-color); color: #fff; }
 
     /* ===== RESPONSIVE ===== */
-    @media (max-width: 1200px) {
-      .products-grid { grid-template-columns: repeat(3, 1fr); }
+    /* 5 columns by default on desktop; drop to 4 only when too narrow for five */
+    @media (max-width: 1024px) {
+      .products-grid { grid-template-columns: repeat(4, 1fr); }
     }
 
     @media (max-width: 968px) {
@@ -634,6 +728,14 @@ import { Category } from '../../models/category.model';
       .filter-bar-inner { gap: 12px; }
       .search-box { min-width: 160px; }
       .cursor-glow { display: none; }
+      /* Avoid sticky offset gap below header (narrow / tablet + mobile) */
+      .filter-bar {
+        position: relative;
+        top: auto;
+      }
+      .listing-page {
+        padding-top: 0;
+      }
     }
 
     @media (max-width: 768px) {
@@ -643,6 +745,50 @@ import { Category } from '../../models/category.model';
       .search-box { flex: 1; min-width: 0; }
       .range-slider-container { width: 100%; }
       .af-inner { gap: 20px; }
+      /* Horizontal scroll for all category chips + visible scrollbar */
+      .filter-chips-scroll {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: scroll;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        padding-bottom: 10px;
+        margin-bottom: 4px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(30, 58, 95, 0.5) rgba(0, 0, 0, 0.08);
+      }
+      .filter-chips-scroll::-webkit-scrollbar {
+        height: 8px;
+      }
+      .filter-chips-scroll::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.08);
+        border-radius: 4px;
+      }
+      .filter-chips-scroll::-webkit-scrollbar-thumb {
+        background: rgba(30, 58, 95, 0.45);
+        border-radius: 4px;
+      }
+      .filter-chips-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgba(30, 58, 95, 0.65);
+      }
+      .filter-chips-scroll .filter-chips {
+        flex-wrap: nowrap;
+        width: max-content;
+        padding-right: 8px;
+      }
+      .filter-chips-scroll .chip {
+        flex-shrink: 0;
+      }
+      /* Always show heart + cart on mobile (no hover on touch) */
+      .card-actions {
+        opacity: 1;
+        transform: none;
+        gap: 6px;
+      }
+      .product-card:hover .card-actions { opacity: 1; transform: none; }
+      .action-btn { width: 34px; height: 34px; }
+      .action-btn svg { width: 14px; height: 14px; }
     }
 
     @media (max-width: 480px) {
@@ -657,6 +803,9 @@ import { Category } from '../../models/category.model';
       .filter-chips { gap: 4px; }
       .card-image { aspect-ratio: 3/4; }
       .results-bar { flex-wrap: wrap; gap: 8px; }
+      .card-actions { top: 8px; right: 8px; gap: 5px; }
+      .action-btn { width: 30px; height: 30px; }
+      .action-btn svg { width: 13px; height: 13px; }
     }
 
     @media (max-width: 360px) {
@@ -695,10 +844,16 @@ export class ProductListingComponent implements OnInit, OnDestroy {
 
   private queryParamSub?: any;
 
+  sizePickerOpen = false;
+  sizePickerMode: 'wishlist' | 'cart' = 'wishlist';
+  sizePickerProduct: any = null;
+  sizePickerSizes: string[] = [];
+
   constructor(
     private productApi: ProductApiService,
     private categoryService: CategoryService,
     private cartService: CartService,
+    public wishlistService: WishlistService,
     private appLoading: AppLoadingService,
     private router: Router,
     private route: ActivatedRoute
@@ -709,10 +864,17 @@ export class ProductListingComponent implements OnInit, OnDestroy {
     this.queryParamSub = this.route.queryParamMap.subscribe(map => {
       const cat = map.get('category');
       const id = cat !== null && cat !== '' ? cat : null;
-      if (String(this.selectedCategoryId) !== String(id)) {
-        this.selectedCategoryId = id;
-        this.initialCategoryId = id;
-        if (!this.loadingCategories) this.loadProducts();
+      const q = (map.get('q') ?? map.get('search') ?? '').trim();
+
+      const catChanged = String(this.selectedCategoryId) !== String(id);
+      const searchChanged = (this.searchQuery || '').trim() !== q;
+
+      this.selectedCategoryId = id;
+      this.initialCategoryId = id;
+      this.searchQuery = q;
+
+      if (!this.loadingCategories && (catChanged || searchChanged)) {
+        this.loadProducts();
       }
     });
     this.loadCategories();
@@ -819,8 +981,12 @@ export class ProductListingComponent implements OnInit, OnDestroy {
   selectCategoryById(id: number | string | null) {
     this.selectedCategoryId = id;
     this.initialCategoryId = id;
+    const q = (this.searchQuery || '').trim();
+    const queryParams: Record<string, string | number> = {};
+    if (id != null) queryParams['category'] = id as string | number;
+    if (q) queryParams['q'] = q;
     this.router.navigate(['/collections'], {
-      queryParams: id != null ? { category: id } : {},
+      queryParams,
       queryParamsHandling: '',
       replaceUrl: false
     });
@@ -883,7 +1049,33 @@ export class ProductListingComponent implements OnInit, OnDestroy {
     this.inStockOnly = false;
     this.sortBy = 'default';
     this.showAdvanced = false;
+    this.navigateCollectionsQueryParams();
     this.applyFilters();
+  }
+
+  /** Remove search from URL (query subscription updates `searchQuery` and reloads). */
+  clearSearchFromUrl() {
+    const id = this.selectedCategoryId;
+    const queryParams: Record<string, string | number> = {};
+    if (id != null) queryParams['category'] = id as string | number;
+    this.router.navigate(['/collections'], {
+      queryParams,
+      queryParamsHandling: '',
+      replaceUrl: true,
+    });
+  }
+
+  private navigateCollectionsQueryParams() {
+    const id = this.selectedCategoryId;
+    const q = (this.searchQuery || '').trim();
+    const queryParams: Record<string, string | number> = {};
+    if (id != null) queryParams['category'] = id as string | number;
+    if (q) queryParams['q'] = q;
+    this.router.navigate(['/collections'], {
+      queryParams,
+      queryParamsHandling: '',
+      replaceUrl: true,
+    });
   }
 
   isProductOutOfStock(p: any): boolean {
@@ -895,13 +1087,101 @@ export class ProductListingComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     event.preventDefault();
     if (this.isProductOutOfStock(product)) return;
+    const sizes = this.getProductSizes(product);
+    if (sizes.length > 0) {
+      const anyInStock = sizes.some((s) => this.getListingStockForSize(product, s) > 0);
+      if (!anyInStock) {
+        this.toastMessage = 'All sizes are out of stock';
+        this.showToastFlash();
+        return;
+      }
+      this.sizePickerProduct = product;
+      this.sizePickerSizes = sizes;
+      this.sizePickerMode = 'cart';
+      this.sizePickerOpen = true;
+      return;
+    }
     const cartProduct = this.mapApiProductToCartProduct(product);
     this.cartService.addToCart(cartProduct, 1);
     this.addedProductId = String(product.id);
     this.toastMessage = `${product.name} added to cart!`;
     this.showToast = true;
-    setTimeout(() => this.addedProductId = null, 1500);
-    setTimeout(() => this.showToast = false, 3000);
+    setTimeout(() => (this.addedProductId = null), 1500);
+    setTimeout(() => (this.showToast = false), 3000);
+  }
+
+  onWishlistHeartClick(product: any, event: Event) {
+    event.stopPropagation();
+    event.preventDefault();
+    if (this.wishlistService.hasProductId(product.id)) {
+      this.wishlistService.removeAllByProductId(product.id);
+      this.toastMessage = 'Removed from wishlist';
+      this.showToastFlash();
+      return;
+    }
+    const sizes = this.getProductSizes(product);
+    if (sizes.length === 0) {
+      const p = this.mapApiProductToCartProduct(product);
+      this.wishlistService.add(p);
+      this.toastMessage = `${product.name} added to wishlist`;
+      this.showToastFlash();
+      return;
+    }
+    const anyInStock = sizes.some(s => this.getListingStockForSize(product, s) > 0);
+    if (!anyInStock) {
+      this.toastMessage = 'All sizes are out of stock';
+      this.showToastFlash();
+      return;
+    }
+    this.sizePickerProduct = product;
+    this.sizePickerSizes = sizes;
+    this.sizePickerMode = 'wishlist';
+    this.sizePickerOpen = true;
+  }
+
+  closeSizePicker() {
+    this.sizePickerOpen = false;
+    this.sizePickerProduct = null;
+    this.sizePickerSizes = [];
+  }
+
+  confirmSizePicker(size: string) {
+    if (!this.sizePickerProduct || this.getListingStockForSize(this.sizePickerProduct, size) <= 0) return;
+    const name = this.sizePickerProduct.name;
+    const p = this.mapApiProductToCartProduct(this.sizePickerProduct);
+    if (this.sizePickerMode === 'wishlist') {
+      p.wishlistSize = size;
+      this.wishlistService.add(p);
+      this.toastMessage = `${name} (Size ${size}) added to wishlist`;
+      this.closeSizePicker();
+      this.showToastFlash();
+      return;
+    }
+    this.cartService.addToCart(p, 1, size);
+    this.addedProductId = String(this.sizePickerProduct.id);
+    this.toastMessage = `${name} (Size ${size}) added to cart!`;
+    this.closeSizePicker();
+    this.showToast = true;
+    setTimeout(() => (this.addedProductId = null), 1500);
+    setTimeout(() => (this.showToast = false), 3000);
+  }
+
+  getListingStockForSize(apiProduct: any, size: string): number {
+    const mapped = this.mapApiProductToCartProduct(apiProduct);
+    const sbs = mapped.stock_by_size;
+    if (sbs && typeof sbs === 'object' && size in sbs) return Number(sbs[size] ?? 0);
+    return mapped.stockQuantity ?? 0;
+  }
+
+  hasListingStockBySize(apiProduct: any): boolean {
+    const mapped = this.mapApiProductToCartProduct(apiProduct);
+    const sbs = mapped.stock_by_size;
+    return !!(sbs && typeof sbs === 'object' && Object.keys(sbs).length > 0);
+  }
+
+  private showToastFlash() {
+    this.showToast = true;
+    setTimeout(() => (this.showToast = false), 2500);
   }
 
   getDiscountPercent(product: any): number {

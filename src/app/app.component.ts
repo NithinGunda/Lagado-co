@@ -204,6 +204,9 @@ import { AppLoadingService } from './services/app-loading.service';
     }
 
     @media (max-width: 768px) {
+      main {
+        min-height: 0;
+      }
       .cookie-content {
         flex-direction: column;
         text-align: center;

@@ -16,6 +16,11 @@ import { ProductListingComponent } from '../../components/product-listing/produc
       min-height: calc(100vh - 200px);
       padding: var(--spacing-sm) 0;
     }
+    @media (max-width: 768px) {
+      .womens-page {
+        padding: 8px 0 var(--spacing-sm);
+      }
+    }
   `]
 })
 export class WomensComponent {}

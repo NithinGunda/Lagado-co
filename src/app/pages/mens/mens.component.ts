@@ -16,6 +16,12 @@ import { ProductListingComponent } from '../../components/product-listing/produc
       min-height: calc(100vh - 200px);
       padding: var(--spacing-sm) 0;
     }
+    @media (max-width: 768px) {
+      .mens-page {
+        padding-top: 0;
+        padding-bottom: var(--spacing-sm);
+      }
+    }
   `]
 })
 export class MensComponent {}

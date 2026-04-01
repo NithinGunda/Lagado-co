@@ -24,6 +24,7 @@ import { AuthService } from '../../../services/auth.service';
           <a routerLink="/admin/buy-the-look" routerLinkActive="active">Buy The Look</a>
           <a routerLink="/admin/coupons" routerLinkActive="active">Coupons</a>
           <a routerLink="/admin/orders" routerLinkActive="active">Orders</a>
+          <a routerLink="/admin/users" routerLinkActive="active">Registered users</a>
         </nav>
         <div class="sidebar-footer">
           <a routerLink="/" target="_blank">View Store</a>
@@ -68,7 +69,7 @@ import { AuthService } from '../../../services/auth.service';
     .sidebar-header h2 {
       margin: 0;
       font-size: 1.5rem;
-      font-family: var(--font-logo);
+      font-family: 'Lato', sans-serif;
       font-weight: 400;
       color: #fff;
     }
@@ -153,10 +154,9 @@ export class AdminLayoutComponent implements OnInit {
   }
 
   logout() {
-    this.auth.clearAdminAuth();
     this.auth.logout().subscribe({
       next: () => this.router.navigate(['/admin/login']),
-      error: () => { this.auth.clearAuth(); this.router.navigate(['/admin/login']); }
+      error: () => { this.auth.clearAdminAuth(); this.router.navigate(['/admin/login']); }
     });
   }
 }

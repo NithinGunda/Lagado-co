@@ -16,6 +16,7 @@ import { AdminFeaturedProductsComponent } from './components/featured-products/f
 import { AdminCouponsComponent } from './components/coupons/coupons.component';
 import { AdminBuyTheLookComponent } from './components/buy-the-look/buy-the-look.component';
 import { AdminSubcategoriesComponent } from './components/subcategories/subcategories.component';
+import { AdminUsersComponent } from './components/users/users.component';
 
 const routes = [
   { path: 'login', component: AdminLoginComponent },
@@ -35,7 +36,8 @@ const routes = [
       { path: 'featured-products', component: AdminFeaturedProductsComponent },
       { path: 'coupons', component: AdminCouponsComponent },
       { path: 'buy-the-look', component: AdminBuyTheLookComponent },
-      { path: 'orders', component: AdminOrdersComponent }
+      { path: 'orders', component: AdminOrdersComponent },
+      { path: 'users', component: AdminUsersComponent }
     ]
   }
 ];
@@ -46,7 +48,8 @@ const routes = [
     FormsModule,
     RouterModule.forChild(routes),
     AdminLayoutComponent,
-    ImageCropperComponent
+    ImageCropperComponent,
+    AdminUsersComponent
   ],
   declarations: [
     AdminLoginComponent,

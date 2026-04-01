@@ -33,6 +33,8 @@ export interface Product {
   rating?: number;
   reviewCount?: number;
   size_guide?: SizeGuide;
+  /** Saved wishlist line: which size was chosen (same product can appear once per size). */
+  wishlistSize?: string;
 }
 
 /** Backend expects/returns stock_by_size as an array. */
