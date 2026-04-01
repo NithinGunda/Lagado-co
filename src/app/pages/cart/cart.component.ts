@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { CartService } from '../../services/cart.service';
+import { AuthService } from '../../services/auth.service';
 import { CartItem } from '../../models/product.model';
 import { Subscription } from 'rxjs';
 
@@ -77,10 +78,15 @@ import { Subscription } from 'rxjs';
               <span>{{ formatPrice(getTotal()) }}</span>
             </div>
 
-            <button class="btn-checkout" routerLink="/checkout">
+            <a *ngIf="isLoggedIn" class="btn-checkout" routerLink="/checkout">
               Proceed to Checkout
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-            </button>
+            </a>
+            <a *ngIf="!isLoggedIn" class="btn-checkout" routerLink="/login" [queryParams]="{ returnUrl: '/checkout' }">
+              Sign in to place order
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </a>
+            <p class="checkout-hint" *ngIf="!isLoggedIn">You need a registered account to checkout — no guest orders.</p>
 
             <a routerLink="/collections" class="continue-shopping">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
@@ -369,6 +375,16 @@ import { Subscription } from 'rxjs';
       align-items: center;
       justify-content: center;
       gap: 8px;
+      text-decoration: none;
+      box-sizing: border-box;
+    }
+
+    .checkout-hint {
+      margin: 10px 0 0;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.4;
     }
 
     .btn-checkout:hover {
@@ -453,11 +469,16 @@ import { Subscription } from 'rxjs';
 })
 export class CartComponent implements OnInit, OnDestroy {
   cartItems: CartItem[] = [];
+  isLoggedIn = false;
   private cartSubscription?: Subscription;
 
-  constructor(private cartService: CartService) {}
+  constructor(
+    private cartService: CartService,
+    private authService: AuthService
+  ) {}
 
   ngOnInit() {
+    this.isLoggedIn = this.authService.isLoggedIn();
     this.cartSubscription = this.cartService.cart$.subscribe(items => {
       this.cartItems = items;
     });

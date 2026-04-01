@@ -254,10 +254,18 @@ import { AuthService } from '../../../services/auth.service';
       text-align: center; position: relative; z-index: 2; color: #f5f1e8;
     }
     .visual-text h1 {
-      font-family: 'Lato', sans-serif; font-size: 2.8rem;
+      font-family: 'Lato', sans-serif;
+      font-size: clamp(1.35rem, 4vw + 0.5rem, 2.8rem);
       font-weight: 400; margin: 0; letter-spacing: 0.5px;
       color: #f5f1e8;
       text-shadow: 0 2px 20px rgba(0,0,0,0.3);
+      max-width: 100%;
+      padding: 0 12px;
+      box-sizing: border-box;
+      line-height: 1.2;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      -webkit-font-smoothing: antialiased;
     }
     .visual-text p {
       font-size: 14px; color: rgba(245, 241, 232, 0.7); margin-top: 8px;

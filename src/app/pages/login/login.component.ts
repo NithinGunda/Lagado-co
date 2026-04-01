@@ -1,7 +1,7 @@
 import { Component, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 @Component({
   selector: 'app-login',
@@ -80,7 +80,7 @@ import { AuthService } from '../../services/auth.service';
                   <input type="checkbox" formControlName="rememberMe">
                   <span>Remember me</span>
                 </label>
-                <a href="#" class="forgot-password">Forgot password?</a>
+                <a routerLink="/forgot-password" class="forgot-password">Forgot password?</a>
               </div>
 
               <button 
@@ -184,12 +184,17 @@ import { AuthService } from '../../services/auth.service';
 
     .brand-title {
       font-family: 'Lato', sans-serif;
-      font-size: 2.2rem;
+      font-size: clamp(1.25rem, 4vw + 0.5rem, 2.2rem);
       font-weight: 600;
       margin: 0 0 var(--spacing-sm) 0;
       color: #FDF6EA;
       text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
       letter-spacing: 0.02em;
+      line-height: 1.2;
+      max-width: 100%;
+      padding: 0 8px;
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
     }
 
     .login-branding h2 {
@@ -464,6 +469,7 @@ export class LoginComponent implements AfterViewInit {
   constructor(
     private fb: FormBuilder,
     private router: Router,
+    private route: ActivatedRoute,
     private authService: AuthService
   ) {
     this.loginForm = this.fb.group({
@@ -513,7 +519,15 @@ export class LoginComponent implements AfterViewInit {
       this.authService.login({ email, password }).subscribe({
         next: () => {
           this.isLoading = false;
-          this.router.navigate(['/']);
+          const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+          const safe =
+            returnUrl &&
+            returnUrl.startsWith('/') &&
+            !returnUrl.startsWith('//') &&
+            !returnUrl.includes('://')
+              ? returnUrl
+              : '/';
+          this.router.navigateByUrl(safe);
         },
         error: (err) => {
           this.isLoading = false;

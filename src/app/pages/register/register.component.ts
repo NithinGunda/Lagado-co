@@ -351,9 +351,12 @@ import { AuthService } from '../../services/auth.service';
     }
 
     .auth-logo-img {
-      height: 70px;
+      height: auto;
+      max-height: 70px;
       width: auto;
+      max-width: min(240px, 85vw);
       display: block;
+      object-fit: contain;
       filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.5));
     }
 

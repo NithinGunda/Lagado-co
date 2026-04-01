@@ -98,11 +98,15 @@ import { RouterModule } from '@angular/router';
 
     .footer-inner {
       display: grid;
-      grid-template-columns: 1.4fr 0.8fr 1fr;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr) minmax(0, 1fr);
       gap: 48px;
       max-width: 1200px;
       margin: 0 auto;
       padding: 0 var(--spacing-md);
+    }
+
+    .ft-col.ft-brand {
+      min-width: 0;
     }
 
     .ft-col h4 {
@@ -125,17 +129,27 @@ import { RouterModule } from '@angular/router';
     }
 
     .ft-logo-link {
-      display: inline-block;
+      display: block;
       margin: 0 0 10px;
       text-decoration: none;
+      min-width: 0;
+      max-width: 100%;
     }
     .ft-logo-link .logo-wordmark {
       font-family: var(--font-body);
-      font-size: 1.4rem;
+      font-size: var(--brand-wordmark-size, clamp(0.75rem, 1.65vw + 0.35rem, 1.35rem));
       font-weight: 700;
-      letter-spacing: 0.18em;
+      letter-spacing: var(--brand-wordmark-tracking, clamp(0.06em, 0.4vw, 0.18em));
       text-transform: uppercase;
       color: #fff;
+      line-height: 1.2;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: inline-block;
+      vertical-align: top;
+      -webkit-font-smoothing: antialiased;
     }
     .ft-logo-link:hover .logo-wordmark {
       opacity: 0.9;
@@ -255,9 +269,11 @@ import { RouterModule } from '@angular/router';
     .fb-brand {
       font-family: var(--font-body);
       font-weight: 700;
-      letter-spacing: 0.18em;
+      letter-spacing: var(--brand-wordmark-tracking, clamp(0.06em, 0.4vw, 0.18em));
       text-transform: uppercase;
       color: #fff;
+      font-size: clamp(0.65rem, 1.2vw + 0.25rem, 0.85rem);
+      -webkit-font-smoothing: antialiased;
     }
     .fb-links {
       display: flex; align-items: center; gap: 6px;

@@ -11,6 +11,7 @@ import { BuyTheLookService, Look } from '../../services/buy-the-look.service';
 import { CarouselService, CarouselItem } from '../../services/carousel.service';
 import { AppLoadingService } from '../../services/app-loading.service';
 import { InstagramService, InstagramTaggedPost } from '../../services/instagram.service';
+import { isProductInStock } from '../../models/product.model';
 
 @Component({
   selector: 'app-home',
@@ -53,24 +54,36 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
         <div class="hero-scanline"></div>
         <div class="hero-content">
           <div class="hero-cta-group" [class.visible]="heroAnimReady">
-            <button class="hero-cta hero-cta-primary" (click)="scrollToFeatured()">
+            <a routerLink="/collections" class="hero-cta hero-cta-primary" aria-label="Explore full collection — all products">
               <span class="cta-glow"></span>
               <span class="cta-bg"></span>
               <span class="cta-content">
                 <span>Explore Collection</span>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
               </span>
-            </button>
-          </div>
+            </a>
+        </div>
           <div class="hero-scroll-indicator" [class.visible]="heroAnimReady">
             <div class="scroll-mouse"><div class="scroll-wheel"></div></div>
           </div>
         </div>
-        <button class="hero-nav hero-nav-left" (click)="prevHeroSlide()" aria-label="Previous">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        <button
+          type="button"
+          class="nav-btn nav-prev hero-nav-btn"
+          (click)="prevHeroSlide()"
+          [disabled]="heroSlides.length <= 1"
+          aria-label="Previous slide"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <button class="hero-nav hero-nav-right" (click)="nextHeroSlide()" aria-label="Next">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"></polyline></svg>
+        <button
+          type="button"
+          class="nav-btn nav-next hero-nav-btn"
+          (click)="nextHeroSlide()"
+          [disabled]="heroSlides.length <= 1"
+          aria-label="Next slide"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg>
         </button>
         <div class="hero-progress">
           <div class="hero-progress-track" *ngFor="let slide of heroSlides; let i = index" [class.active]="i === activeSlide" (click)="goToSlide(i)">
@@ -86,7 +99,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
             <span class="sec-line"></span>
             <h2 class="sec-title">Featured Products</h2>
             <span class="sec-line"></span>
-          </div>
+              </div>
           <p class="sec-sub">Hand-picked pieces that define the season. Premium quality, timeless design.</p>
           <div class="featured-carousel-wrapper" (touchstart)="onFeaturedTouchStart($event)" (touchend)="onFeaturedTouchEnd($event)" #featuredCarouselWrapper>
             <button class="nav-btn nav-prev" (click)="prevFeatured()" [disabled]="featuredOffset === 0" aria-label="Previous">
@@ -100,7 +113,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
                     <div class="f-card-img-fallback" [style.background]="getProductColor(product)"></div>
                     <div class="f-card-overlay">
                       <span class="f-card-quick">View Details</span>
-                    </div>
+            </div>
                     <span class="f-card-badge" *ngIf="product.badge">{{ product.badge }}</span>
                   </div>
                   <div class="f-card-info">
@@ -132,7 +145,82 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
             <h2 class="sec-title">Shop by Category</h2>
             <span class="sec-line"></span>
           </div>
-          <div class="cat-scroll-wrap" *ngIf="topCategories.length > 0">
+          <!-- Mobile (≤768px): one category per view — same carousel pattern as Featured Products -->
+          <div class="cat-carousel-mobile-only" *ngIf="topCategories.length > 0">
+            <div
+              class="featured-carousel-wrapper category-home-carousel"
+              (touchstart)="onCategoryTouchStart($event)"
+              (touchend)="onCategoryTouchEnd($event)"
+            >
+              <button
+                type="button"
+                class="nav-btn nav-prev"
+                (click)="prevCategorySlide()"
+                [disabled]="categoryOffset === 0"
+                aria-label="Previous category"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <div class="featured-track-container" #categoryTrackContainer>
+                <div
+                  class="featured-track category-featured-track"
+                  [style.transform]="'translateX(-' + categoryOffset * categoryCardWidth + 'px)'"
+                  [style.--featured-card-width.px]="getCategoryCardWidthPx()"
+                >
+                  <a
+                    class="cat-card cat-card-carousel"
+                    *ngFor="let cat of topCategories"
+                    (click)="goToCategory(cat)"
+                  >
+                    <img *ngIf="cat.image_url" [src]="cat.image_url" [alt]="cat.name" loading="lazy" />
+                    <div class="cat-overlay">
+                      <div class="cat-label">
+                        <span class="cat-tag">Collection</span>
+                        <h3>{{ cat.name }}</h3>
+                        <span class="cat-cta">
+                          Explore
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                          </svg>
+                        </span>
+                        <div class="cat-subcats" *ngIf="cat.children?.length">
+                          <button
+                            class="subcat-pill"
+                            *ngFor="let sub of cat.children"
+                            (click)="goToCategory(sub, $event)"
+                          >
+                            {{ sub.name }}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+            </a>
+          </div>
+        </div>
+              <button
+                type="button"
+                class="nav-btn nav-next"
+                (click)="nextCategorySlide()"
+                [disabled]="categoryOffset >= topCategories.length - categoryCarouselVisible"
+                aria-label="Next category"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg>
+              </button>
+            </div>
+            <div class="featured-dots category-carousel-dots">
+              <span
+                *ngFor="let _ of getCategoryDotArray(); let i = index"
+                class="dot"
+                [class.active]="i === categoryOffset"
+                (click)="categoryOffset = i"
+                role="button"
+                [attr.aria-label]="'Category ' + (i + 1)"
+              ></span>
+            </div>
+          </div>
+
+          <!-- Tablet / desktop: grid -->
+          <div class="cat-scroll-wrap cat-desktop-grid-hide-mobile" *ngIf="topCategories.length > 0">
             <div class="cat-grid" [class.collage]="topCategories.length > 4" [class.compact-collage]="topCategories.length === 6 || topCategories.length === 7">
             <a
               class="cat-card"
@@ -148,7 +236,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
                     Explore
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                    </svg>
+                  </svg>
                   </span>
                   <div class="cat-subcats" *ngIf="cat.children?.length">
                     <button
@@ -158,13 +246,13 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
                     >
                       {{ sub.name }}
                     </button>
-                  </div>
                 </div>
               </div>
+                </div>
             </a>
-            </div>
-          </div>
-        </div>
+              </div>
+                </div>
+              </div>
       </section>
 
       <!-- =============== BRAND STORY STRIP =============== -->
@@ -173,7 +261,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
           <div class="story-image-wrap">
             <img src="assets/ourstory.png" alt="Our Philosophy" loading="lazy" />
             <div class="story-accent"></div>
-          </div>
+            </div>
           <div class="story-text">
             <span class="story-label">Our Philosophy</span>
             <h2 class="story-heading">Crafted With<br/><em>Purpose & Passion</em></h2>
@@ -194,10 +282,10 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
             <div class="trust-item">
               <div class="trust-icon">
                 <svg viewBox="0 0 48 48" fill="none" stroke="var(--primary-color)" stroke-width="2"><rect x="3" y="14" width="26" height="18" rx="1"/><path d="M29 20h7l5 6v6H29V20z" stroke-linejoin="round"/><circle cx="12" cy="35" r="4"/><circle cx="36" cy="35" r="4"/></svg>
-              </div>
+          </div>
               <h4>Free Shipping</h4>
               <p>Complimentary delivery on all orders above ₹2,000</p>
-            </div>
+                </div>
             <div class="trust-item">
               <div class="trust-icon">
                 <svg viewBox="0 0 48 48" fill="none" stroke="var(--primary-color)" stroke-width="2"><path d="M9 18c0-5 4-9 9-9h12c5 0 9 4 9 9"/><path d="M39 30c0 5-4 9-9 9H18c-5 0-9-4-9-9"/><path d="M34 13l5 5-5 5"/><path d="M14 25l-5 5 5 5"/></svg>
@@ -230,7 +318,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
             <span class="sec-line accent-line"></span>
             <h2 class="sec-title sale-title">On Sale</h2>
             <span class="sec-line accent-line"></span>
-          </div>
+                    </div>
           <div class="sale-scroll-wrap">
             <div class="sale-grid">
             <div class="s-card" *ngFor="let product of saleProducts" [routerLink]="['/product', product.id]">
@@ -239,7 +327,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
                 <div class="s-card-img-fallback" [style.background]="getProductColor(product)"></div>
                 <span class="s-badge">Sale</span>
                 <span class="s-discount" *ngIf="product.discount_percentage">-{{ product.discount_percentage }}%</span>
-              </div>
+                  </div>
               <div class="s-card-info">
                 <span class="s-cat">{{ getProductCategoryName(product) | titlecase }}</span>
                 <h3 class="s-name">{{ product.name }}</h3>
@@ -247,11 +335,11 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
                   <span class="s-original">{{ formatPrice(product.original_price || product.price) }}</span>
                   <span class="s-current">{{ formatPrice(product.price) }}</span>
                 </div>
-              </div>
-            </div>
-            </div>
-          </div>
-        </div>
+                      </div>
+                    </div>
+                    </div>
+                  </div>
+                </div>
       </section>
 
       <!-- =============== BUY THE LOOK =============== -->
@@ -261,10 +349,9 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
             <span class="sec-line"></span>
             <h2 class="sec-title">Buy The Look</h2>
             <span class="sec-line"></span>
-          </div>
+            </div>
           <p class="sec-sub">Get our curated collection — complete outfits styled by our creative team.</p>
           <div class="look-carousel" (touchstart)="onLookTouchStart($event)" (touchend)="onLookTouchEnd($event)">
-            <button class="nav-btn" (click)="prevLook()" [disabled]="currentLookIndex === 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
             <div class="look-grid"
                  [class.two-items]="curatedLooks[currentLookIndex].products.length === 2"
                  [class.three-items]="curatedLooks[currentLookIndex].products.length >= 3">
@@ -277,10 +364,9 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
                   <h4>{{ product.name }}</h4>
                   <span>{{ formatPrice(product.price) }}</span>
                   <span class="look-shop-link">Shop Now</span>
-                </div>
+            </div>
               </div>
             </div>
-            <button class="nav-btn" (click)="nextLook()" [disabled]="currentLookIndex === curatedLooks.length - 1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></button>
           </div>
           <div class="look-dots">
             <span *ngFor="let look of curatedLooks; let i = index" class="dot" [class.active]="i === currentLookIndex" (click)="currentLookIndex = i"></span>
@@ -295,7 +381,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
             <span class="sec-line"></span>
             <h2 class="sec-title">Spotted On Social</h2>
             <span class="sec-line"></span>
-          </div>
+                  </div>
           <p class="sec-sub">Share your style with us — tag <strong>&#64;legadoandco</strong> for a chance to be featured.</p>
           <div class="social-grid">
             <a *ngFor="let post of socialPosts" class="social-card" [href]="post.permalink || '#'" [attr.target]="post.permalink ? '_blank' : null" [attr.rel]="post.permalink ? 'noopener noreferrer' : null">
@@ -303,10 +389,10 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
               <div class="social-hover">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="#fff" stroke="none"/></svg>
                 <span>{{ post.handle }}</span>
-              </div>
+                </div>
             </a>
-          </div>
-        </div>
+                </div>
+              </div>
       </section>
 
       <!-- =============== NEWSLETTER CTA =============== -->
@@ -315,7 +401,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
           <div class="newsletter-text">
             <h2>Stay In The Loop</h2>
             <p>Be the first to know about new collections, exclusive offers, and styling tips.</p>
-          </div>
+            </div>
           <div class="newsletter-form">
             <input type="email" placeholder="Enter your email address" />
             <button>Subscribe</button>
@@ -422,7 +508,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
     .hero-subtitle.visible { opacity: 1; transform: translateY(0); }
     .hero-cta-group { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; opacity: 0; transform: translateY(20px); transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 1.2s; }
     .hero-cta-group.visible { opacity: 1; transform: translateY(0); }
-    .hero-cta { position: relative; display: inline-flex; align-items: center; justify-content: center; padding: 16px 36px; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; overflow: hidden; border: none; text-decoration: none; font-family: var(--font-body); transition: transform 0.3s, box-shadow 0.3s; }
+    .hero-cta { position: relative; display: inline-flex; align-items: center; justify-content: center; padding: 16px 36px; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; overflow: hidden; border: none; text-decoration: none; font-family: var(--font-body); transition: transform 0.3s, box-shadow 0.3s; box-sizing: border-box; color: inherit; }
     .hero-cta:hover { transform: translateY(-3px); }
     .hero-cta-primary { color: #fff; }
     .hero-cta-primary .cta-bg { position: absolute; inset: 0; background: linear-gradient(135deg, var(--primary-color), #2a4d7a); z-index: 0; transition: opacity 0.3s; }
@@ -441,10 +527,14 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
     .scroll-mouse { width: 24px; height: 38px; border: 2px solid rgba(255,255,255,0.5); border-radius: 12px !important; display: flex; justify-content: center; padding-top: 8px; }
     .scroll-wheel { width: 3px; height: 8px; background: rgba(255,255,255,0.7); border-radius: 2px !important; animation: scrollBounce 2s ease-in-out infinite; }
     @keyframes scrollBounce { 0%, 100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(8px); opacity: 0.3; } }
-    .hero-nav { position: absolute; top: 50%; z-index: 20; background: rgba(255,255,255,0.08); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; }
-    .hero-nav:hover { background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.3); }
-    .hero-nav-left { left: 20px; transform: translateY(-50%); }
-    .hero-nav-right { right: 20px; transform: translateY(-50%); }
+    /* Hero arrows: same as Featured; respect :disabled (do not override opacity when hidden) */
+    .hero-section .hero-nav-btn:not(:disabled) {
+      z-index: 25;
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .hero-section .hero-nav-btn.nav-prev { left: 16px; }
+    .hero-section .hero-nav-btn.nav-next { right: 16px; }
     .hero-progress { position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; gap: 8px; }
     .hero-progress-track { width: 48px; height: 3px; background: rgba(255,255,255,0.2); cursor: pointer; overflow: hidden; transition: background 0.3s; }
     .hero-progress-track.active { background: rgba(255,255,255,0.3); }
@@ -611,6 +701,28 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       margin-top: 40px;
       width: 100%;
     }
+    /* Mobile category carousel: hidden on larger screens */
+    .cat-carousel-mobile-only {
+      display: none;
+      margin-top: 40px;
+    }
+    .cat-desktop-grid-hide-mobile {
+      display: block;
+    }
+    .category-home-carousel {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .category-featured-track .cat-card-carousel {
+      flex-shrink: 0;
+      width: var(--featured-card-width, 100%);
+      min-width: var(--featured-card-width, 100%);
+      height: 360px;
+      margin: 0;
+    }
+    .category-carousel-dots {
+      margin-top: 20px;
+    }
     .cat-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -622,7 +734,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
     }
     .cat-card {
       position: relative; overflow: hidden;
-      height: 400px; cursor: pointer;
+      height: 520px; cursor: pointer;
       text-decoration: none; display: block;
       border-radius: 16px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.08);
@@ -637,10 +749,10 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
     }
     .cat-card-wide {
       grid-column: 1 / -1;
-      height: 320px;
+      height: 420px;
     }
     .cat-card img {
-      width: 100%; height: 100%; object-fit: cover;
+      width: 100%; height: 100%; object-fit: cover; object-position: center;
       transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
     .cat-card:hover img { transform: scale(1.06); }
@@ -702,14 +814,14 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
     /* Collage layout when more than 4 categories */
     .cat-grid.collage {
       grid-template-columns: repeat(4, 1fr);
-      grid-auto-rows: minmax(220px, 1fr);
+      grid-auto-rows: minmax(280px, 1fr);
       gap: 18px;
       width: 100%;
       max-width: 1200px;
     }
     .cat-grid.collage .cat-card {
       height: auto;
-      min-height: 220px;
+      min-height: 280px;
       min-width: 0;
     }
     .cat-grid.collage .cat-card:first-child {
@@ -723,7 +835,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       grid-row: span 1;
     }
     .cat-grid.collage.compact-collage {
-      grid-auto-rows: minmax(240px, 1fr);
+      grid-auto-rows: minmax(300px, 1fr);
     }
     .cat-grid.collage .cat-card:first-child .cat-label h3 {
       font-size: 2rem;
@@ -1043,9 +1155,9 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       .hero-section { min-height: 75vh; }
       .hero-content { padding: 0 var(--spacing-md); }
       .hero-title { font-size: clamp(2.2rem, 6vw, 3.5rem); }
-      .hero-nav { width: 40px; height: 40px; }
-      .hero-nav-left { left: 12px; }
-      .hero-nav-right { right: 12px; }
+      .hero-section .hero-nav-btn { width: 42px; height: 42px; }
+      .hero-section .hero-nav-btn.nav-prev { left: 10px; }
+      .hero-section .hero-nav-btn.nav-next { right: 10px; }
       .orb-1 { width: 200px; height: 200px; }
       .orb-2 { width: 150px; height: 150px; }
       .sale-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1057,9 +1169,9 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
         grid-column: span 2;
         grid-row: span 1;
       }
-      .cat-card { height: 300px; }
-      .cat-grid.collage .cat-card { min-height: 200px; }
-      .cat-card-wide { height: 260px; }
+      .cat-card { height: 400px; }
+      .cat-grid.collage .cat-card { min-height: 260px; }
+      .cat-card-wide { height: 340px; }
       .story-inner { grid-template-columns: 1fr; gap: 40px; }
       .story-image-wrap img { height: 360px; }
       .story-accent { display: none; }
@@ -1080,68 +1192,12 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
         bottom: 0;
         padding-bottom: 20px;
       }
-      .featured-carousel-wrapper .nav-btn,
-      .look-carousel .nav-btn { opacity: 1; pointer-events: auto; }
-      .cat-scroll-wrap {
-        overflow-x: auto;
-        overflow-y: hidden;
-        -webkit-overflow-scrolling: touch;
-        scroll-snap-type: x mandatory;
-        scrollbar-width: none;
-        margin-left: calc(-1 * var(--spacing-md));
-        margin-right: calc(-1 * var(--spacing-md));
-        padding-left: var(--spacing-md);
-        padding-right: var(--spacing-md);
-        /* One full-width slide per view (same idea as featured products carousel) */
-        container-type: inline-size;
-        container-name: cat-carousel;
-      }
-      .cat-scroll-wrap::-webkit-scrollbar { display: none; }
-      .cat-grid {
-        display: flex;
-        flex-wrap: nowrap;
-        grid-template-columns: unset;
-        gap: 0;
-        width: max-content;
-        margin: 0;
-      }
-      .cat-grid.collage .cat-card:first-child { grid-column: unset; }
-      .cat-card {
-        height: 240px;
-        flex-shrink: 0;
-        scroll-snap-align: start;
-        scroll-snap-stop: always;
-        box-sizing: border-box;
-        /* Exactly one card visible — no peek of next (100% of scroll container width) */
-        flex: 0 0 100cqi;
-        width: 100cqi;
-        min-width: 100cqi;
-        max-width: 100cqi;
-      }
-      /* Fallback when container queries are not supported */
-      @supports not (width: 1cqi) {
-        .cat-card {
-          flex: 0 0 calc(100vw - 2 * var(--spacing-md));
-          width: calc(100vw - 2 * var(--spacing-md));
-          min-width: calc(100vw - 2 * var(--spacing-md));
-          max-width: calc(100vw - 2 * var(--spacing-md));
-        }
-      }
-      .cat-grid.collage .cat-card {
-        min-height: 200px;
-        flex: 0 0 100cqi;
-        width: 100cqi;
-        min-width: 100cqi;
-        max-width: 100cqi;
-      }
-      @supports not (width: 1cqi) {
-        .cat-grid.collage .cat-card {
-          flex: 0 0 calc(100vw - 2 * var(--spacing-md));
-          width: calc(100vw - 2 * var(--spacing-md));
-          min-width: calc(100vw - 2 * var(--spacing-md));
-          max-width: calc(100vw - 2 * var(--spacing-md));
-        }
-      }
+      .featured-carousel-wrapper .nav-btn:not(:disabled),
+      .category-home-carousel .nav-btn:not(:disabled),
+      .hero-section .hero-nav-btn:not(:disabled) { opacity: 1; pointer-events: auto; }
+      /* Shop by Category: carousel (1 per slide) like Featured — not horizontal scroll */
+      .cat-carousel-mobile-only { display: block; }
+      .cat-desktop-grid-hide-mobile { display: none !important; }
       .sale-scroll-wrap {
         overflow-x: auto;
         overflow-y: hidden;
@@ -1180,20 +1236,18 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
       .hero-cta-group { flex-direction: column; width: 100%; }
       .hero-cta { width: 100%; }
       .hero-cta-primary .cta-content, .hero-cta-outline .cta-content { width: 100%; justify-content: center; }
-      .hero-nav { width: 34px; height: 34px; }
-      .hero-nav-left { left: 8px; }
-      .hero-nav-right { right: 8px; }
-      .hero-nav svg { width: 16px; height: 16px; }
+      .hero-section .hero-nav-btn { width: 40px; height: 40px; }
+      .hero-section .hero-nav-btn.nav-prev { left: 6px; }
+      .hero-section .hero-nav-btn.nav-next { right: 6px; }
       .hero-progress-track { width: 32px; }
       .hero-shapes { display: none; }
       .hero-scroll-indicator { display: none; }
-      /* Keep one full-width category slide (inherit 768px rules; do not shrink card width) */
+      .category-featured-track .cat-card-carousel { height: 300px; }
       .s-card { min-width: 220px; max-width: 220px; }
       .trust-grid { grid-template-columns: 1fr; }
       .social-grid { grid-template-columns: 1fr 1fr; }
       .look-grid { height: 280px; }
-      .look-carousel { gap: 8px; }
-      .look-carousel .nav-btn { width: 36px; height: 36px; }
+      .look-carousel { gap: 0; }
       .sec-title { font-size: 1.2rem; letter-spacing: 2px; }
     }
   `]
@@ -1201,6 +1255,7 @@ import { InstagramService, InstagramTaggedPost } from '../../services/instagram.
 export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('heroSection') heroSection!: ElementRef;
   @ViewChild('featuredTrackContainer') featuredTrackContainer!: ElementRef;
+  @ViewChild('categoryTrackContainer') categoryTrackContainer?: ElementRef<HTMLElement>;
 
   heroAnimReady = false;
   private heroMouseX = 0.5;
@@ -1220,7 +1275,13 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   private heroInterval: any;
   private heroTouchStartX = 0;
   private featuredTouchStartX = 0;
+  private categoryTouchStartX = 0;
   private lookTouchStartX = 0;
+
+  /** Shop by Category — mobile carousel (≤768px), same mechanics as featured */
+  categoryOffset = 0;
+  categoryCardWidth = 0;
+  readonly categoryCarouselVisible = 1;
   currentLookIndex = 0;
   curatedLooks: any[] = [];
   socialPosts: InstagramTaggedPost[] = [
@@ -1297,6 +1358,8 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
           ...root,
           children: map.get(root.id as any) || []
         }));
+        this.categoryOffset = 0;
+        setTimeout(() => this.calcCategoryCarouselLayout(), 0);
         this.markHomeLoadDone();
       },
       error: () => {
@@ -1316,7 +1379,10 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngAfterViewInit() {
     setTimeout(() => this.heroAnimReady = true, 200);
-    setTimeout(() => this.calcFeaturedLayout(), 100);
+    setTimeout(() => {
+      this.calcFeaturedLayout();
+      this.calcCategoryCarouselLayout();
+    }, 100);
   }
 
   ngOnDestroy() {
@@ -1339,7 +1405,10 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     return `translate(${x}px, ${y}px)`;
   }
 
-  private onResize = () => this.calcFeaturedLayout();
+  private onResize = () => {
+    this.calcFeaturedLayout();
+    this.calcCategoryCarouselLayout();
+  };
 
   getFeaturedCardWidthPx(): number {
     const gap = 16;
@@ -1367,6 +1436,65 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.featuredOffset > this.featuredProducts.length - this.featuredVisible) {
       this.featuredOffset = Math.max(0, this.featuredProducts.length - this.featuredVisible);
     }
+  }
+
+  getCategoryCardWidthPx(): number {
+    const gap = 16;
+    const w = this.categoryCardWidth - gap;
+    return w > 0 ? w : 300;
+  }
+
+  calcCategoryCarouselLayout() {
+    if (typeof window === 'undefined') return;
+    if (window.innerWidth > 768) {
+      this.categoryOffset = Math.min(
+        this.categoryOffset,
+        Math.max(0, this.topCategories.length - this.categoryCarouselVisible)
+      );
+      return;
+    }
+    const gap = 16;
+    let containerW: number;
+    const el = this.categoryTrackContainer?.nativeElement;
+    if (el && typeof el.getBoundingClientRect === 'function') {
+      containerW = el.clientWidth || Math.min(1200, window.innerWidth - 32);
+    } else {
+      containerW = Math.min(1200, window.innerWidth - 32);
+    }
+    if (containerW <= 0) containerW = Math.min(1200, window.innerWidth - 32);
+    this.categoryCardWidth = (containerW + gap) / this.categoryCarouselVisible;
+    if (this.categoryOffset > this.topCategories.length - this.categoryCarouselVisible) {
+      this.categoryOffset = Math.max(0, this.topCategories.length - this.categoryCarouselVisible);
+    }
+  }
+
+  getCategoryDotArray(): any[] {
+    const total = Math.max(0, this.topCategories.length - this.categoryCarouselVisible + 1);
+    return new Array(total);
+  }
+
+  prevCategorySlide() {
+    if (this.categoryOffset > 0) this.categoryOffset--;
+  }
+
+  nextCategorySlide() {
+    if (this.categoryOffset < this.topCategories.length - this.categoryCarouselVisible) {
+      this.categoryOffset++;
+    } else {
+      this.categoryOffset = 0;
+    }
+  }
+
+  onCategoryTouchStart(e: TouchEvent) {
+    if (e.changedTouches?.length) this.categoryTouchStartX = e.changedTouches[0].clientX;
+  }
+
+  onCategoryTouchEnd(e: TouchEvent) {
+    if (!e.changedTouches?.length || !this.topCategories.length) return;
+    if (typeof window !== 'undefined' && window.innerWidth > 768) return;
+    const dx = e.changedTouches[0].clientX - this.categoryTouchStartX;
+    if (dx > 50) this.prevCategorySlide();
+    else if (dx < -50) this.nextCategorySlide();
   }
 
   getDotArray(): any[] {
@@ -1404,7 +1532,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
   stopHeroAutoSlide() {
     if (this.heroInterval) clearInterval(this.heroInterval);
-  }
+    }
   nextHeroSlide() {
     if (!this.heroSlides || this.heroSlides.length === 0) return;
     this.prevSlide = this.activeSlide;
@@ -1425,11 +1553,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
   private resetHeroAutoSlide() {
     this.stopHeroAutoSlide(); this.startHeroAutoSlide();
-  }
-
-  scrollToFeatured() {
-    const el = document.getElementById('featured-products');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   onHeroTouchStart(e: TouchEvent) {
@@ -1489,7 +1612,9 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
         const apiProducts = items || [];
         if (apiProducts.length > 0) {
           // latest featured first (backend already orders by updated_at desc, but ensure)
-          this.featuredProducts = [...apiProducts].sort((a, b) => {
+          this.featuredProducts = [...apiProducts]
+            .filter(isProductInStock)
+            .sort((a, b) => {
             const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
             const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
             return bTime - aTime;
@@ -1538,23 +1663,23 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
           const db = b.created_at ? new Date(b.created_at).getTime() : 0;
           return db - da;
         };
-        this.saleProducts = [...mapped].sort(byDate).slice(0, 6);
+        this.saleProducts = [...mapped].filter(isProductInStock).sort(byDate).slice(0, 6);
         this.markHomeLoadDone();
       },
       error: () => {
-        const allProducts = this.productService.getAllProducts();
+    const allProducts = this.productService.getAllProducts();
         const filtered = allProducts.filter((p: any) => p.is_on_sale || (p.originalPrice && p.price < p.originalPrice));
         const byDate = (a: any, b: any) => {
           const da = a.created_at ? new Date(a.created_at).getTime() : 0;
           const db = b.created_at ? new Date(b.created_at).getTime() : 0;
           return db - da;
         };
-        this.saleProducts = [...filtered].sort(byDate).slice(0, 6).map((p: any) => {
-          if (!p.discount_percentage && p.originalPrice) {
+        this.saleProducts = [...filtered].filter(isProductInStock).sort(byDate).slice(0, 6).map((p: any) => {
+      if (!p.discount_percentage && p.originalPrice) {
             p.discount_percentage = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
-          }
+      }
           if (!p.original_price && p.originalPrice) p.original_price = p.originalPrice;
-          return p;
+      return p;
         });
         this.markHomeLoadDone();
       }
@@ -1565,15 +1690,19 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     this.lookService.list().subscribe({
       next: (looks) => {
         if (looks && looks.length > 0) {
-          this.curatedLooks = looks.map(l => ({
-            id: l.id,
-            products: (l.products || []).map(p => ({
-              id: p.product_id || p.id,
-              name: p.name,
-              price: p.price,
-              image: p.image_url || ''
+          this.curatedLooks = looks
+            .map(l => ({
+              id: l.id,
+              products: (l.products || [])
+                .filter((p: any) => isProductInStock(p))
+                .map(p => ({
+                  id: p.product_id || p.id,
+                  name: p.name,
+                  price: p.price,
+                  image: p.image_url || ''
+                }))
             }))
-          }));
+            .filter(look => look.products.length > 0);
           this.currentLookIndex = 0;
         }
         this.markHomeLoadDone();
@@ -1601,7 +1730,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   prevLook() {
     if (this.currentLookIndex > 0) this.currentLookIndex--;
-  }
+    }
   nextLook() {
     if (this.currentLookIndex < this.curatedLooks.length - 1) this.currentLookIndex++;
   }

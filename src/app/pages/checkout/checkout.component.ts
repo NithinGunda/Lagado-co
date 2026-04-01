@@ -21,16 +21,11 @@ import { CartItem, Product } from '../../models/product.model';
         <h1 class="page-title">Checkout</h1>
 
         <div class="checkout-content" *ngIf="cartItems.length > 0">
-          <div class="guest-option" *ngIf="!isLoggedIn">
-            <p>Already have an account? <a routerLink="/login">Sign in</a> or continue as guest</p>
-          </div>
-
           <div class="checkout-grid">
             <!-- Checkout Form -->
             <div class="checkout-form-section">
               <form [formGroup]="checkoutForm" (ngSubmit)="onSubmit()">
-                <!-- Signed-in: show user details (read-only), then only address -->
-                <section class="form-section" *ngIf="isLoggedIn && hasUserDetails()">
+                <section class="form-section" *ngIf="hasUserDetails()">
                   <h2>Your details</h2>
                   <div class="user-details-readonly">
                     <p><strong>{{ checkoutForm.get('firstName')?.value }} {{ checkoutForm.get('lastName')?.value }}</strong></p>
@@ -39,60 +34,7 @@ import { CartItem, Product } from '../../models/product.model';
                   </div>
                 </section>
 
-                <!-- Guest: full shipping form -->
-                <section class="form-section" *ngIf="!isLoggedIn">
-                  <h2>Shipping Information</h2>
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label>First Name *</label>
-                      <input type="text" formControlName="firstName" class="form-input">
-                      <span class="error" *ngIf="isFieldInvalid('firstName')">Required</span>
-                    </div>
-                    <div class="form-group">
-                      <label>Last Name *</label>
-                      <input type="text" formControlName="lastName" class="form-input">
-                      <span class="error" *ngIf="isFieldInvalid('lastName')">Required</span>
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label>Email Address *</label>
-                    <input type="email" formControlName="email" class="form-input">
-                    <span class="error" *ngIf="isFieldInvalid('email')">Valid email required</span>
-                  </div>
-                  <div class="form-group">
-                    <label>Phone Number *</label>
-                    <input type="tel" formControlName="phone" class="form-input">
-                    <span class="error" *ngIf="isFieldInvalid('phone')">Required</span>
-                  </div>
-                  <div class="form-group">
-                    <label>Address *</label>
-                    <input type="text" formControlName="address" class="form-input">
-                    <span class="error" *ngIf="isFieldInvalid('address')">Required</span>
-                  </div>
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label>City *</label>
-                      <input type="text" formControlName="city" class="form-input">
-                      <span class="error" *ngIf="isFieldInvalid('city')">Required</span>
-                    </div>
-                    <div class="form-group">
-                      <label>State *</label>
-                      <select formControlName="state" class="form-input">
-                        <option value="">Select State</option>
-                        <option *ngFor="let s of indianStates" [value]="s">{{ s }}</option>
-                      </select>
-                      <span class="error" *ngIf="isFieldInvalid('state')">Required</span>
-                    </div>
-                    <div class="form-group">
-                      <label>PIN Code *</label>
-                      <input type="text" formControlName="zipCode" class="form-input" maxlength="6" placeholder="e.g. 500001">
-                      <span class="error" *ngIf="isFieldInvalid('zipCode')">Required</span>
-                    </div>
-                  </div>
-                </section>
-
-                <!-- Signed-in: delivery address (saved or new) -->
-                <section class="form-section" *ngIf="isLoggedIn">
+                <section class="form-section">
                   <h2>Delivery Address</h2>
                   <p class="address-loading" *ngIf="addressesLoading">Loading addresses...</p>
                   <div class="address-choice" *ngIf="!addressesLoading && userAddresses.length > 0 && !useNewAddress">
@@ -259,14 +201,6 @@ import { CartItem, Product } from '../../models/product.model';
       margin-bottom: var(--spacing-lg);
       font-weight: 700;
     }
-    .guest-option {
-      background: var(--secondary-color);
-      padding: var(--spacing-sm) var(--spacing-md);
-      margin-bottom: var(--spacing-md);
-      text-align: center;
-    }
-    .guest-option a { color: var(--primary-color); font-weight: 600; }
-
     .user-details-readonly {
       padding: 12px 0;
       color: var(--text-dark);
@@ -476,7 +410,9 @@ import { CartItem, Product } from '../../models/product.model';
       text-align: center;
     }
     .order-success-logo {
-      width: 140px;
+      width: auto;
+      max-width: min(200px, 70vw);
+      max-height: 72px;
       height: auto;
       margin: 0 auto 24px;
       display: block;
@@ -532,7 +468,7 @@ import { CartItem, Product } from '../../models/product.model';
       transform: translateY(-1px);
     }
     @media (min-width: 600px) {
-      .order-success-logo { width: 160px; margin-bottom: 28px; }
+      .order-success-logo { max-width: min(220px, 72vw); max-height: 80px; margin-bottom: 28px; }
       .order-success-inner { padding: 48px 44px 40px; }
       .order-success-title { font-size: 1.75rem; }
     }
@@ -546,7 +482,6 @@ import { CartItem, Product } from '../../models/product.model';
 export class CheckoutComponent implements OnInit {
   checkoutForm: FormGroup;
   cartItems: CartItem[] = [];
-  isLoggedIn = false;
   isProcessing = false;
   couponCode = '';
   appliedCoupon: { code: string; discount_type?: string; discount_value?: number } | null = null;
@@ -593,12 +528,9 @@ export class CheckoutComponent implements OnInit {
 
   ngOnInit() {
     this.cartItems = this.cartService.getCartItems();
-    this.isLoggedIn = this.authService.isLoggedIn();
-    if (this.isLoggedIn) {
-      const cached = this.authService.getUser();
-      if (cached) this.patchUserIntoForm(cached);
-      this.loadUserAndAddresses();
-    }
+    const cached = this.authService.getUser();
+    if (cached) this.patchUserIntoForm(cached);
+    this.loadUserAndAddresses();
   }
 
   loadUserAndAddresses(): void {
@@ -684,78 +616,60 @@ export class CheckoutComponent implements OnInit {
 
   isSubmitDisabled(): boolean {
     if (this.isProcessing) return true;
-    if (this.isLoggedIn) {
-      // If using a saved address, allow submit
-      const useSaved = this.selectedAddressId != null && !this.useNewAddress && this.userAddresses.length > 0;
-      if (useSaved) return false;
+    const useSaved = this.selectedAddressId != null && !this.useNewAddress && this.userAddresses.length > 0;
+    if (useSaved) return false;
 
-      // For new address, only require address fields
-      const addr = this.checkoutForm.get('address')?.value?.trim();
-      const city = this.checkoutForm.get('city')?.value?.trim();
-      const state = this.checkoutForm.get('state')?.value?.trim();
-      const zip = this.checkoutForm.get('zipCode')?.value?.trim();
-      const zipOk = !!zip && /^\d{6}$/.test(zip);
-      return !addr || !city || !state || !zipOk;
-    }
-    // Guest: full form must be valid
-    return this.checkoutForm.invalid;
+    const addr = this.checkoutForm.get('address')?.value?.trim();
+    const city = this.checkoutForm.get('city')?.value?.trim();
+    const state = this.checkoutForm.get('state')?.value?.trim();
+    const zip = this.checkoutForm.get('zipCode')?.value?.trim();
+    const zipOk = !!zip && /^\d{6}$/.test(zip);
+    return !addr || !city || !state || !zipOk;
   }
 
   onSubmit() {
-    if (this.isLoggedIn) {
-      this.checkoutError = '';
-      const useSaved = this.selectedAddressId != null && !this.useNewAddress && this.userAddresses.length > 0;
-      if (useSaved) {
-        this.placeOrderWithAddressId(this.selectedAddressId!);
-        return;
-      }
-      if (!this.checkoutForm.get('address')?.value?.trim() || !this.checkoutForm.get('city')?.value?.trim() ||
-          !this.checkoutForm.get('state')?.value?.trim() || !this.checkoutForm.get('zipCode')?.value?.trim()) {
-        this.checkoutForm.get('address')?.markAsTouched();
-        this.checkoutForm.get('city')?.markAsTouched();
-        this.checkoutForm.get('state')?.markAsTouched();
-        this.checkoutForm.get('zipCode')?.markAsTouched();
-        this.checkoutError = 'Please fill in delivery address.';
-        return;
-      }
-      this.isProcessing = true;
-      this.addressService.create({
-        type: 'shipping',
-        street: this.checkoutForm.get('address')?.value,
-        location: this.checkoutForm.get('address')?.value || '—',
-        city: this.checkoutForm.get('city')?.value,
-        state: this.checkoutForm.get('state')?.value,
-        pincode: this.checkoutForm.get('zipCode')?.value,
-      }).subscribe({
-        next: (res: any) => {
-          const id = res?.id ?? res?.data?.id ?? res?.address?.id;
-          if (id) {
-            this.placeOrderWithAddressId(id);
-          } else {
-            this.checkoutError = 'Could not save address. Try again.';
-            this.isProcessing = false;
-          }
-        },
-        error: () => {
-          this.checkoutError = 'Could not save address. Try again.';
-          this.isProcessing = false;
-        },
-      });
+    if (!this.authService.isLoggedIn()) {
+      this.router.navigate(['/login'], { queryParams: { returnUrl: '/checkout' } });
       return;
     }
-
-    if (this.checkoutForm.valid) {
-      this.isProcessing = true;
-      setTimeout(() => {
-        this.isProcessing = false;
-        this.cartService.clearCart();
-        this.showOrderSuccessModal = true;
-      }, 2000);
-    } else {
-      Object.keys(this.checkoutForm.controls).forEach(key => {
-        this.checkoutForm.get(key)?.markAsTouched();
-      });
+    this.checkoutError = '';
+    const useSaved = this.selectedAddressId != null && !this.useNewAddress && this.userAddresses.length > 0;
+    if (useSaved) {
+      this.placeOrderWithAddressId(this.selectedAddressId!);
+      return;
     }
+    if (!this.checkoutForm.get('address')?.value?.trim() || !this.checkoutForm.get('city')?.value?.trim() ||
+        !this.checkoutForm.get('state')?.value?.trim() || !this.checkoutForm.get('zipCode')?.value?.trim()) {
+      this.checkoutForm.get('address')?.markAsTouched();
+      this.checkoutForm.get('city')?.markAsTouched();
+      this.checkoutForm.get('state')?.markAsTouched();
+      this.checkoutForm.get('zipCode')?.markAsTouched();
+      this.checkoutError = 'Please fill in delivery address.';
+      return;
+    }
+    this.isProcessing = true;
+    this.addressService.create({
+      type: 'shipping',
+      street: this.checkoutForm.get('address')?.value,
+      location: this.checkoutForm.get('address')?.value || '—',
+      city: this.checkoutForm.get('city')?.value,
+      state: this.checkoutForm.get('state')?.value,
+      pincode: this.checkoutForm.get('zipCode')?.value,
+    }).subscribe({
+      next: (res: any) => {
+        const id = res?.id ?? res?.data?.id ?? res?.address?.id;
+        if (id) {
+          this.placeOrderWithAddressId(id);
+        } else {
+          this.checkoutError = 'Could not save address. Try again.';
+          this.isProcessing = false;
+        }
+      },
+      error: () => {
+        this.checkoutError = 'Could not save address. Try again.';
+        this.isProcessing = false;
+      },
+    });
   }
 
   private placeOrderWithAddressId(addressId: number): void {

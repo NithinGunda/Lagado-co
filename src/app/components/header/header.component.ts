@@ -254,9 +254,10 @@ import { Subscription } from 'rxjs';
     .h-container {
       max-width: 1400px;
       margin: 0 auto;
-      padding: 0 28px 0 0;
+      padding: 0 16px;
       display: grid;
-      grid-template-columns: auto 1fr auto;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      column-gap: 10px;
       align-items: center;
       height: 72px;
       transition: height 0.35s ease;
@@ -273,8 +274,23 @@ import { Subscription } from 'rxjs';
       flex-wrap: nowrap;
       white-space: nowrap;
       min-width: 0;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
     }
-    .nav-main { justify-self: center; }
+    .desktop-nav::-webkit-scrollbar {
+      display: none;
+      height: 0;
+      width: 0;
+    }
+    .nav-main {
+      justify-self: center;
+      min-width: 0;
+      max-width: 100%;
+    }
     .nav-right {
       justify-self: end;
       display: flex;
@@ -392,35 +408,41 @@ import { Subscription } from 'rxjs';
       background: rgba(30,58,95,0.1);
     }
 
-    /* ==================== LOGO ==================== */
+    /* ==================== LOGO (Safari-safe: no negative margin, fluid type, bounded width) ==================== */
     .logo-left {
       justify-self: start;
       align-self: center;
-      overflow: visible;
-      margin-left: -40px;
+      min-width: 0;
+      max-width: min(46vw, 220px);
+      flex-shrink: 0;
     }
     .logo-link {
       text-decoration: none;
       display: flex;
       align-items: center;
+      min-width: 0;
+      max-width: 100%;
     }
     .logo-wordmark {
       font-family: var(--font-body, 'Lato', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
-      font-size: 1.4rem;
+      font-size: var(--brand-wordmark-size, clamp(0.75rem, 1.65vw + 0.35rem, 1.35rem));
       font-weight: 700;
-      letter-spacing: 0.18em;
+      letter-spacing: var(--brand-wordmark-tracking, clamp(0.06em, 0.4vw, 0.18em));
       text-transform: uppercase;
       color: #1e3a5f;
       white-space: nowrap;
-      transition: transform 0.25s ease, opacity 0.2s ease;
+      line-height: 1.15;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      -webkit-font-smoothing: antialiased;
+      transition: opacity 0.2s ease;
     }
     .scrolled .logo-wordmark {
-      transform: translateY(-1px) scale(0.96);
       opacity: 0.95;
     }
     .logo-link:hover .logo-wordmark {
-      opacity: 0.9;
-      transform: translateY(-1px) scale(1.02);
+      opacity: 0.88;
     }
 
     /* ==================== DIVIDER ==================== */
@@ -644,9 +666,12 @@ import { Subscription } from 'rxjs';
       gap: 8px;
     }
     .mobile-logo-img {
-      width: 120px;
+      width: auto;
+      max-width: min(140px, 55vw);
+      max-height: 44px;
       height: auto;
       display: block;
+      object-fit: contain;
     }
     .mobile-close {
       display: flex;
@@ -769,9 +794,14 @@ import { Subscription } from 'rxjs';
     .mob-wishlist-count { font-weight: 700; opacity: 0.9; }
 
     /* ==================== RESPONSIVE ==================== */
+    @media (max-width: 1200px) {
+      .desktop-nav { gap: 14px; }
+      .nav-text { font-size: 10.5px; letter-spacing: 0.85px; }
+    }
+
     @media (max-width: 1024px) {
-      .h-container { padding: 0 20px 0 12px; }
-      .desktop-nav { gap: 18px; }
+      .h-container { padding: 0 14px; column-gap: 8px; }
+      .desktop-nav { gap: 12px; }
       .nav-text { font-size: 11px; letter-spacing: 1px; }
       .search-overlay { padding: 0 24px; }
       .search-overlay.open { padding: 12px 24px; }
@@ -781,12 +811,13 @@ import { Subscription } from 'rxjs';
       .desktop-nav { display: none; }
       .action-divider { display: none; }
       .h-container {
-        grid-template-columns: auto 1fr auto;
-        padding: 0 16px 0 12px;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        padding: 0 12px;
+        column-gap: 8px;
         height: 60px;
       }
       .scrolled .h-container { height: 54px; }
-      .logo-left { margin-left: 0; }
+      .logo-left { max-width: min(55vw, 200px); }
       .nav-right { justify-self: end; gap: 2px; min-width: 0; }
       .header-actions { gap: 0; }
       .mobile-toggle { display: flex; }
@@ -797,12 +828,12 @@ import { Subscription } from 'rxjs';
     }
 
     @media (max-width: 480px) {
-      .h-container { padding: 0 10px 0 8px; height: 56px; }
+      .h-container { padding: 0 10px; height: 56px; }
       .scrolled .h-container { height: 50px; }
-      .logo-left { margin-left: 0; }
+      .logo-left { max-width: min(58vw, 180px); }
       .logo-wordmark {
-        font-size: 1.1rem;
-        letter-spacing: 0.14em;
+        font-size: clamp(0.68rem, 3.2vw, 1rem);
+        letter-spacing: clamp(0.04em, 0.8vw, 0.12em);
       }
       .announce-inner { font-size: 11px; padding: 8px 12px; }
       .action-icon, .search-btn {

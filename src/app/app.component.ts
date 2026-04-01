@@ -19,7 +19,7 @@ import { AppLoadingService } from './services/app-loading.service';
           <div class="loader-ring loader-ring-outer"></div>
           <div class="loader-ring loader-ring-inner"></div>
           <div class="loader-logo-wrap">
-            <img src="assets/Logo.png" alt="Legado & Co" class="loader-logo" />
+            <img src="assets/Logo.png" alt="Legado & Co" class="loader-logo" width="76" height="76" decoding="async" />
           </div>
         </div>
       </div>
@@ -235,42 +235,54 @@ export class AppComponent implements OnInit, OnDestroy {
 
   constructor(private router: Router, private appLoading: AppLoadingService) {}
 
+  /** Defer loader/admin updates to the next macrotask so dev-mode CD does not throw ExpressionChangedAfterItHasBeenCheckedError */
+  private scheduleUi(fn: () => void): void {
+    setTimeout(fn, 0);
+  }
+
   ngOnInit() {
     this.loadingSub = this.appLoading.loading$.subscribe(isLoading => {
-      this.appBusy = isLoading;
-      if (!this.isAdmin && isLoading) {
-        this.showLoader = true;
-      }
-      if (!this.isAdmin && !isLoading && !(this.router as any).navigating) {
-        this.showLoader = false;
-      }
+      this.scheduleUi(() => {
+        this.appBusy = isLoading;
+        if (!this.isAdmin && isLoading) {
+          this.showLoader = true;
+        }
+        if (!this.isAdmin && !isLoading && !(this.router as any).navigating) {
+          this.showLoader = false;
+        }
+      });
     });
 
     this.routerSub = this.router.events.subscribe((e: any) => {
       if (e instanceof NavigationStart) {
-        this.isAdmin = e.url?.startsWith('/admin');
-        if (!this.isAdmin) {
-          this.showLoader = true;
-        }
+        this.scheduleUi(() => {
+          this.isAdmin = e.url?.startsWith('/admin');
+          if (!this.isAdmin) {
+            this.showLoader = true;
+          }
+        });
       }
       if (e instanceof NavigationEnd) {
-        this.isAdmin = e.urlAfterRedirects?.startsWith('/admin') || e.url?.startsWith('/admin');
-        if (this.isAdmin) {
-          this.showLoader = false;
-        } else if (!this.appBusy) {
-          // Page does not use loading service; hide loader after brief delay
-          setTimeout(() => this.showLoader = false, 150);
-        }
+        this.scheduleUi(() => {
+          this.isAdmin = e.urlAfterRedirects?.startsWith('/admin') || e.url?.startsWith('/admin');
+          if (this.isAdmin) {
+            this.showLoader = false;
+          } else if (!this.appBusy) {
+            setTimeout(() => {
+              this.showLoader = false;
+            }, 150);
+          }
+        });
       }
       if (e instanceof NavigationCancel || e instanceof NavigationError) {
-        // cancel/error: just hide loader, keep current isAdmin
-        this.showLoader = false;
+        this.scheduleUi(() => {
+          this.showLoader = false;
+        });
       }
     });
 
     this.isAdmin = this.router.url.startsWith('/admin');
     if (this.isAdmin) this.showLoader = false;
-    // Non-admin: showLoader stays true until loading$ emits false (e.g. home/collections/product done)
 
     if (typeof localStorage !== 'undefined') {
       const consent = localStorage.getItem('legado_cookie_consent');

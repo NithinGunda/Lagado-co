@@ -74,6 +74,23 @@ export class AuthService {
     );
   }
 
+  forgotPassword(payload: { email: string }): Observable<{ message?: string }> {
+    return this.http.post<{ message?: string }>(`${environment.apiBaseUrl}/forgot-password`, payload).pipe(
+      catchError(err => { throw err; })
+    );
+  }
+
+  resetPassword(payload: {
+    token: string;
+    email: string;
+    password: string;
+    password_confirmation: string;
+  }): Observable<{ message?: string }> {
+    return this.http.post<{ message?: string }>(`${environment.apiBaseUrl}/reset-password`, payload).pipe(
+      catchError(err => { throw err; })
+    );
+  }
+
   setToken(token: string) {
     localStorage.setItem(this.tokenKey, token);
   }

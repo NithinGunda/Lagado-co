@@ -8,10 +8,13 @@ import { BlogComponent } from './pages/blog/blog.component';
 import { LoginComponent } from './pages/login/login.component';
 import { RegisterComponent } from './pages/register/register.component';
 import { VerifyOtpComponent } from './pages/verify-otp/verify-otp.component';
+import { ForgotPasswordComponent } from './pages/forgot-password/forgot-password.component';
+import { ResetPasswordComponent } from './pages/reset-password/reset-password.component';
 import { CartComponent } from './pages/cart/cart.component';
 import { WishlistComponent } from './pages/wishlist/wishlist.component';
 import { ProductDetailsComponent } from './pages/product-details/product-details.component';
 import { CheckoutComponent } from './pages/checkout/checkout.component';
+import { customerAuthGuard } from './services/auth.guard';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { PrivacyComponent } from './pages/privacy/privacy.component';
 import { TermsComponent } from './pages/terms/terms.component';
@@ -21,10 +24,12 @@ export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'verify-otp', component: VerifyOtpComponent },
+  { path: 'forgot-password', component: ForgotPasswordComponent },
+  { path: 'reset-password', component: ResetPasswordComponent },
   { path: 'profile', component: ProfileComponent },
   { path: 'cart', component: CartComponent },
   { path: 'wishlist', component: WishlistComponent },
-  { path: 'checkout', component: CheckoutComponent },
+  { path: 'checkout', component: CheckoutComponent, canActivate: [customerAuthGuard] },
   { path: 'product/:id', component: ProductDetailsComponent },
   { path: 'our-story', component: OurStoryComponent },
   { path: 'about-us', component: OurStoryComponent },

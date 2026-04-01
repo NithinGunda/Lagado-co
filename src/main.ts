@@ -3,6 +3,7 @@ import { AppComponent } from './app/app.component';
 import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { routes } from './app/app.routes';
 import { importProvidersFrom } from '@angular/core';
+import { IMAGE_CONFIG } from '@angular/common';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
@@ -18,6 +19,10 @@ bootstrapApplication(AppComponent, {
       CommonModule,
       FormsModule
     ),
-    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+    {
+      provide: IMAGE_CONFIG,
+      useValue: { disableImageSizeWarning: true }
+    }
   ]
 }).catch(err => console.error(err));

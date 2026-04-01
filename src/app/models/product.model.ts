@@ -48,6 +48,29 @@ export function stockBySizeToArray(obj: { [size: string]: number } | undefined):
   return Object.entries(obj).map(([size, quantity]) => ({ size, quantity: Number(quantity ?? 0) }));
 }
 
+/**
+ * Whether a product has available inventory (API shapes, stock_by_size, and legacy mocks).
+ * Used to hide items on the home page and to show “Out of stock” on listings.
+ */
+export function isProductInStock(p: any): boolean {
+  if (!p) return false;
+  if (p.in_stock === false || p.inStock === false) return false;
+
+  const sbsObj = stockBySizeFromArray(p.stock_by_size);
+  if (Object.keys(sbsObj).length > 0) {
+    const total = Object.values(sbsObj).reduce((a: number, q) => a + Number(q ?? 0), 0);
+    return total > 0;
+  }
+
+  const qty = p.stock_quantity ?? p.stockQuantity;
+  if (qty !== undefined && qty !== null && String(qty).trim() !== '') {
+    return Number(qty) > 0;
+  }
+
+  if (p.inStock === true || p.in_stock === true) return true;
+  return true;
+}
+
 /** Accepts API response: either array [{ size, quantity }] or object { "S": 5, "M": 10 }. */
 export function stockBySizeFromArray(arrOrObj: StockBySizeItem[] | { [size: string]: number } | any): { [size: string]: number } {
   if (Array.isArray(arrOrObj)) {

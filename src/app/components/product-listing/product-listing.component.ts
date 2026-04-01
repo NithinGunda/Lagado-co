@@ -7,7 +7,7 @@ import { CategoryService } from '../../services/category.service';
 import { CartService } from '../../services/cart.service';
 import { WishlistService } from '../../services/wishlist.service';
 import { AppLoadingService } from '../../services/app-loading.service';
-import { Product, FilterOptions, stockBySizeFromArray } from '../../models/product.model';
+import { Product, FilterOptions, stockBySizeFromArray, isProductInStock } from '../../models/product.model';
 import { Category } from '../../models/category.model';
 
 @Component({
@@ -138,6 +138,10 @@ import { Category } from '../../models/category.model';
             <img class="card-img-inner" [src]="getProductImage(product)" [alt]="product.name" loading="lazy" />
             <div class="card-img-fallback" [style.background]="getProductColor(product)"></div>
             <div class="card-overlay"></div>
+
+            <div class="oos-ribbon" *ngIf="isProductOutOfStock(product)" aria-hidden="true">
+              <span>Out of stock</span>
+            </div>
 
             <!-- Badges -->
             <div class="badge sale" *ngIf="product.original_price || product.originalPrice">-{{ getDiscountPercent(product) }}%</div>
@@ -510,6 +514,27 @@ import { Category } from '../../models/category.model';
       opacity: 0; transition: opacity 0.4s ease;
     }
     .product-card:hover .card-overlay { opacity: 1; }
+
+    .oos-ribbon {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      background: rgba(0, 0, 0, 0.42);
+    }
+    .oos-ribbon span {
+      padding: 10px 18px;
+      background: rgba(17, 24, 39, 0.92);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
 
     /* Badges */
     .badge {
@@ -1079,8 +1104,7 @@ export class ProductListingComponent implements OnInit, OnDestroy {
   }
 
   isProductOutOfStock(p: any): boolean {
-    if (!p) return true;
-    return p.in_stock === false || (Number(p.stock_quantity ?? 0) <= 0);
+    return !isProductInStock(p);
   }
 
   addToCart(product: any, event: Event) {

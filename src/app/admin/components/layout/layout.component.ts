@@ -68,10 +68,15 @@ import { AuthService } from '../../../services/auth.service';
     }
     .sidebar-header h2 {
       margin: 0;
-      font-size: 1.5rem;
+      font-size: clamp(1rem, 2.5vw, 1.5rem);
       font-family: 'Lato', sans-serif;
       font-weight: 400;
       color: #fff;
+      line-height: 1.25;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      max-width: 100%;
+      -webkit-font-smoothing: antialiased;
     }
     .admin-badge {
       display: inline-block;

@@ -199,7 +199,7 @@ import { Product, stockBySizeFromArray } from '../../models/product.model';
                   <strong>{{ attr.name }}:</strong> {{ attr.value }}
                 </li>
                 <li>
-                  <strong>Category:</strong> {{ product.category | titlecase }}
+                  <strong>Category:</strong> {{ getCategoryDisplayName() }}
                 </li>
                 <li>
                   <strong>Availability:</strong> 
