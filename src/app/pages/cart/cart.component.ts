@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { CartService } from '../../services/cart.service';
 import { AuthService } from '../../services/auth.service';
-import { CartItem } from '../../models/product.model';
+import { CartItem, maxQuantityForCartLine } from '../../models/product.model';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -23,7 +23,20 @@ import { Subscription } from 'rxjs';
           <div class="cart-items">
             <div class="cart-item" *ngFor="let item of cartItems; trackBy: trackByItemId; let i = index" [style.animation-delay]="i * 0.06 + 's'">
               <div class="item-image">
-                <div class="image-placeholder" [style.background]="getProductColor(item.product)"></div>
+                <a [routerLink]="['/product', item.product.id]" class="item-image-link" tabindex="-1" aria-hidden="true">
+                  <img
+                    *ngIf="getProductImage(item.product)"
+                    [src]="getProductImage(item.product)"
+                    [alt]="item.product.name"
+                    class="item-img"
+                    loading="lazy"
+                  />
+                  <div
+                    *ngIf="!getProductImage(item.product)"
+                    class="image-placeholder"
+                    [style.background]="getProductColor(item.product)"
+                  ></div>
+                </a>
               </div>
               
               <div class="item-details">
@@ -44,7 +57,7 @@ import { Subscription } from 'rxjs';
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                   </button>
                   <span class="qty-display">{{ item.quantity }}</span>
-                  <button class="qty-btn" (click)="updateQuantity(item, item.quantity + 1)" [disabled]="item.quantity >= item.product.stockQuantity">
+                  <button class="qty-btn" (click)="updateQuantity(item, item.quantity + 1)" [disabled]="item.quantity >= maxQty(item)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                   </button>
                 </div>
@@ -179,6 +192,26 @@ import { Subscription } from 'rxjs';
       width: 110px;
       height: 110px;
       overflow: hidden;
+      border-radius: 4px;
+      background: var(--secondary-color);
+    }
+
+    .item-image-link {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .item-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+
+    .cart-item:hover .item-img {
+      transform: scale(1.05);
     }
 
     .image-placeholder {
@@ -231,7 +264,7 @@ import { Subscription } from 'rxjs';
     .item-price {
       font-size: 15px;
       color: var(--text-dark);
-      font-weight: 600;
+      font-weight: 400;
       margin: 4px 0 0 0;
     }
 
@@ -289,7 +322,7 @@ import { Subscription } from 'rxjs';
 
     .total-price {
       font-size: 1.1rem;
-      font-weight: 700;
+      font-weight: 400;
       color: var(--text-dark);
       margin: 0;
     }
@@ -493,18 +526,28 @@ export class CartComponent implements OnInit, OnDestroy {
     return item.product.id + (item.selectedSize || '') + (item.selectedColor || '');
   }
 
+  maxQty(item: CartItem): number {
+    return maxQuantityForCartLine(item.product, item.selectedSize);
+  }
+
   updateQuantity(item: CartItem, newQuantity: number) {
     if (newQuantity < 1) {
       newQuantity = 1;
     }
-    if (newQuantity > item.product.stockQuantity) {
-      newQuantity = item.product.stockQuantity;
+    const cap = this.maxQty(item);
+    if (cap > 0 && newQuantity > cap) {
+      newQuantity = cap;
     }
-    this.cartService.updateQuantity(item.product.id, newQuantity);
+    this.cartService.updateQuantity(
+      item.product.id,
+      newQuantity,
+      item.selectedSize,
+      item.selectedColor
+    );
   }
 
   removeItem(item: CartItem) {
-    this.cartService.removeFromCart(item.product.id);
+    this.cartService.removeFromCart(item.product.id, item.selectedSize, item.selectedColor);
   }
 
   getItemTotal(item: CartItem): number {
@@ -523,12 +566,29 @@ export class CartComponent implements OnInit, OnDestroy {
     return `₹${price}`;
   }
 
+  getProductImage(product: any): string {
+    if (!product) return '';
+    if (product.image_url) return product.image_url;
+    if (Array.isArray(product.image_urls) && product.image_urls.length) {
+      return product.image_urls[0];
+    }
+    if (Array.isArray(product.images) && product.images.length) {
+      const first = product.images[0];
+      if (typeof first === 'string') return first;
+      if (first && typeof first.path === 'string') return first.path;
+    }
+    return '';
+  }
+
   getProductColor(product: any): string {
     const colors: { [key: string]: string } = {
       'mens': 'linear-gradient(135deg, #1e3a5f 0%, #2a4d7a 100%)',
       'womens': 'linear-gradient(135deg, #a8d5ba 0%, #7fb89a 100%)',
-      'collections': 'linear-gradient(135deg, #f5f1e8 0%, #e8e3d8 100%)'
+      'collections': 'linear-gradient(135deg, #f5f1e8 0%, #e8e3d8 100%)',
     };
-    return colors[product.category] || colors['collections'];
+    const cat = product?.category;
+    const key =
+      typeof cat === 'string' ? cat : (cat?.slug ?? cat?.name ?? '').toString().toLowerCase();
+    return colors[key] || colors['collections'];
   }
 }

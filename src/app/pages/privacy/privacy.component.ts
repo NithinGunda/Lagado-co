@@ -141,7 +141,7 @@ import { CommonModule } from '@angular/common';
               <li><strong>Right to Data Portability:</strong> Receive your data in a structured, commonly used, machine-readable format.</li>
             </ul>
             <p>
-              To exercise any of these rights, please contact us at <strong>support&#64;legadoandco.com</strong>. We will respond to your request within 30 days.
+              To exercise any of these rights, please contact us at <strong>legadoandco2026&#64;gmail.com</strong>. We will respond to your request within 30 days.
             </p>
           </section>
 
@@ -155,7 +155,7 @@ import { CommonModule } from '@angular/common';
           <section>
             <h2>10. Children's Privacy</h2>
             <p>
-              Our website and services are not intended for individuals under the age of 18. We do not knowingly collect personal information from children under 18. If we become aware that we have inadvertently collected information from a minor, we will take immediate steps to delete such information. If you believe a child has provided us with personal information, please contact us immediately at <strong>support&#64;legadoandco.com</strong>.
+              Our website and services are not intended for individuals under the age of 18. We do not knowingly collect personal information from children under 18. If we become aware that we have inadvertently collected information from a minor, we will take immediate steps to delete such information. If you believe a child has provided us with personal information, please contact us immediately at <strong>legadoandco2026&#64;gmail.com</strong>.
             </p>
           </section>
 
@@ -180,7 +180,8 @@ import { CommonModule } from '@angular/common';
               <p>
                 <strong>Grievance Officer</strong><br>
                 Legado & Co<br>
-                Email: <strong>support&#64;legadoandco.com</strong><br>
+                Email: <strong>legadoandco2026&#64;gmail.com</strong><br>
+                Phone: <strong>+918019433344</strong><br>
                 Response Time: Within 48 hours of receipt
               </p>
             </div>
@@ -192,8 +193,8 @@ import { CommonModule } from '@angular/common';
             <div class="contact-box">
               <p>
                 <strong>Legado & Co</strong><br>
-                Email: <strong>support&#64;legadoandco.com</strong><br>
-                Customer Support: <strong>support&#64;legadoandco.com</strong><br>
+                Email / Customer Support: <strong>legadoandco2026&#64;gmail.com</strong><br>
+                Phone: <strong>+918019433344</strong><br>
                 Website: <strong>www.legadoandco.com</strong>
               </p>
             </div>

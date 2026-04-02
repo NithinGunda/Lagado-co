@@ -375,7 +375,7 @@ import { Category } from '../../models/category.model';
     }
     .price-display {
       display: flex; align-items: center; gap: 8px;
-      font-size: 13px; font-weight: 700; color: var(--primary-color); margin-bottom: 8px;
+      font-size: 13px; font-weight: 400; color: var(--primary-color); margin-bottom: 8px;
     }
     .price-dash { color: var(--text-muted); font-weight: 400; }
 
@@ -617,7 +617,7 @@ import { Category } from '../../models/category.model';
       display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;
     }
     .card-price {
-      font-size: 1.05rem; font-weight: 800; color: var(--text-dark);
+      font-size: 1.05rem; font-weight: 400; color: var(--text-dark);
       letter-spacing: -0.02em;
     }
     .card-original {

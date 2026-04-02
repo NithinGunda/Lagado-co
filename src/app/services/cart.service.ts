@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { CartItem, Product } from '../models/product.model';
+import { CartItem, Product, maxQuantityForCartLine } from '../models/product.model';
 
 @Injectable({
   providedIn: 'root'
@@ -52,19 +52,32 @@ export class CartService {
     this.saveCartToStorage();
   }
 
-  removeFromCart(itemId: string): void {
-    this.cartItems = this.cartItems.filter(item => item.product.id !== itemId);
+  removeFromCart(itemId: string, selectedSize?: string, selectedColor?: string): void {
+    this.cartItems = this.cartItems.filter(
+      item =>
+        !(
+          item.product.id === itemId &&
+          item.selectedSize === selectedSize &&
+          item.selectedColor === selectedColor
+        )
+    );
     this.cartSubject.next(this.cartItems);
     this.saveCartToStorage();
   }
 
-  updateQuantity(itemId: string, quantity: number): void {
-    const item = this.cartItems.find(i => i.product.id === itemId);
+  updateQuantity(itemId: string, quantity: number, selectedSize?: string, selectedColor?: string): void {
+    const item = this.cartItems.find(
+      i =>
+        i.product.id === itemId &&
+        i.selectedSize === selectedSize &&
+        i.selectedColor === selectedColor
+    );
     if (item) {
       if (quantity <= 0) {
-        this.removeFromCart(itemId);
+        this.removeFromCart(itemId, selectedSize, selectedColor);
       } else {
-        item.quantity = quantity;
+        const maxQ = maxQuantityForCartLine(item.product, item.selectedSize);
+        item.quantity = maxQ > 0 ? Math.min(quantity, maxQ) : quantity;
         this.cartSubject.next(this.cartItems);
         this.saveCartToStorage();
       }

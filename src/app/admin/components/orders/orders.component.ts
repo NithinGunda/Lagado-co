@@ -167,6 +167,7 @@ const MOCK_ORDERS = [
                       <thead>
                         <tr>
                           <th>Product</th>
+                          <th>Size</th>
                           <th>Qty</th>
                           <th>Unit price</th>
                           <th>Line total</th>
@@ -180,6 +181,7 @@ const MOCK_ORDERS = [
                               <span class="product-name">{{ line.name || 'Product #' + line.id }}</span>
                             </div>
                           </td>
+                          <td class="line-size">{{ getOrderLineSize(line) }}</td>
                           <td>{{ getOrderQuantity(line) }}</td>
                           <td>{{ formatPrice(getProductPrice(line)) }}</td>
                           <td><strong>{{ formatPrice(getLineTotal(line)) }}</strong></td>
@@ -480,6 +482,18 @@ export class AdminOrdersComponent implements OnInit, OnDestroy {
 
   getOrderQuantity(line: any): number {
     return line?.pivot?.quantity ?? line?.quantity ?? 1;
+  }
+
+  /** Size stored on order line (pivot or flattened API fields). */
+  getOrderLineSize(line: any): string {
+    const pivot = line?.pivot || {};
+    const raw =
+      pivot.selected_size ??
+      pivot.size ??
+      line?.selected_size ??
+      line?.size;
+    if (raw == null || String(raw).trim() === '') return '—';
+    return String(raw).trim();
   }
 
   getProductPrice(line: any): number {

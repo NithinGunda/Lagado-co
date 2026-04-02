@@ -5,11 +5,11 @@ import { Router, RouterModule } from '@angular/router';
 import { forkJoin, of, throwError } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { CartService } from '../../services/cart.service';
-import { CouponService } from '../../services/coupon.service';
+import { CouponService, Coupon } from '../../services/coupon.service';
 import { AuthService } from '../../services/auth.service';
 import { AddressService } from '../../services/address.service';
 import { CartApiService } from '../../services/cart-api.service';
-import { CartItem, Product } from '../../models/product.model';
+import { CartItem, Product, stockBySizeFromArray } from '../../models/product.model';
 
 @Component({
   selector: 'app-checkout',
@@ -23,8 +23,9 @@ import { CartItem, Product } from '../../models/product.model';
         <div class="checkout-content" *ngIf="cartItems.length > 0">
           <div class="checkout-grid">
             <!-- Checkout Form -->
-            <div class="checkout-form-section">
-              <form [formGroup]="checkoutForm" (ngSubmit)="onSubmit()">
+            <!-- formGroup on wrapper so delivery <form> stays small; coupon/payment sit outside that <form> so Apply / Enter cannot submit checkout -->
+            <div class="checkout-form-section" [formGroup]="checkoutForm">
+              <form id="legado-checkout-delivery" (ngSubmit)="onSubmit()">
                 <section class="form-section" *ngIf="hasUserDetails()">
                   <h2>Your details</h2>
                   <div class="user-details-readonly">
@@ -75,50 +76,99 @@ import { CartItem, Product } from '../../models/product.model';
                   </div>
                   <p class="error" *ngIf="checkoutError">{{ checkoutError }}</p>
                 </section>
-
-                <!-- Coupon -->
-                <section class="form-section">
-                  <h2>Coupon Code</h2>
-                  <div class="coupon-row" *ngIf="!appliedCoupon">
-                    <input type="text" class="form-input coupon-input" [(ngModel)]="couponCode" [ngModelOptions]="{standalone: true}" placeholder="Enter coupon code" />
-                    <button type="button" class="btn-apply-coupon" (click)="applyCoupon()" [disabled]="!couponCode.trim() || couponLoading">
-                      {{ couponLoading ? 'Checking...' : 'Apply' }}
-                    </button>
-                  </div>
-                  <p class="coupon-error" *ngIf="couponError">{{ couponError }}</p>
-                  <div class="coupon-applied" *ngIf="appliedCoupon">
-                    <span class="coupon-applied-code">{{ appliedCoupon.code }}</span>
-                    <span class="coupon-applied-discount">−{{ formatPrice(couponDiscountAmount) }}</span>
-                    <button type="button" class="btn-remove-coupon" (click)="removeCoupon()">Remove</button>
-                  </div>
-                </section>
-
-                <!-- Payment -->
-                <section class="form-section">
-                  <h2>Payment Method</h2>
-                  <div class="cod-info">
-                    <div class="cod-icon">
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                        <line x1="1" y1="10" x2="23" y2="10"/>
-                      </svg>
-                    </div>
-                    <div class="cod-text">
-                      <h3>Cash on Delivery</h3>
-                      <p>Pay with cash when your order is delivered to your doorstep. No advance payment required.</p>
-                    </div>
-                  </div>
-                  <div class="cod-note">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                    <span>Please keep the exact amount ready at the time of delivery.</span>
-                  </div>
-                </section>
-
-                <button type="submit" class="btn-submit" [disabled]="isSubmitDisabled()">
-                  <span *ngIf="!isProcessing">Place Order — {{ formatPrice(getTotal()) }}</span>
-                  <span *ngIf="isProcessing">Processing...</span>
-                </button>
               </form>
+
+              <!-- Outside delivery <form>: prevents implicit submit from coupon field / Apply -->
+              <section class="form-section">
+                <h2>Coupon Code</h2>
+                <div class="coupon-row" *ngIf="!appliedCoupon">
+                  <input
+                    type="text"
+                    class="form-input coupon-input"
+                    [(ngModel)]="couponCode"
+                    [ngModelOptions]="{standalone: true}"
+                    placeholder="Enter coupon code"
+                    autocomplete="off"
+                    (keydown.enter)="$event.preventDefault(); applyCoupon()"
+                  />
+                  <button
+                    type="button"
+                    class="btn-apply-coupon"
+                    (click)="$event.preventDefault(); applyCoupon()"
+                    [disabled]="!couponCode.trim() || couponLoading"
+                  >
+                    {{ couponLoading ? 'Checking...' : 'Apply' }}
+                  </button>
+                </div>
+                <p class="coupon-error" *ngIf="couponError">{{ couponError }}</p>
+                <div class="coupon-applied-block" *ngIf="appliedCoupon">
+                  <div class="coupon-applied-label">Coupon applied</div>
+                  <div class="coupon-applied-card">
+                    <div class="coupon-applied-left">
+                      <span class="coupon-applied-discount-main" *ngIf="appliedCoupon.discount_type === 'percentage'">
+                        {{ appliedCoupon.discount_value || 0 }}% OFF
+                      </span>
+                      <span class="coupon-applied-discount-main" *ngIf="appliedCoupon.discount_type === 'fixed'">
+                        ₹{{ appliedCoupon.discount_value || 0 }} OFF
+                      </span>
+                      <span class="coupon-applied-discount-main" *ngIf="appliedCoupon.discount_type !== 'percentage' && appliedCoupon.discount_type !== 'fixed'">
+                        −{{ formatPrice(couponDiscountAmount) }}
+                      </span>
+                      <span class="coupon-applied-min" *ngIf="appliedCoupon.min_order_amount">
+                        Min order: ₹{{ appliedCoupon.min_order_amount }}
+                      </span>
+                    </div>
+                    <div class="coupon-applied-right">
+                      <span class="coupon-applied-code-text">{{ appliedCoupon.code | uppercase }}</span>
+                      <span class="coupon-applied-order-save">On this order: −{{ formatPrice(couponDiscountAmount) }}</span>
+                      <span class="coupon-applied-validity" *ngIf="appliedCoupon.valid_until">
+                        Expires {{ formatCouponValidUntil(appliedCoupon.valid_until) }}
+                      </span>
+                      <button type="button" class="btn-remove-coupon" (click)="removeCoupon()">Remove coupon</button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="form-section">
+                <h2>Payment Method</h2>
+                <div class="cod-info">
+                  <div class="cod-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                      <line x1="1" y1="10" x2="23" y2="10"/>
+                    </svg>
+                  </div>
+                  <div class="cod-text">
+                    <h3>Cash on Delivery</h3>
+                    <p>Pay with cash when your order is delivered to your doorstep. No advance payment required.</p>
+                  </div>
+                </div>
+                <div class="cod-note">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  <span>Please keep the exact amount ready at the time of delivery.</span>
+                </div>
+              </section>
+
+              <p class="shipping-estimate-note" role="status">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <rect x="1" y="3" width="15" height="13"/>
+                  <path d="M16 8h4l3 3v5h-7V8z"/>
+                  <circle cx="5.5" cy="18.5" r="2.5"/>
+                  <circle cx="18.5" cy="18.5" r="2.5"/>
+                </svg>
+                <span>Standard shipping typically takes <strong>5 to 7 business days</strong> after your order is dispatched.</span>
+              </p>
+
+              <button
+                type="submit"
+                form="legado-checkout-delivery"
+                class="btn-submit"
+                [disabled]="isSubmitDisabled()"
+              >
+                <span *ngIf="!isProcessing">Place Order — {{ formatPrice(getTotal()) }}</span>
+                <span *ngIf="isProcessing">Processing...</span>
+              </button>
             </div>
 
             <!-- Order Summary -->
@@ -127,9 +177,26 @@ import { CartItem, Product } from '../../models/product.model';
 
               <div class="order-items">
                 <div class="order-item" *ngFor="let item of cartItems">
-                  <div class="item-info">
-                    <h4>{{ item.product.name }}</h4>
-                    <p>Qty: {{ item.quantity }} × {{ formatPrice(item.product.price) }}</p>
+                  <div class="order-item-body">
+                    <div class="order-thumb-wrap">
+                      <img
+                        *ngIf="getProductImage(item.product)"
+                        [src]="getProductImage(item.product)"
+                        [alt]="item.product.name"
+                        class="order-thumb-img"
+                        loading="lazy"
+                      />
+                      <div
+                        *ngIf="!getProductImage(item.product)"
+                        class="order-thumb-fallback"
+                        [style.background]="getProductColor(item.product)"
+                      ></div>
+                    </div>
+                    <div class="item-info">
+                      <h4>{{ item.product.name }}</h4>
+                      <p class="order-line-meta" *ngIf="item.selectedSize">Size: {{ item.selectedSize }}</p>
+                      <p>Qty: {{ item.quantity }} × {{ formatPrice(item.product.price) }}</p>
+                    </div>
                   </div>
                   <span class="item-total">{{ formatPrice(getItemTotal(item)) }}</span>
                 </div>
@@ -141,7 +208,18 @@ import { CartItem, Product } from '../../models/product.model';
                   <span>{{ formatPrice(getSubtotal()) }}</span>
                 </div>
                 <div class="summary-row discount-row" *ngIf="appliedCoupon">
-                  <span>Discount ({{ appliedCoupon.code }})</span>
+                  <span class="summary-discount-cell">
+                    <span
+                      class="discount-badge"
+                      [class.pct]="appliedCoupon.discount_type === 'percentage'"
+                      [class.fixed]="appliedCoupon.discount_type === 'fixed'"
+                    >
+                      <ng-container *ngIf="appliedCoupon.discount_type === 'percentage'">{{ appliedCoupon.discount_value }}% off</ng-container>
+                      <ng-container *ngIf="appliedCoupon.discount_type === 'fixed'">₹{{ appliedCoupon.discount_value }} off</ng-container>
+                      <ng-container *ngIf="appliedCoupon.discount_type !== 'percentage' && appliedCoupon.discount_type !== 'fixed'">Coupon</ng-container>
+                    </span>
+                    <span class="summary-coupon-code-pill">{{ appliedCoupon.code | uppercase }}</span>
+                  </span>
                   <span class="discount-amount">−{{ formatPrice(couponDiscountAmount) }}</span>
                 </div>
                 <div class="summary-row">
@@ -286,17 +364,65 @@ import { CartItem, Product } from '../../models/product.model';
     .btn-apply-coupon:hover:not(:disabled) { opacity: 0.9; }
     .btn-apply-coupon:disabled { opacity: 0.6; cursor: not-allowed; }
     .coupon-error { color: #b91c1c; font-size: 13px; margin: 8px 0 0; }
-    .coupon-applied {
-      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-      padding: 12px 14px; background: #ecfdf5; border: 1px solid #a7f3d0;
+
+    /* Matches admin Coupons preview card */
+    .coupon-applied-block { margin-top: 4px; }
+    .coupon-applied-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--text-muted); margin-bottom: 8px;
     }
-    .coupon-applied-code { font-weight: 700; color: #065f46; }
-    .coupon-applied-discount { font-weight: 700; color: #059669; }
+    .coupon-applied-card {
+      display: flex; border: 2px dashed var(--border-color); overflow: hidden;
+      background: #fff;
+    }
+    .coupon-applied-left {
+      background: var(--primary-color); color: #fff; padding: 16px 20px;
+      display: flex; flex-direction: column; justify-content: center; gap: 4px;
+      min-width: 140px; flex-shrink: 0;
+    }
+    .coupon-applied-discount-main { font-size: 1.2rem; font-weight: 800; line-height: 1.2; }
+    .coupon-applied-min { font-size: 11px; opacity: 0.88; }
+    .coupon-applied-right {
+      flex: 1; padding: 16px 20px;
+      display: flex; flex-direction: column; justify-content: center; gap: 6px;
+      min-width: 0;
+    }
+    .coupon-applied-code-text {
+      font-family: ui-monospace, 'SF Mono', 'Fira Code', monospace;
+      font-size: 1.1rem; font-weight: 800; letter-spacing: 2px;
+      color: var(--text-dark);
+    }
+    .coupon-applied-order-save { font-size: 13px; font-weight: 600; color: #059669; }
+    .coupon-applied-validity { font-size: 11px; color: var(--text-muted); }
     .btn-remove-coupon {
-      margin-left: auto; background: none; border: none; color: var(--primary-color);
-      font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: underline;
+      align-self: flex-start; margin-top: 4px;
+      background: none; border: none; color: var(--primary-color);
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      text-decoration: underline; padding: 0; font-family: inherit;
+    }
+    .btn-remove-coupon:hover { opacity: 0.85; }
+
+    .summary-discount-cell {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .discount-badge {
+      display: inline-block; padding: 4px 10px; font-size: 12px; font-weight: 700;
+      background: #ecfdf5; color: #059669;
+    }
+    .discount-badge.pct { background: #ecfdf5; color: #059669; }
+    .discount-badge.fixed { background: #eff6ff; color: #2563eb; }
+    .summary-coupon-code-pill {
+      font-family: ui-monospace, 'SF Mono', 'Fira Code', monospace;
+      font-weight: 700; font-size: 12px;
+      background: var(--secondary-color); padding: 4px 10px;
+      border: 1px dashed var(--border-color); letter-spacing: 1px;
     }
     .discount-row .discount-amount { color: #059669; font-weight: 700; }
+
+    @media (max-width: 480px) {
+      .coupon-applied-card { flex-direction: column; }
+      .coupon-applied-left { min-width: unset; width: 100%; }
+    }
 
     /* COD Section */
     .cod-info {
@@ -319,6 +445,29 @@ import { CartItem, Product } from '../../models/product.model';
       font-size: 12px; color: #92400e;
     }
     .cod-note svg { flex-shrink: 0; color: #d97706; }
+
+    .shipping-estimate-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-top: var(--spacing-md);
+      margin-bottom: 4px;
+      padding: 12px 14px;
+      background: var(--secondary-color);
+      border: 1px solid var(--border-color);
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-light);
+    }
+    .shipping-estimate-note svg {
+      flex-shrink: 0;
+      margin-top: 2px;
+      color: var(--primary-color);
+    }
+    .shipping-estimate-note strong {
+      color: var(--text-dark);
+      font-weight: 600;
+    }
 
     .btn-submit {
       width: 100%; padding: 16px;
@@ -343,13 +492,28 @@ import { CartItem, Product } from '../../models/product.model';
     }
     .order-items { margin-bottom: var(--spacing-md); }
     .order-item {
-      display: flex; justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
       padding: var(--spacing-sm) 0;
       border-bottom: 1px solid var(--border-color);
     }
+    .order-item-body {
+      display: flex; align-items: center; gap: 12px;
+      min-width: 0; flex: 1;
+    }
+    .order-thumb-wrap {
+      width: 48px; height: 60px; flex-shrink: 0;
+      border-radius: 6px; overflow: hidden;
+      background: var(--secondary-color);
+    }
+    .order-thumb-img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .order-thumb-fallback { width: 100%; height: 100%; }
+    .item-info { min-width: 0; }
     .item-info h4 { margin: 0 0 4px; font-size: 13px; font-weight: 600; color: var(--text-dark); }
     .item-info p { margin: 0; font-size: 12px; color: var(--text-muted); }
-    .item-total { font-weight: 700; color: var(--text-dark); font-size: 13px; }
+    .item-info .order-line-meta { color: var(--text-dark); font-weight: 500; margin-bottom: 2px; }
+    .item-total { font-weight: 700; color: var(--text-dark); font-size: 13px; flex-shrink: 0; }
 
     .summary-totals { margin-bottom: var(--spacing-md); }
     .summary-row {
@@ -484,7 +648,7 @@ export class CheckoutComponent implements OnInit {
   cartItems: CartItem[] = [];
   isProcessing = false;
   couponCode = '';
-  appliedCoupon: { code: string; discount_type?: string; discount_value?: number } | null = null;
+  appliedCoupon: Coupon | null = null;
   couponDiscountAmount = 0;
   couponError = '';
   couponLoading = false;
@@ -721,9 +885,10 @@ export class CheckoutComponent implements OnInit {
         const adds = localItems.map((item: CartItem) => {
           const size = this.resolveLineSize(item);
           const body: Record<string, unknown> = {
-            product_id: Number(item.product.id),
+            product_id: this.normalizeProductIdForApi(item.product.id),
             quantity: item.quantity,
           };
+          // API stores size on order lines; send both keys for compatibility
           if (size) {
             body['size'] = size;
             body['selected_size'] = size;
@@ -735,29 +900,52 @@ export class CheckoutComponent implements OnInit {
     );
   }
 
-  /** Backend requires size when product uses per-size stock. */
+  /** Backend requires size when the product has multiple size options or per-size stock. */
   private productNeedsCartApiSize(product: Product): boolean {
-    const sbs = (product as any).stock_by_size;
-    if (sbs && typeof sbs === 'object' && Object.keys(sbs).length > 0) return true;
-    const opts = this.sizesFromProductAttributes(product);
-    return opts.length > 0;
+    return this.sizesOptionsFromProduct(product).length > 0;
   }
 
-  private sizesFromProductAttributes(product: Product): string[] {
+  /**
+   * All size labels we know about for the product (attributes, `sizes` CSV, stock_by_size keys).
+   */
+  private sizesOptionsFromProduct(product: Product): string[] {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    const push = (s: string) => {
+      const t = s.trim();
+      if (t && !seen.has(t)) {
+        seen.add(t);
+        out.push(t);
+      }
+    };
     const sizeAttr = product.attributes?.find((a) => a.name?.toLowerCase() === 'size');
-    if (!sizeAttr?.value) return [];
-    return sizeAttr.value
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+    if (sizeAttr?.value) {
+      sizeAttr.value.split(',').forEach((x) => push(x));
+    }
+    const rawSizes = (product as any).sizes;
+    if (typeof rawSizes === 'string' && rawSizes.trim()) {
+      rawSizes.split(',').forEach((x: string) => push(x));
+    }
+    const sbs = stockBySizeFromArray((product as any).stock_by_size);
+    Object.keys(sbs).forEach((k) => push(k));
+    return out;
   }
 
-  /** Effective size for API: cart selection, or single-size auto-fill. */
+  private normalizeProductIdForApi(id: string | number | undefined): number | string {
+    if (id == null) return '';
+    const n = Number(id);
+    return Number.isFinite(n) && String(n) === String(id) ? n : String(id);
+  }
+
+  /** Effective size for API: cart line, or single explicit option, or single stock_by_size key. */
   private resolveLineSize(item: CartItem): string | undefined {
     const fromCart = item.selectedSize?.trim();
     if (fromCart) return fromCart;
-    const opts = this.sizesFromProductAttributes(item.product);
+    const opts = this.sizesOptionsFromProduct(item.product);
     if (opts.length === 1) return opts[0];
+    const sbs = stockBySizeFromArray((item.product as any).stock_by_size);
+    const keys = Object.keys(sbs);
+    if (keys.length === 1) return keys[0];
     return undefined;
   }
 
@@ -802,6 +990,43 @@ export class CheckoutComponent implements OnInit {
     this.appliedCoupon = null;
     this.couponDiscountAmount = 0;
     this.couponError = '';
+  }
+
+  /** Same date style as admin Coupons preview */
+  formatCouponValidUntil(dateStr?: string): string {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return dateStr;
+    }
+  }
+
+  getProductImage(product: any): string {
+    if (!product) return '';
+    if (product.image_url) return product.image_url;
+    if (Array.isArray(product.image_urls) && product.image_urls.length) {
+      return product.image_urls[0];
+    }
+    if (Array.isArray(product.images) && product.images.length) {
+      const first = product.images[0];
+      if (typeof first === 'string') return first;
+      if (first && typeof first.path === 'string') return first.path;
+    }
+    return '';
+  }
+
+  getProductColor(product: any): string {
+    const colors: { [key: string]: string } = {
+      mens: 'linear-gradient(135deg, #1e3a5f 0%, #2a4d7a 100%)',
+      womens: 'linear-gradient(135deg, #a8d5ba 0%, #7fb89a 100%)',
+      collections: 'linear-gradient(135deg, #f5f1e8 0%, #e8e3d8 100%)',
+    };
+    const cat = product?.category;
+    const key =
+      typeof cat === 'string' ? cat : (cat?.slug ?? cat?.name ?? '').toString().toLowerCase();
+    return colors[key] || colors['collections'];
   }
 
   formatPrice(price: number): string {

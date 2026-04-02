@@ -100,7 +100,7 @@ import { CommonModule } from '@angular/common';
 
             <h3>5.6 Failed Transactions</h3>
             <p>
-              If a payment transaction fails but the amount is debited from your account, it will typically be auto-reversed by your bank/payment provider within 5–7 business days. If the reversal does not occur within this period, please contact us at <strong>support&#64;legadoandco.com</strong> with your transaction details, and we will assist in resolving the issue with our payment partner.
+              If a payment transaction fails but the amount is debited from your account, it will typically be auto-reversed by your bank/payment provider within 5–7 business days. If the reversal does not occur within this period, please contact us at <strong>legadoandco2026&#64;gmail.com</strong> with your transaction details, and we will assist in resolving the issue with our payment partner.
             </p>
           </section>
 
@@ -148,7 +148,7 @@ import { CommonModule } from '@angular/common';
 
             <h3>7.3 Order Cancellation by Customer</h3>
             <p>
-              You may request cancellation of your order <strong>within 2 hours of placing it</strong>, provided the order has not already been dispatched or processed for shipment. Cancellation requests must be sent to <strong>support&#64;legadoandco.com</strong> with your Order ID. Once an order is dispatched, it <strong>cannot be cancelled</strong>.
+              You may request cancellation of your order <strong>within 2 hours of placing it</strong>, provided the order has not already been dispatched or processed for shipment. Cancellation requests must be sent to <strong>legadoandco2026&#64;gmail.com</strong> with your Order ID. Once an order is dispatched, it <strong>cannot be cancelled</strong>.
             </p>
             <p>
               If your cancellation request is approved before dispatch, a full refund will be processed to your original payment method within 7–10 business days.
@@ -164,7 +164,7 @@ import { CommonModule } from '@angular/common';
               <li>Defective in manufacturing (stitching defects, fabric flaws not described in the listing)</li>
             </ul>
             <p>
-              You must notify us within <strong>24 hours of delivery</strong> by emailing <strong>support&#64;legadoandco.com</strong> with the following:
+              You must notify us within <strong>24 hours of delivery</strong> by emailing <strong>legadoandco2026&#64;gmail.com</strong> with the following:
             </p>
             <ul>
               <li>Your Order ID</li>
@@ -188,7 +188,7 @@ import { CommonModule } from '@angular/common';
 
             <h3>7.6 Chargebacks & Disputes</h3>
             <p>
-              We strongly encourage you to contact us directly at <strong>support&#64;legadoandco.com</strong> before initiating a chargeback or payment dispute with your bank or card issuer. Filing a chargeback without first attempting to resolve the issue with us may result in suspension of your account. We reserve the right to contest all chargebacks.
+              We strongly encourage you to contact us directly at <strong>legadoandco2026&#64;gmail.com</strong> before initiating a chargeback or payment dispute with your bank or card issuer. Filing a chargeback without first attempting to resolve the issue with us may result in suspension of your account. We reserve the right to contest all chargebacks.
             </p>
           </section>
 
@@ -313,8 +313,8 @@ import { CommonModule } from '@angular/common';
             <div class="contact-box">
               <p>
                 <strong>Legado & Co</strong><br>
-                Email: <strong>support&#64;legadoandco.com</strong><br>
-                Customer Support: <strong>support&#64;legadoandco.com</strong><br>
+                Email / Customer Support: <strong>legadoandco2026&#64;gmail.com</strong><br>
+                Phone: <strong>+918019433344</strong><br>
                 Website: <strong>www.legadoandco.com</strong>
               </p>
             </div>

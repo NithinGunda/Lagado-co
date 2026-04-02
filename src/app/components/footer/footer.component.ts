@@ -18,17 +18,14 @@ import { RouterModule } from '@angular/router';
             <p class="ft-tagline">Timeless Style, Quiet Confidence</p>
             <p class="ft-desc">Curating premium fashion for the modern individual who values quality, elegance, and sophistication.</p>
             <div class="ft-social">
-              <a href="#" aria-label="Instagram" class="social-link">
+              <a
+                href="https://www.instagram.com/legadoandco/"
+                class="social-link"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Legado &amp; Co on Instagram"
+              >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/></svg>
-              </a>
-              <a href="#" aria-label="Facebook" class="social-link">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
-              </a>
-              <a href="#" aria-label="Twitter" class="social-link">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
-              </a>
-              <a href="#" aria-label="Pinterest" class="social-link">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.236 2.636 7.855 6.356 9.312-.088-.791-.167-2.005.035-2.868.182-.78 1.172-4.97 1.172-4.97s-.299-.598-.299-1.482c0-1.388.806-2.425 1.81-2.425.853 0 1.265.64 1.265 1.408 0 .858-.546 2.14-.828 3.33-.236.995.5 1.807 1.48 1.807 1.778 0 3.144-1.874 3.144-4.58 0-2.393-1.72-4.068-4.177-4.068-2.845 0-4.515 2.135-4.515 4.34 0 .859.331 1.781.745 2.282a.3.3 0 01.069.288l-.278 1.133c-.044.183-.145.222-.335.134-1.249-.581-2.03-2.407-2.03-3.874 0-3.154 2.292-6.052 6.608-6.052 3.469 0 6.165 2.473 6.165 5.776 0 3.447-2.173 6.22-5.19 6.22-1.013 0-1.965-.527-2.291-1.148l-.623 2.378c-.226.869-.835 1.958-1.244 2.621.936.29 1.93.446 2.962.446 5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
               </a>
             </div>
           </div>
@@ -53,9 +50,9 @@ import { RouterModule } from '@angular/router';
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg>
                 <span>{{ email }}</span>
               </a>
-              <a href="tel:+919876543210" class="contact-row">
+              <a [href]="phoneTel" class="contact-row">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-                <span>+91 98765 43210</span>
+                <span>{{ phoneDisplay }}</span>
               </a>
             </div>
             <div class="ft-payment">
@@ -306,5 +303,7 @@ import { RouterModule } from '@angular/router';
 })
 export class FooterComponent {
   year = new Date().getFullYear();
-  email = 'support@legadoandco.com';
+  email = 'legadoandco2026@gmail.com';
+  phoneDisplay = '+918019433344';
+  phoneTel = 'tel:+918019433344';
 }

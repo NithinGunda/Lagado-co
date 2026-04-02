@@ -16,17 +16,18 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
   template: `
-    <div class="header-wrap" [class.scrolled]="isScrolled" [class.hide-bar]="isScrolled">
-      <!-- Announcement Bar -->
-      <div class="announcement-bar">
-        <div class="announce-inner">
-          <span class="announce-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1 0-4h14v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z"/></svg>
-          </span>
-          <p>Free shipping on orders over ₹5,000 &nbsp;·&nbsp; <a routerLink="/collections">Shop the Collection <span class="arr">&rarr;</span></a></p>
+    <div class="header-wrap" [class.scrolled]="isScrolled">
+      <div class="top-promo-banner" role="region" aria-label="Shipping promotion">
+        <div class="top-promo-inner">
+          <svg class="top-promo-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="1" y="3" width="15" height="13"></rect>
+            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+            <circle cx="5.5" cy="18.5" r="2.5"></circle>
+            <circle cx="18.5" cy="18.5" r="2.5"></circle>
+          </svg>
+          <p class="top-promo-text">Free shipping on orders above &#8377;5,000</p>
         </div>
       </div>
-
       <!-- Main Header -->
       <header class="main-header">
         <div class="h-container">
@@ -151,26 +152,62 @@ import { Subscription } from 'rxjs';
         </div>
         <div class="mobile-links">
           <div class="mobile-cat-group" *ngFor="let cat of headerCategories">
-            <a
-              class="mobile-cat-parent"
-              [routerLink]="['/collections']"
-              [queryParams]="{ category: cat.slug || cat.id }"
-              routerLinkActive="active"
-              (click)="closeMobileMenu()"
-            >
-              {{ cat.name }}
-            </a>
-            <a
-              *ngFor="let sub of cat.children || []"
-              class="mobile-subcat"
-              [routerLink]="['/collections']"
-              [queryParams]="{ category: sub.slug || sub.id }"
-              routerLinkActive="active"
-              (click)="closeMobileMenu()"
-            >
-              <span class="mobile-subcat-dot"></span>
-              {{ sub.name }}
-            </a>
+            <ng-container *ngIf="cat.children?.length; else mobileCatSingle">
+              <button
+                type="button"
+                class="mobile-cat-toggle"
+                [class.open]="isMobileCatOpen(cat)"
+                [attr.aria-expanded]="isMobileCatOpen(cat)"
+                [attr.aria-controls]="'mobile-subcats-' + mobileCatKey(cat)"
+                [id]="'mobile-cat-btn-' + mobileCatKey(cat)"
+                (click)="toggleMobileCat(cat)"
+              >
+                <span class="mobile-cat-toggle-label">{{ cat.name }}</span>
+                <span class="mobile-cat-chevron" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </span>
+              </button>
+              <div
+                class="mobile-subcat-list"
+                *ngIf="isMobileCatOpen(cat)"
+                [id]="'mobile-subcats-' + mobileCatKey(cat)"
+                role="region"
+                [attr.aria-labelledby]="'mobile-cat-btn-' + mobileCatKey(cat)"
+              >
+                <a
+                  class="mobile-subcat mobile-subcat-all"
+                  [routerLink]="['/collections']"
+                  [queryParams]="{ category: cat.slug || cat.id }"
+                  routerLinkActive="active"
+                  (click)="closeMobileMenu()"
+                >
+                  <span class="mobile-subcat-dot"></span>
+                  View all {{ cat.name }}
+                </a>
+                <a
+                  *ngFor="let sub of cat.children || []"
+                  class="mobile-subcat"
+                  [routerLink]="['/collections']"
+                  [queryParams]="{ category: sub.slug || sub.id }"
+                  routerLinkActive="active"
+                  (click)="closeMobileMenu()"
+                >
+                  <span class="mobile-subcat-dot"></span>
+                  {{ sub.name }}
+                </a>
+              </div>
+            </ng-container>
+            <ng-template #mobileCatSingle>
+              <a
+                class="mobile-cat-parent"
+                [routerLink]="['/collections']"
+                [queryParams]="{ category: cat.slug || cat.id }"
+                routerLinkActive="active"
+                (click)="closeMobileMenu()"
+              >
+                {{ cat.name }}
+              </a>
+            </ng-template>
           </div>
           <a routerLink="/our-story" routerLinkActive="active" (click)="closeMobileMenu()">Our Philosophy</a>
           <a routerLink="/blog" routerLinkActive="active" (click)="closeMobileMenu()">Journal</a>
@@ -204,39 +241,35 @@ import { Subscription } from 'rxjs';
       box-shadow: 0 2px 20px rgba(0,0,0,0.08);
     }
 
-    /* ==================== ANNOUNCEMENT BAR ==================== */
-    .announcement-bar {
-      background: var(--btn-primary, #1e3a5f);
-      color: rgba(255,255,255,0.9);
-      overflow: hidden;
-      max-height: 38px;
-      transition: max-height 0.4s ease, opacity 0.3s ease;
+    /* ==================== TOP PROMO (free shipping) ==================== */
+    .top-promo-banner {
+      background: linear-gradient(90deg, var(--primary-color, #1e3a5f) 0%, #2a4d7a 50%, var(--primary-color, #1e3a5f) 100%);
+      color: rgba(255,255,255,0.95);
+      text-align: center;
+      padding: 8px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
     }
-    .hide-bar .announcement-bar {
-      max-height: 0;
-      opacity: 0;
-    }
-    .announce-inner {
+    .top-promo-inner {
+      max-width: 1400px;
+      margin: 0 auto;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      padding: 9px 20px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .top-promo-icon {
+      flex-shrink: 0;
+      opacity: 0.9;
+    }
+    .top-promo-text {
+      margin: 0;
       font-size: 12px;
-      letter-spacing: 0.4px;
-      white-space: nowrap;
-    }
-    .announce-icon { display: flex; opacity: 0.7; }
-    .announce-inner p { margin: 0; }
-    .announce-inner a {
-      color: var(--btn-accent, #a8d5ba);
       font-weight: 600;
-      text-decoration: none;
-      transition: color 0.2s;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      line-height: 1.35;
     }
-    .announce-inner a:hover { color: #fff; }
-    .arr { display: inline-block; transition: transform 0.2s; }
-    .announce-inner a:hover .arr { transform: translateX(3px); }
 
     /* ==================== MAIN HEADER ==================== */
     .main-header {
@@ -267,6 +300,7 @@ import { Subscription } from 'rxjs';
     }
 
     /* ==================== NAVIGATION ==================== */
+    /* overflow must stay visible or absolutely positioned dropdowns are clipped */
     .desktop-nav {
       display: flex;
       align-items: center;
@@ -275,16 +309,7 @@ import { Subscription } from 'rxjs';
       white-space: nowrap;
       min-width: 0;
       max-width: 100%;
-      overflow-x: auto;
-      overflow-y: hidden;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
-    .desktop-nav::-webkit-scrollbar {
-      display: none;
-      height: 0;
-      width: 0;
+      overflow: visible;
     }
     .nav-main {
       justify-self: center;
@@ -375,7 +400,8 @@ import { Subscription } from 'rxjs';
       visibility: hidden;
       z-index: 1200;
     }
-    .nav-item:hover .nav-dropdown {
+    .nav-item:hover .nav-dropdown,
+    .nav-item:focus-within .nav-dropdown {
       opacity: 1;
       pointer-events: auto;
       visibility: visible;
@@ -424,7 +450,7 @@ import { Subscription } from 'rxjs';
       max-width: 100%;
     }
     .logo-wordmark {
-      font-family: var(--font-body, 'Lato', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+      font-family: var(--font-body, 'Lato', sans-serif);
       font-size: var(--brand-wordmark-size, clamp(0.75rem, 1.65vw + 0.35rem, 1.35rem));
       font-weight: 700;
       letter-spacing: var(--brand-wordmark-tracking, clamp(0.06em, 0.4vw, 0.18em));
@@ -696,7 +722,8 @@ import { Subscription } from 'rxjs';
       overflow-y: auto;
       padding: 12px 0;
     }
-    .mobile-links a {
+    .mobile-links a,
+    .mobile-links .mobile-cat-toggle {
       display: block;
       padding: 16px 28px;
       font-size: 14px;
@@ -708,6 +735,36 @@ import { Subscription } from 'rxjs';
       border-bottom: 1px solid rgba(0,0,0,0.04);
       transition: all 0.25s;
       position: relative;
+    }
+    .mobile-links .mobile-cat-toggle {
+      width: 100%;
+      text-align: left;
+      background: none;
+      border-left: none;
+      border-right: none;
+      border-top: none;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .mobile-cat-toggle-label {
+      flex: 1;
+      min-width: 0;
+    }
+    .mobile-cat-chevron {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      opacity: 0.65;
+      transition: transform 0.3s ease, opacity 0.2s;
+    }
+    .mobile-cat-toggle.open .mobile-cat-chevron {
+      transform: rotate(180deg);
+      opacity: 1;
     }
     .mobile-links a::before {
       content: '';
@@ -725,6 +782,15 @@ import { Subscription } from 'rxjs';
       color: var(--primary-color, #3C5A99);
       background: rgba(60,90,153,0.04);
     }
+    .mobile-links .mobile-cat-toggle:hover,
+    .mobile-links .mobile-cat-toggle:focus-visible {
+      color: var(--primary-color, #3C5A99);
+      background: rgba(60,90,153,0.04);
+    }
+    .mobile-links .mobile-cat-toggle:focus-visible {
+      outline: 2px solid var(--primary-color, #3C5A99);
+      outline-offset: -2px;
+    }
     .mobile-links a:hover::before,
     .mobile-links a.active::before {
       width: 3px;
@@ -736,6 +802,17 @@ import { Subscription } from 'rxjs';
     }
     .mobile-cat-group .mobile-cat-parent {
       font-weight: 600;
+    }
+    .mobile-subcat-list {
+      display: flex;
+      flex-direction: column;
+      background: rgba(0,0,0,0.02);
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+      animation: mobileSubcatReveal 0.25s ease;
+    }
+    @keyframes mobileSubcatReveal {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
     .mobile-cat-group .mobile-subcat {
       display: flex;
@@ -750,6 +827,14 @@ import { Subscription } from 'rxjs';
       color: var(--text-dark);
       border-left: 3px solid transparent;
       margin-left: 0;
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+    .mobile-cat-group .mobile-subcat:last-child {
+      border-bottom: none;
+    }
+    .mobile-subcat-all {
+      font-weight: 600;
+      color: var(--primary-color, #3C5A99);
     }
     .mobile-cat-group .mobile-subcat:hover,
     .mobile-cat-group .mobile-subcat.active {
@@ -828,6 +913,8 @@ import { Subscription } from 'rxjs';
     }
 
     @media (max-width: 480px) {
+      .top-promo-banner { padding: 6px 12px; }
+      .top-promo-text { font-size: 10px; letter-spacing: 0.08em; }
       .h-container { padding: 0 10px; height: 56px; }
       .scrolled .h-container { height: 50px; }
       .logo-left { max-width: min(58vw, 180px); }
@@ -835,7 +922,6 @@ import { Subscription } from 'rxjs';
         font-size: clamp(0.68rem, 3.2vw, 1rem);
         letter-spacing: clamp(0.04em, 0.8vw, 0.12em);
       }
-      .announce-inner { font-size: 11px; padding: 8px 12px; }
       .action-icon, .search-btn {
         width: 36px; height: 36px;
         min-width: 36px; min-height: 36px;
@@ -849,6 +935,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
   wishlistCount = 0;
   isLoggedIn = false;
   mobileMenuOpen = false;
+  /** Which category row has its subcategories expanded in the mobile drawer (accordion). */
+  mobileOpenCategoryKey: string | null = null;
   isScrolled = false;
   searchOpen = false;
   /** Header search overlay draft (submitted → /collections?q=…) */
@@ -917,6 +1005,20 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   closeMobileMenu() {
     this.mobileMenuOpen = false;
+    this.mobileOpenCategoryKey = null;
+  }
+
+  mobileCatKey(cat: Category): string {
+    return String(cat.slug ?? cat.id ?? cat.name ?? 'cat');
+  }
+
+  isMobileCatOpen(cat: Category): boolean {
+    return this.mobileOpenCategoryKey === this.mobileCatKey(cat);
+  }
+
+  toggleMobileCat(cat: Category): void {
+    const key = this.mobileCatKey(cat);
+    this.mobileOpenCategoryKey = this.mobileOpenCategoryKey === key ? null : key;
   }
 
   toggleSearch() {
@@ -943,26 +1045,43 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   private loadCategories() {
-    // Use tree endpoint so each top-level category includes its subcategories
-    this.categoryService.getTree().subscribe({
+    // Same flat list + parent map as home page — API tree=1 often omits nested children
+    this.categoryService.list({ per_page: 200 }).subscribe({
       next: (res) => {
-        const items = (res as any)?.data ?? res ?? [];
-        // Top-level, active categories; also keep only active children
-        this.headerCategories = (items as Category[])
-          .filter(c => c.parent_id == null && c.is_active !== false)
+        const items = ((res as any)?.data ?? []) as Category[];
+        const parentKey = (pid: unknown): string => {
+          if (pid == null || pid === '') return '__root__';
+          const n = Number(pid);
+          if (!Number.isNaN(n) && n === 0) return '__root__';
+          return String(pid);
+        };
+        const idKey = (id: unknown): string => String(id);
+
+        const byParent = new Map<string, Category[]>();
+        for (const c of items) {
+          const pk = parentKey(c.parent_id);
+          if (!byParent.has(pk)) byParent.set(pk, []);
+          byParent.get(pk)!.push(c);
+        }
+
+        const roots = (byParent.get('__root__') || []).filter(c => c.is_active !== false);
+        const sortCats = (a: Category, b: Category) => {
+          const ao = a.sort_order ?? 0;
+          const bo = b.sort_order ?? 0;
+          if (ao !== bo) return ao - bo;
+          return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+        };
+
+        this.headerCategories = roots
+          .sort(sortCats)
           .map(c => ({
             ...c,
-            children: (c.children || []).filter(ch => ch.is_active !== false)
-          }))
-          .sort((a: any, b: any) => {
-            const at = new Date(a.created_at || 0).getTime();
-            const bt = new Date(b.created_at || 0).getTime();
-            return at - bt;
-          });
+            children: (byParent.get(idKey(c.id)) || []).filter(ch => ch.is_active !== false).sort(sortCats),
+          }));
       },
       error: () => {
         this.headerCategories = [];
-      }
+      },
     });
   }
 }

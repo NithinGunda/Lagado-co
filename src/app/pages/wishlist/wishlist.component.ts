@@ -184,7 +184,7 @@ import { Subscription } from 'rxjs';
     .item-size strong { font-weight: 700; color: var(--primary-color, #1e3a5f); }
     .item-price {
       font-size: 15px;
-      font-weight: 600;
+      font-weight: 400;
       color: var(--text-dark, #1a1a1a);
       margin: 4px 0 0 0;
     }

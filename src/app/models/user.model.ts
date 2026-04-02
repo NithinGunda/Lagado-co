@@ -14,6 +14,11 @@ export interface User {
   name?: string;
   email?: string;
   phone?: string;
+  /** Some APIs return split name / DOB */
+  first_name?: string;
+  last_name?: string;
+  date_of_birth?: string;
+  mobile?: string;
   is_admin?: boolean;
   addresses?: Address[];
   created_at?: string;

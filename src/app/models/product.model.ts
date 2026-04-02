@@ -92,6 +92,20 @@ export function stockBySizeFromArray(arrOrObj: StockBySizeItem[] | { [size: stri
   return {};
 }
 
+/**
+ * Max units allowed for one cart line — matches product-details quantity cap:
+ * per-size stock from stock_by_size when present, else product.stockQuantity.
+ */
+export function maxQuantityForCartLine(product: Product | undefined, selectedSize?: string | null): number {
+  if (!product) return 0;
+  const sizeKey = selectedSize != null ? String(selectedSize).trim() : '';
+  const sbs = stockBySizeFromArray((product as any).stock_by_size);
+  if (sbs && typeof sbs === 'object' && Object.keys(sbs).length > 0 && sizeKey) {
+    if (sizeKey in sbs) return Math.max(0, Number(sbs[sizeKey] ?? 0));
+  }
+  return Math.max(0, Number(product.stockQuantity ?? 0));
+}
+
 export interface ProductAttribute {
   name: string;
   value: string;

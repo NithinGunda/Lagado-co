@@ -10,7 +10,6 @@ import { FeaturedProductsService } from '../../services/featured-products.servic
 import { BuyTheLookService, Look } from '../../services/buy-the-look.service';
 import { CarouselService, CarouselItem } from '../../services/carousel.service';
 import { AppLoadingService } from '../../services/app-loading.service';
-import { InstagramService, InstagramTaggedPost } from '../../services/instagram.service';
 import { isProductInStock } from '../../models/product.model';
 
 @Component({
@@ -88,6 +87,24 @@ import { isProductInStock } from '../../models/product.model';
         <div class="hero-progress">
           <div class="hero-progress-track" *ngFor="let slide of heroSlides; let i = index" [class.active]="i === activeSlide" (click)="goToSlide(i)">
             <div class="hero-progress-fill" [class.animating]="i === activeSlide"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =============== DEBUT INTRO (after hero) =============== -->
+      <section class="debut-intro-section" aria-labelledby="debut-intro-heading">
+        <div class="container">
+          <div class="debut-intro-inner">
+          <h2 id="debut-intro-heading" class="debut-intro-title">
+            A Refined Metamorphosis of Timeless Silhouettes
+          </h2>
+          <p class="debut-intro-body">
+            The debut collection from Legado and Co. introduces modern luxury menswear through precision tailoring and enduring design.
+            Produced in carefully limited quantities per size as part of our commitment to craftsmanship.
+          </p>
+          <a routerLink="/mens" class="btn btn-primary debut-intro-cta" aria-label="Explore the First Edition collection">
+            Explore the First Edition
+          </a>
           </div>
         </div>
       </section>
@@ -183,14 +200,26 @@ import { isProductInStock } from '../../models/product.model';
                             <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
                           </svg>
                         </span>
-                        <div class="cat-subcats" *ngIf="cat.children?.length">
+                        <div class="cat-mobile-subcats-wrap" *ngIf="cat.children?.length" (click)="$event.stopPropagation()">
                           <button
-                            class="subcat-pill"
-                            *ngFor="let sub of cat.children"
-                            (click)="goToCategory(sub, $event)"
+                            type="button"
+                            class="cat-mobile-subcats-toggle"
+                            [class.open]="homeMobileSubcatsOpenKey === categorySubcatKey(cat)"
+                            [attr.aria-expanded]="homeMobileSubcatsOpenKey === categorySubcatKey(cat)"
+                            (click)="toggleHomeMobileSubcats(cat, $event)"
                           >
-                            {{ sub.name }}
+                            <span>Subcategories</span>
+                            <svg class="cat-mobile-subcats-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
                           </button>
+                          <div class="cat-subcats cat-subcats-mobile-dropdown" *ngIf="homeMobileSubcatsOpenKey === categorySubcatKey(cat)">
+                            <button
+                              class="subcat-pill"
+                              *ngFor="let sub of cat.children"
+                              (click)="goToCategory(sub, $event)"
+                            >
+                              {{ sub.name }}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -212,7 +241,7 @@ import { isProductInStock } from '../../models/product.model';
                 *ngFor="let _ of getCategoryDotArray(); let i = index"
                 class="dot"
                 [class.active]="i === categoryOffset"
-                (click)="categoryOffset = i"
+                (click)="setCategoryCarouselOffset(i)"
                 role="button"
                 [attr.aria-label]="'Category ' + (i + 1)"
               ></span>
@@ -284,7 +313,7 @@ import { isProductInStock } from '../../models/product.model';
                 <svg viewBox="0 0 48 48" fill="none" stroke="var(--primary-color)" stroke-width="2"><rect x="3" y="14" width="26" height="18" rx="1"/><path d="M29 20h7l5 6v6H29V20z" stroke-linejoin="round"/><circle cx="12" cy="35" r="4"/><circle cx="36" cy="35" r="4"/></svg>
           </div>
               <h4>Free Shipping</h4>
-              <p>Complimentary delivery on all orders above ₹2,000</p>
+              <p>Complimentary delivery on all orders above ₹5,000</p>
                 </div>
             <div class="trust-item">
               <div class="trust-icon">
@@ -374,25 +403,46 @@ import { isProductInStock } from '../../models/product.model';
         </div>
       </section>
 
-      <!-- =============== SOCIAL PROOF =============== -->
+      <!-- =============== SPOTTED ON SOCIAL =============== -->
       <section class="social-section">
         <div class="container">
           <div class="sec-header">
             <span class="sec-line"></span>
             <h2 class="sec-title">Spotted On Social</h2>
             <span class="sec-line"></span>
-                  </div>
-          <p class="sec-sub">Share your style with us — tag <strong>&#64;legadoandco</strong> for a chance to be featured.</p>
-          <div class="social-grid">
-            <a *ngFor="let post of socialPosts" class="social-card" [href]="post.permalink || '#'" [attr.target]="post.permalink ? '_blank' : null" [attr.rel]="post.permalink ? 'noopener noreferrer' : null">
-              <div class="social-img" [style.background-image]="'url(' + post.image + ')'"></div>
-              <div class="social-hover">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="#fff" stroke="none"/></svg>
-                <span>{{ post.handle }}</span>
-                </div>
-            </a>
-                </div>
+          </div>
+          <p class="sec-sub social-sec-sub">
+            Share your style with us — tag <strong>&#64;legadoandco</strong>
+            ·
+            <a href="https://www.instagram.com/legadoandco/" target="_blank" rel="noopener noreferrer">Instagram</a>
+          </p>
+          <div class="social-grid" role="list">
+            <a
+              *ngFor="let spot of socialSpots"
+              class="social-card"
+              role="listitem"
+              href="https://www.instagram.com/legadoandco/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <div class="social-img-wrap">
+                <img
+                  class="social-img-el"
+                  [src]="spot.src"
+                  [alt]="spot.alt"
+                  width="600"
+                  height="600"
+                  loading="lazy"
+                  decoding="async"
+                />
               </div>
+              <div class="social-hover" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="#fff" stroke="none"/></svg>
+                <span>&#64;legadoandco</span>
+              </div>
+            </a>
+          </div>
+        </div>
       </section>
 
       <!-- =============== NEWSLETTER CTA =============== -->
@@ -412,7 +462,10 @@ import { isProductInStock } from '../../models/product.model';
   `,
   styles: [`
     :host { display: block; }
-    .home-page { min-height: 100vh; }
+    .home-page {
+      min-height: 100vh;
+      font-family: var(--font-body, 'Lato', sans-serif);
+    }
 
     /* ===== HERO (preserved) ===== */
     .hero-section {
@@ -495,8 +548,8 @@ import { isProductInStock } from '../../models/product.model';
     .hero-badge { display: flex; align-items: center; gap: 16px; opacity: 0; transform: translateY(20px); transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
     .hero-badge.visible { opacity: 1; transform: translateY(0); }
     .badge-line { width: 40px; height: 1px; background: rgba(255,255,255,0.4); }
-    .badge-text { font-family: var(--font-logo); font-size: 1.1rem; font-weight: 400; letter-spacing: 0.05em; color: rgba(255,255,255,0.85); }
-    .hero-title { font-family: var(--font-heading); font-size: clamp(2.8rem, 7vw, 5rem); font-weight: 700; line-height: 1.1; margin: 0; letter-spacing: -0.02em; text-shadow: 0 4px 30px rgba(0,0,0,0.3); }
+    .badge-text { font-family: var(--font-body, 'Lato', sans-serif); font-size: 1.1rem; font-weight: 400; letter-spacing: 0.05em; color: rgba(255,255,255,0.85); }
+    .hero-title { font-family: var(--font-body, 'Lato', sans-serif); font-size: clamp(2.8rem, 7vw, 5rem); font-weight: 700; line-height: 1.1; margin: 0; letter-spacing: -0.02em; text-shadow: 0 4px 30px rgba(0,0,0,0.3); }
     .title-line { display: block; overflow: hidden; }
     .title-word { display: inline-block; opacity: 0; transform: translateY(100%); transition: all 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
     .title-word.accent { color: #e8c547; }
@@ -542,6 +595,45 @@ import { isProductInStock } from '../../models/product.model';
     .hero-progress-fill.animating { animation: progressFill 5s linear forwards; }
     @keyframes progressFill { from { width: 0; } to { width: 100%; } }
 
+    /* ===== DEBUT INTRO (below hero) ===== */
+    .debut-intro-section {
+      padding: clamp(40px, 7vw, 80px) 0;
+      background: var(--bg-cream, var(--secondary-color));
+      border-bottom: 1px solid var(--border-color);
+    }
+    .debut-intro-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      max-width: 720px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .debut-intro-title {
+      font-family: var(--font-body, 'Lato', sans-serif);
+      font-size: clamp(1.35rem, 4.2vw, 2rem);
+      font-weight: 600;
+      line-height: 1.25;
+      color: var(--text-dark);
+      margin: 0 0 1rem;
+      letter-spacing: 0.02em;
+    }
+    .debut-intro-body {
+      font-family: var(--font-body, 'Lato', sans-serif);
+      font-size: clamp(0.95rem, 2.4vw, 1.05rem);
+      font-weight: 400;
+      line-height: 1.75;
+      color: var(--text-light);
+      margin: 0 0 1.75rem;
+      max-width: 62ch;
+      padding: 0;
+    }
+    .debut-intro-cta {
+      margin-top: 0;
+      align-self: center;
+    }
+
     /* ===== SHARED SECTION STYLES ===== */
     .sec-header {
       display: flex; align-items: center; justify-content: center; gap: 20px;
@@ -553,7 +645,7 @@ import { isProductInStock } from '../../models/product.model';
     }
     .sec-line.accent-line { background: linear-gradient(90deg, transparent, #b91c1c, transparent); }
     .sec-title {
-      font-family: var(--font-heading); font-size: clamp(1.4rem, 2.5vw, 1.8rem);
+      font-family: var(--font-body, 'Lato', sans-serif); font-size: clamp(1.4rem, 2.5vw, 1.8rem);
       font-weight: 700; color: var(--text-dark);
       text-transform: uppercase; letter-spacing: 3px;
       margin: 0; padding: 0; text-align: center;
@@ -673,7 +765,7 @@ import { isProductInStock } from '../../models/product.model';
     }
     .f-card:hover .f-card-name { color: var(--primary-color); }
     .f-card-price-row { display: flex; align-items: baseline; gap: 8px; }
-    .f-card-price { font-size: 1.1rem; font-weight: 800; color: var(--text-dark); }
+    .f-card-price { font-size: 1.1rem; font-weight: 400; color: var(--text-dark); }
     .f-card-original { font-size: 0.8rem; color: var(--text-muted); text-decoration: line-through; }
     .featured-dots {
       display: flex; justify-content: center; gap: 8px; margin-top: 28px;
@@ -773,7 +865,7 @@ import { isProductInStock } from '../../models/product.model';
       color: rgba(255,255,255,0.65); margin-bottom: 6px;
     }
     .cat-label h3 {
-      font-family: var(--font-heading); font-size: 1.8rem;
+      font-family: var(--font-body, 'Lato', sans-serif); font-size: 1.8rem;
       font-weight: 700; margin: 0 0 12px; color: #fff;
       text-shadow: 0 2px 12px rgba(0,0,0,0.2);
     }
@@ -809,6 +901,56 @@ import { isProductInStock } from '../../models/product.model';
       background: #fff;
       color: #111827;
       border-color: transparent;
+    }
+
+    /* Mobile category carousel only: subcategories behind a dropdown toggle */
+    .cat-mobile-subcats-wrap {
+      margin-top: 10px;
+      width: 100%;
+      max-width: 100%;
+    }
+    .cat-mobile-subcats-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: #fff;
+      background: rgba(0,0,0,0.38);
+      border: 1px solid rgba(255,255,255,0.5);
+      border-radius: 999px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .cat-mobile-subcats-toggle:hover,
+    .cat-mobile-subcats-toggle.open {
+      background: rgba(0,0,0,0.55);
+      border-color: rgba(255,255,255,0.75);
+    }
+    .cat-mobile-subcats-chevron {
+      transition: transform 0.25s ease;
+      flex-shrink: 0;
+      opacity: 0.95;
+    }
+    .cat-mobile-subcats-toggle.open .cat-mobile-subcats-chevron {
+      transform: rotate(180deg);
+    }
+    .cat-subcats-mobile-dropdown {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      animation: mobileHomeSubcatFade 0.22s ease;
+    }
+    @keyframes mobileHomeSubcatFade {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     /* Collage layout when more than 4 categories */
@@ -885,7 +1027,7 @@ import { isProductInStock } from '../../models/product.model';
       width: 28px; height: 1px; background: var(--primary-color);
     }
     .story-heading {
-      font-family: 'Lato', sans-serif; font-size: clamp(1.8rem, 3vw, 2.5rem);
+      font-family: var(--font-body, 'Lato', sans-serif); font-size: clamp(1.8rem, 3vw, 2.5rem);
       font-weight: 700; color: var(--text-dark);
       line-height: 1.2; margin: 0 0 24px;
     }
@@ -934,7 +1076,7 @@ import { isProductInStock } from '../../models/product.model';
     }
     .trust-icon svg { width: 100%; height: 100%; }
     .trust-item h4 {
-      font-family: var(--font-heading);
+      font-family: var(--font-body, 'Lato', sans-serif);
       font-size: 0.95rem; font-weight: 700; color: var(--text-dark);
       margin: 0; letter-spacing: 0.5px;
     }
@@ -999,7 +1141,7 @@ import { isProductInStock } from '../../models/product.model';
     }
     .s-prices { display: flex; align-items: baseline; gap: 8px; }
     .s-original { font-size: 0.82rem; color: var(--text-muted); text-decoration: line-through; }
-    .s-current { font-size: 1.1rem; font-weight: 800; color: #b91c1c; }
+    .s-current { font-size: 1.1rem; font-weight: 400; color: #b91c1c; }
 
     /* ===== BUY THE LOOK ===== */
     .look-section {
@@ -1049,7 +1191,7 @@ import { isProductInStock } from '../../models/product.model';
       letter-spacing: 0.3px;
     }
     .look-card-overlay span {
-      display: block; font-size: 0.95rem; font-weight: 800;
+      display: block; font-size: 0.95rem; font-weight: 400;
     }
     .look-shop-link {
       font-size: 0.75rem !important; font-weight: 600 !important;
@@ -1066,39 +1208,85 @@ import { isProductInStock } from '../../models/product.model';
       display: flex; justify-content: center; gap: 8px; margin-top: 24px;
     }
 
-    /* ===== SOCIAL PROOF ===== */
+    /* ===== SPOTTED ON SOCIAL — uniform square tiles, responsive grid ===== */
     .social-section {
-      padding: 80px 0;
+      padding: clamp(48px, 8vw, 80px) 0;
       background: #fff;
     }
+    .social-sec-sub a {
+      color: var(--primary-color);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .social-sec-sub a:hover { text-decoration: underline; }
     .social-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 16px; max-width: 1200px; margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: clamp(10px, 2vw, 18px);
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
     }
     .social-section a.social-card {
-      display: block; text-decoration: none; color: inherit;
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      border-radius: 10px;
+      outline: none;
     }
+    .social-card:focus-visible {
+      box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.35);
+    }
+    /* Same width × height per cell (square); image fills with cover */
     .social-card {
-      position: relative; overflow: hidden;
-      aspect-ratio: 1; cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      min-width: 0;
+      cursor: pointer;
+      background: var(--secondary-color, #f5f1e8);
     }
-    .social-img {
-      width: 100%; height: 100%;
-      background-size: cover; background-position: center;
-      transition: transform 0.5s ease;
+    .social-img-wrap {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
     }
-    .social-card:hover .social-img { transform: scale(1.08); }
+    .social-img-el {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+      transition: transform 0.45s ease;
+    }
+    .social-card:hover .social-img-el,
+    .social-card:focus-visible .social-img-el {
+      transform: scale(1.06);
+    }
     .social-hover {
-      position: absolute; inset: 0;
-      background: rgba(10,20,40,0.6);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 10px; color: #fff; opacity: 0;
-      transition: opacity 0.35s ease;
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 20, 40, 0.58);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: #fff;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
     }
-    .social-card:hover .social-hover { opacity: 1; }
+    .social-card:hover .social-hover,
+    .social-card:focus-visible .social-hover {
+      opacity: 1;
+    }
     .social-hover span {
-      font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
     }
 
     /* ===== NEWSLETTER ===== */
@@ -1112,7 +1300,7 @@ import { isProductInStock } from '../../models/product.model';
       text-align: center; padding: 0 var(--spacing-md);
     }
     .newsletter-text h2 {
-      font-family: var(--font-heading);
+      font-family: var(--font-body, 'Lato', sans-serif);
       font-size: clamp(1.5rem, 3vw, 2rem);
       font-weight: 700; color: #fff; margin: 0 0 10px;
     }
@@ -1177,7 +1365,7 @@ import { isProductInStock } from '../../models/product.model';
       .story-accent { display: none; }
       .trust-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
       .look-grid { height: 380px; }
-      .social-grid { grid-template-columns: repeat(2, 1fr); }
+      .social-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
     }
 
     @media (max-width: 768px) {
@@ -1227,6 +1415,8 @@ import { isProductInStock } from '../../models/product.model';
       .cat-label h3 { font-size: 1.3rem; }
       .newsletter-form { flex-direction: column; }
       .newsletter-form input, .newsletter-form button { width: 100%; }
+      .social-section { padding: 48px 0; }
+      .social-grid { gap: 12px; }
     }
 
     @media (max-width: 480px) {
@@ -1245,10 +1435,11 @@ import { isProductInStock } from '../../models/product.model';
       .category-featured-track .cat-card-carousel { height: 300px; }
       .s-card { min-width: 220px; max-width: 220px; }
       .trust-grid { grid-template-columns: 1fr; }
-      .social-grid { grid-template-columns: 1fr 1fr; }
       .look-grid { height: 280px; }
       .look-carousel { gap: 0; }
       .sec-title { font-size: 1.2rem; letter-spacing: 2px; }
+      .social-section { padding: 40px 0; }
+      .social-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     }
   `]
 })
@@ -1284,22 +1475,19 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   readonly categoryCarouselVisible = 1;
   currentLookIndex = 0;
   curatedLooks: any[] = [];
-  socialPosts: InstagramTaggedPost[] = [
-    { id: '1', image: 'assets/buythelook2.png', permalink: '#', handle: '@legadoandco' },
-    { id: '2', image: 'assets/buythelook3.png', permalink: '#', handle: '@legadoandco' },
-    { id: '3', image: 'assets/homebanner2.png', permalink: '#', handle: '@legadoandco' },
-    { id: '4', image: 'assets/ourstory.png', permalink: '#', handle: '@legadoandco' },
-  ];
-  private staticSocialFallback: InstagramTaggedPost[] = [
-    { id: '1', image: 'assets/buythelook2.png', permalink: '#', handle: '@legadoandco' },
-    { id: '2', image: 'assets/buythelook3.png', permalink: '#', handle: '@legadoandco' },
-    { id: '3', image: 'assets/homebanner2.png', permalink: '#', handle: '@legadoandco' },
-    { id: '4', image: 'assets/ourstory.png', permalink: '#', handle: '@legadoandco' },
+
+  /** Spotted on Social — assets/spotted_1.jpeg … spotted_4.jpeg (square grid, object-fit: cover) */
+  readonly socialSpots: { src: string; alt: string }[] = [
+    { src: 'assets/spotted_1.jpeg', alt: 'Legado & Co on Instagram — community style 1' },
+    { src: 'assets/spotted_2.jpeg', alt: 'Legado & Co on Instagram — community style 2' },
+    { src: 'assets/spotted_3.jpeg', alt: 'Legado & Co on Instagram — community style 3' },
+    { src: 'assets/spotted_4.jpeg', alt: 'Legado & Co on Instagram — community style 4' },
   ];
 
   categories: Category[] = [];
   topCategories: (Category & { children: Category[] })[] = [];
-  openCategoryId: number | string | null = null;
+  /** Mobile category carousel: which card has subcategories expanded */
+  homeMobileSubcatsOpenKey: string | null = null;
   private homePendingLoads = 0;
 
   constructor(
@@ -1310,13 +1498,12 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     private lookService: BuyTheLookService,
     private carouselService: CarouselService,
     private router: Router,
-    private appLoading: AppLoadingService,
-    private instagramService: InstagramService
+    private appLoading: AppLoadingService
   ) {}
 
   ngOnInit() {
     // Track all home API loads; loader stays until every one completes (success or error)
-    this.homePendingLoads = 6; // hero, featured, sale, categories, looks, social
+    this.homePendingLoads = 5; // hero, featured, sale, categories, looks
     this.appLoading.setLoading('home', true);
 
     this.loadHeroSlides();
@@ -1324,7 +1511,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     this.loadSaleProducts();
     this.loadCategories();
     this.loadLooksFromApi();
-    this.loadSocialPosts();
     this.startHeroAutoSlide();
     this.calcFeaturedLayout();
     this.startFeaturedAuto();
@@ -1359,6 +1545,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
           children: map.get(root.id as any) || []
         }));
         this.categoryOffset = 0;
+        this.homeMobileSubcatsOpenKey = null;
         setTimeout(() => this.calcCategoryCarouselLayout(), 0);
         this.markHomeLoadDone();
       },
@@ -1375,6 +1562,21 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     this.router.navigate(['/collections'], {
       queryParams: { category: cat.slug || cat.id }
     });
+  }
+
+  categorySubcatKey(cat: Category): string {
+    return String(cat.slug ?? cat.id ?? cat.name ?? '');
+  }
+
+  toggleHomeMobileSubcats(cat: Category, event: Event): void {
+    event.stopPropagation();
+    const k = this.categorySubcatKey(cat);
+    this.homeMobileSubcatsOpenKey = this.homeMobileSubcatsOpenKey === k ? null : k;
+  }
+
+  setCategoryCarouselOffset(i: number): void {
+    this.categoryOffset = i;
+    this.homeMobileSubcatsOpenKey = null;
   }
 
   ngAfterViewInit() {
@@ -1474,7 +1676,10 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   prevCategorySlide() {
-    if (this.categoryOffset > 0) this.categoryOffset--;
+    if (this.categoryOffset > 0) {
+      this.categoryOffset--;
+      this.homeMobileSubcatsOpenKey = null;
+    }
   }
 
   nextCategorySlide() {
@@ -1483,6 +1688,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     } else {
       this.categoryOffset = 0;
     }
+    this.homeMobileSubcatsOpenKey = null;
   }
 
   onCategoryTouchStart(e: TouchEvent) {
@@ -1708,23 +1914,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
         this.markHomeLoadDone();
       },
       error: () => { this.markHomeLoadDone(); }
-    });
-  }
-
-  loadSocialPosts() {
-    this.instagramService.getTaggedMedia().subscribe({
-      next: (posts) => {
-        if (posts && posts.length > 0) {
-          this.socialPosts = posts;
-        } else {
-          this.socialPosts = [...this.staticSocialFallback];
-        }
-        this.markHomeLoadDone();
-      },
-      error: () => {
-        this.socialPosts = [...this.staticSocialFallback];
-        this.markHomeLoadDone();
-      },
     });
   }
 

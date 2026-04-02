@@ -32,8 +32,9 @@ html {
   --btn-accent: #a8d5ba;
   --btn-accent-hover: #7fb89a;
 
-  --font-logo: 'Snell Roundhand', 'Snell Roundhand Script', 'Brush Script MT', 'Great Vibes', cursive;
-  --font-heading: 'Playfair Display', serif;
+  /* Single sans-serif stack sitewide */
+  --font-logo: 'Lato', sans-serif;
+  --font-heading: 'Lato', sans-serif;
   --font-body: 'Lato', sans-serif;
 
   /* Wordmark: fluid size + letter-spacing for Safari / narrow viewports (avoids overlap) */

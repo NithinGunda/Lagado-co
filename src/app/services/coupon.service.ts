@@ -63,13 +63,13 @@ export class CouponService {
     valid: boolean;
     message?: string;
     discount_amount?: number;
-    coupon?: { id?: number | string; code: string; discount_type?: string; discount_value?: number };
+    coupon?: Coupon;
   }> {
     return this.http.post<{
       valid: boolean;
       message?: string;
       discount_amount?: number;
-      coupon?: { id?: number | string; code: string; discount_type?: string; discount_value?: number };
+      coupon?: Coupon;
     }>(`${this.base}/validate`, { code: code.trim(), order_amount: orderAmount });
   }
 }

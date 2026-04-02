@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { User } from '../../models/user.model';
 import { AuthService } from '../../services/auth.service';
 import { OrderService } from '../../services/order.service';
 import { AddressService } from '../../services/address.service';
@@ -32,35 +33,29 @@ import { AddressService } from '../../services/address.service';
             <!-- Profile Information Tab -->
             <div class="tab-content" *ngIf="activeTab === 'profile'">
               <h2>Profile Information</h2>
-              <form [formGroup]="profileForm" (ngSubmit)="updateProfile()" class="profile-form">
-                <div class="form-row">
-                  <div class="form-group">
-                    <label>First Name *</label>
-                    <input type="text" formControlName="firstName" class="form-input">
-                  </div>
-                  <div class="form-group">
-                    <label>Last Name *</label>
-                    <input type="text" formControlName="lastName" class="form-input">
-                  </div>
+              <p class="profile-readonly-hint">Your details from your account. Contact support if anything needs updating.</p>
+              <div class="profile-info-readonly">
+                <div class="info-row">
+                  <span class="info-label">First name</span>
+                  <span class="info-value">{{ profileDisplay.firstName }}</span>
                 </div>
-
-                <div class="form-group">
-                  <label>Email Address *</label>
-                  <input type="email" formControlName="email" class="form-input">
+                <div class="info-row">
+                  <span class="info-label">Last name</span>
+                  <span class="info-value">{{ profileDisplay.lastName }}</span>
                 </div>
-
-                <div class="form-group">
-                  <label>Phone Number</label>
-                  <input type="tel" formControlName="phone" class="form-input">
+                <div class="info-row">
+                  <span class="info-label">Email</span>
+                  <span class="info-value">{{ profileDisplay.email }}</span>
                 </div>
-
-                <div class="form-group">
-                  <label>Date of Birth</label>
-                  <input type="date" formControlName="dateOfBirth" class="form-input">
+                <div class="info-row">
+                  <span class="info-label">Phone</span>
+                  <span class="info-value">{{ profileDisplay.phone }}</span>
                 </div>
-
-                <button type="submit" class="btn btn-primary">Save Changes</button>
-              </form>
+                <div class="info-row">
+                  <span class="info-label">Date of birth</span>
+                  <span class="info-value">{{ profileDisplay.dateOfBirth }}</span>
+                </div>
+              </div>
             </div>
 
             <!-- Orders Tab -->
@@ -78,6 +73,7 @@ import { AddressService } from '../../services/address.service';
                   <div class="order-products">
                     <div class="order-products-header">
                       <span>Product</span>
+                      <span>Size</span>
                       <span>Qty</span>
                       <span>Unit price</span>
                       <span>Amount</span>
@@ -87,6 +83,7 @@ import { AddressService } from '../../services/address.service';
                         <img *ngIf="item.imageUrl" [src]="item.imageUrl" [alt]="item.name" class="order-product-img">
                         <span class="order-product-name">{{ item.name }}</span>
                       </div>
+                      <span class="order-product-size">{{ item.sizeLabel || '—' }}</span>
                       <span class="order-product-qty">{{ item.quantity }}</span>
                       <span class="order-product-unit">{{ formatPrice(item.unitPrice) }}</span>
                       <span class="order-product-total">{{ formatPrice(item.lineTotal) }}</span>
@@ -314,6 +311,44 @@ import { AddressService } from '../../services/address.service';
       margin-bottom: var(--spacing-md);
     }
 
+    .profile-readonly-hint {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin: 0 0 var(--spacing-md);
+      max-width: 560px;
+      line-height: 1.5;
+    }
+    .profile-info-readonly {
+      max-width: 600px;
+      background: var(--grey-light, #f8f9fa);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .profile-info-readonly .info-row {
+      display: grid;
+      grid-template-columns: minmax(120px, 160px) 1fr;
+      gap: 16px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      align-items: start;
+    }
+    .profile-info-readonly .info-row:last-child {
+      border-bottom: none;
+    }
+    .profile-info-readonly .info-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+    .profile-info-readonly .info-value {
+      font-size: 15px;
+      color: var(--text-dark);
+      word-break: break-word;
+    }
+
     .profile-form {
       display: flex;
       flex-direction: column;
@@ -416,7 +451,7 @@ import { AddressService } from '../../services/address.service';
 
     .order-products-header {
       display: grid;
-      grid-template-columns: 1fr 60px 90px 90px;
+      grid-template-columns: 1fr 52px 48px 88px 88px;
       gap: 12px;
       padding: 8px 0 10px;
       font-size: 12px;
@@ -429,7 +464,7 @@ import { AddressService } from '../../services/address.service';
 
     .order-product-row {
       display: grid;
-      grid-template-columns: 1fr 60px 90px 90px;
+      grid-template-columns: 1fr 52px 48px 88px 88px;
       gap: 12px;
       align-items: center;
       padding: 12px 0;
@@ -465,6 +500,12 @@ import { AddressService } from '../../services/address.service';
     .order-product-name {
       font-weight: 500;
       color: var(--text-dark);
+    }
+
+    .order-product-size {
+      font-size: 13px;
+      color: var(--text-light);
+      text-align: left;
     }
 
     .order-product-qty {
@@ -632,7 +673,7 @@ import { AddressService } from '../../services/address.service';
 
       .order-products-header,
       .order-product-row {
-        grid-template-columns: 1fr 50px 70px 80px;
+        grid-template-columns: 1fr 44px 44px 64px 72px;
         gap: 8px;
         font-size: 13px;
       }
@@ -688,7 +729,7 @@ import { AddressService } from '../../services/address.service';
 
       .order-products-header,
       .order-product-row {
-        grid-template-columns: minmax(120px, 1fr) 44px 64px 72px;
+        grid-template-columns: minmax(120px, 1fr) 40px 40px 60px 68px;
         gap: 8px;
         font-size: 12px;
       }
@@ -721,12 +762,16 @@ import { AddressService } from '../../services/address.service';
         padding: 10px 12px;
         font-size: 13px;
       }
+
+      .profile-info-readonly .info-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
     }
   `]
 })
 export class ProfileComponent implements OnInit {
   activeTab = 'profile';
-  profileForm: FormGroup;
   passwordForm: FormGroup;
   addressForm: FormGroup;
   orders: any[] = [];
@@ -736,6 +781,15 @@ export class ProfileComponent implements OnInit {
   showAddressForm = false;
   addressFormError = '';
   addressSaving = false;
+
+  /** Read-only profile tab — filled from AuthService user / GET /me */
+  profileDisplay = {
+    firstName: '—',
+    lastName: '—',
+    email: '—',
+    phone: '—',
+    dateOfBirth: '—',
+  };
 
   states: string[] = [
     'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
@@ -754,14 +808,6 @@ export class ProfileComponent implements OnInit {
     private orderService: OrderService,
     private addressService: AddressService
   ) {
-    this.profileForm = this.fb.group({
-      firstName: ['', Validators.required],
-      lastName: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
-      phone: [''],
-      dateOfBirth: ['']
-    });
-
     this.passwordForm = this.fb.group({
       currentPassword: ['', Validators.required],
       newPassword: ['', [Validators.required, Validators.minLength(8)]],
@@ -793,32 +839,44 @@ export class ProfileComponent implements OnInit {
   }
 
   loadUserData() {
-    const user = this.authService.getUser();
-    if (user) {
-      const nameParts = (user.name || '').trim().split(/\s+/);
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ') || '';
-      this.profileForm.patchValue({
-        firstName,
-        lastName,
-        email: user.email || '',
-        phone: user.phone || '',
-        dateOfBirth: ''
-      });
-    } else {
-      this.authService.me().subscribe(u => {
-        if (u) {
-          const nameParts = (u.name || '').trim().split(/\s+/);
-          this.profileForm.patchValue({
-            firstName: nameParts[0] || '',
-            lastName: nameParts.slice(1).join(' ') || '',
-            email: u.email || '',
-            phone: u.phone || '',
-            dateOfBirth: ''
-          });
-        }
-      });
+    const cached = this.authService.getUser();
+    if (cached) this.applyUserToProfileDisplay(cached);
+    this.authService.me().subscribe(u => {
+      if (u) this.applyUserToProfileDisplay(u);
+    });
+  }
+
+  private applyUserToProfileDisplay(user: User) {
+    const u = user as User & Record<string, unknown>;
+    let first = (u.first_name || (u as any).firstName || '') as string;
+    let last = (u.last_name || (u as any).lastName || '') as string;
+    if (!first && !last && u.name) {
+      const parts = String(u.name).trim().split(/\s+/);
+      first = parts[0] || '';
+      last = parts.slice(1).join(' ') || '';
     }
+    const rawDob =
+      u.date_of_birth ||
+      (u as any).dateOfBirth ||
+      (u as any).dob ||
+      '';
+    let dobLabel = '—';
+    if (rawDob) {
+      const d = new Date(String(rawDob));
+      if (!Number.isNaN(d.getTime())) {
+        dobLabel = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      } else {
+        dobLabel = String(rawDob);
+      }
+    }
+    const phone = u.phone || (u as any).mobile || '';
+    this.profileDisplay = {
+      firstName: first.trim() || '—',
+      lastName: last.trim() || '—',
+      email: (u.email && String(u.email).trim()) || '—',
+      phone: (phone && String(phone).trim()) || '—',
+      dateOfBirth: dobLabel,
+    };
   }
 
   loadOrders() {
@@ -832,12 +890,20 @@ export class ProfileComponent implements OnInit {
             const qty = p.pivot?.quantity ?? 1;
             const unitPrice = Number(p.price ?? p.pivot?.price ?? 0);
             const imageUrl = p.image_url ?? p.image_urls?.[0] ?? null;
+            const pivot = p.pivot || {};
+            const sizeLabel =
+              pivot.selected_size ??
+              pivot.size ??
+              p.selected_size ??
+              p.size ??
+              '';
             return {
               name: p.name || 'Product',
               quantity: qty,
               unitPrice,
               lineTotal: unitPrice * qty,
-              imageUrl
+              imageUrl,
+              sizeLabel: sizeLabel ? String(sizeLabel).trim() : '',
             };
           });
           return {
@@ -881,13 +947,6 @@ export class ProfileComponent implements OnInit {
       next: () => this.router.navigate(['/']),
       error: () => { this.authService.clearAuth(); this.router.navigate(['/']); }
     });
-  }
-
-  updateProfile() {
-    if (this.profileForm.valid) {
-      // Update profile logic
-      alert('Profile updated successfully!');
-    }
   }
 
   changePassword() {

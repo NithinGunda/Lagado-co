@@ -42,9 +42,6 @@ import { AuthService } from '../../services/auth.service';
           </button>
 
           <div class="register-branding">
-            <a routerLink="/" class="logo-link" aria-label="Legado & Co home">
-              <img src="assets/Logo.png" alt="Legado & Co" class="auth-logo-img" />
-            </a>
             <h2>Join Us</h2>
             <p>Create your account and start your journey with timeless elegance</p>
             <div class="benefits-list">
@@ -118,7 +115,7 @@ import { AuthService } from '../../services/auth.service';
                   formControlName="phone"
                   class="form-input"
                   [class.error]="isFieldInvalid('phone')"
-                  placeholder="+91 98765 43210"
+                  placeholder="+91 80194 33344"
                 >
                 <small class="helper-text">Indian mobile numbers only (starts with 6–9)</small>
                 <span class="error-message" *ngIf="isFieldInvalid('phone')">
@@ -334,30 +331,6 @@ import { AuthService } from '../../services/auth.service';
       text-align: center;
       width: 100%;
       padding: var(--spacing-xl) var(--spacing-lg);
-    }
-
-    .logo-link {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: var(--spacing-sm);
-      margin-bottom: var(--spacing-md);
-      color: var(--text-white);
-      transition: var(--transition-normal);
-    }
-
-    .logo-link:hover {
-      transform: scale(1.05);
-    }
-
-    .auth-logo-img {
-      height: auto;
-      max-height: 70px;
-      width: auto;
-      max-width: min(240px, 85vw);
-      display: block;
-      object-fit: contain;
-      filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.5));
     }
 
     .register-branding h2 {
@@ -674,10 +647,6 @@ import { AuthService } from '../../services/auth.service';
         min-height: 350px;
       }
 
-      .auth-logo-img {
-        height: 60px;
-      }
-
       .register-branding h2 {
         font-size: 1.8rem;
       }
@@ -716,10 +685,6 @@ import { AuthService } from '../../services/auth.service';
 
       .register-branding {
         padding: var(--spacing-md);
-      }
-
-      .auth-logo-img {
-        height: 48px;
       }
 
       .register-branding h2 {
