@@ -604,8 +604,6 @@ export class OurStoryComponent implements OnInit, OnDestroy {
 
   stats = [
     { num: '500+', label: 'Products Crafted' },
-    { num: '10K+', label: 'Happy Customers' },
-    { num: '50+', label: 'Artisan Partners' },
     { num: '100%', label: 'Quality Promise' }
   ];
 

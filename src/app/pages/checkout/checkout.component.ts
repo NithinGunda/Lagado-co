@@ -976,12 +976,12 @@ export class CheckoutComponent implements OnInit {
           this.couponDiscountAmount = res.discount_amount;
           this.couponCode = '';
         } else {
-          this.couponError = res.message || 'Invalid coupon.';
+          this.couponError = 'Invalid coupon.';
         }
       },
-      error: (err) => {
+      error: () => {
         this.couponLoading = false;
-        this.couponError = this.extractApiError(err, 'Could not validate coupon. Try again.');
+        this.couponError = 'Invalid coupon.';
       },
     });
   }
@@ -1036,14 +1036,5 @@ export class CheckoutComponent implements OnInit {
   closeOrderSuccessAndGoHome(): void {
     this.showOrderSuccessModal = false;
     this.router.navigate(['/']);
-  }
-
-  private extractApiError(err: any, fallback: string): string {
-    const body = err?.error;
-    if (body?.errors && typeof body.errors === 'object') {
-      const first = Object.values(body.errors)[0];
-      return Array.isArray(first) ? String(first[0]) : String(first);
-    }
-    return body?.message || body?.error || fallback;
   }
 }

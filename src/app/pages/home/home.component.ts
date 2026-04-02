@@ -329,13 +329,6 @@ import { isProductInStock } from '../../models/product.model';
               <h4>Premium Quality</h4>
               <p>Handpicked fabrics with meticulous craftsmanship</p>
             </div>
-            <div class="trust-item">
-              <div class="trust-icon">
-                <svg viewBox="0 0 48 48" fill="none" stroke="var(--primary-color)" stroke-width="2"><rect x="6" y="10" width="36" height="28" rx="1"/><path d="M6 20h36"/><circle cx="14" cy="30" r="3"/></svg>
-              </div>
-              <h4>Secure Payments</h4>
-              <p>SSL encrypted transactions for your safety</p>
-            </div>
           </div>
         </div>
       </section>
@@ -1061,7 +1054,7 @@ import { isProductInStock } from '../../models/product.model';
       border-bottom: 1px solid var(--border-color);
     }
     .trust-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr);
+      display: grid; grid-template-columns: repeat(3, 1fr);
       gap: 32px; max-width: 1100px; margin: 0 auto;
       text-align: center;
     }
